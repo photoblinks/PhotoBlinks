@@ -25,7 +25,11 @@ export async function createPresignedUploadUrl(key: string, contentType: string)
   return { uploadUrl, publicUrl };
 }
 
-/** locations/{slug}/{filename} or studios/{slug}/{filename} per the R2 layout convention. */
-export function buildImageKey(kind: "locations" | "studios", slug: string, filename: string) {
+/** locations/{slug}/{filename}, studios/{slug}/{filename}, or categories/{slug}/{filename}. */
+export function buildImageKey(
+  kind: "locations" | "studios" | "categories",
+  slug: string,
+  filename: string,
+) {
   return `${kind}/${slug}/${filename}`;
 }

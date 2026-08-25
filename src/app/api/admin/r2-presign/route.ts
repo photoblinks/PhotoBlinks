@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { buildImageKey, createPresignedUploadUrl } from "@/lib/r2/upload";
 
 const bodySchema = z.object({
-  kind: z.enum(["locations", "studios"]),
+  kind: z.enum(["locations", "studios", "categories"]),
   slug: z.string().min(1),
   filename: z.string().min(1),
   contentType: z.string().min(1),
