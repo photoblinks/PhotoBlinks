@@ -12,12 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { deleteLocation, toggleLocationPublished } from "./actions";
-
-function formatPricing(pricingType: string, price: number | null) {
-  if (pricingType === "free") return "Free";
-  if (pricingType === "paid") return price != null ? `₹${price.toLocaleString("en-IN")}` : "Paid";
-  return "Unknown";
-}
+import { formatPricing } from "@/lib/format";
 
 export default async function AdminLocationsPage() {
   const supabase = await createClient();
