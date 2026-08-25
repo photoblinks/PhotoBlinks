@@ -1,14 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
-import { MapPin } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Globe, ArrowRight } from "lucide-react";
 import { formatPricing } from "@/lib/format";
 import type { PublicLocationCard } from "@/lib/public-data";
 
 export function LocationCard({ location }: { location: PublicLocationCard }) {
   return (
-    <Link href={`/location/${location.slug}`} className="group flex flex-col gap-2.5">
-      <div className="relative aspect-4/3 overflow-hidden rounded-xl bg-muted">
+    <Link href={`/location/${location.slug}`} className="group flex flex-col gap-3">
+      <div className="relative aspect-4/3 overflow-hidden rounded-2xl bg-muted">
         {location.primaryImageUrl ? (
           <Image
             src={location.primaryImageUrl}
@@ -22,20 +21,22 @@ export function LocationCard({ location }: { location: PublicLocationCard }) {
             No image
           </div>
         )}
-        <Badge
-          className="absolute top-2.5 left-2.5 shadow-sm"
-          variant={location.pricing_type === "free" ? "default" : "secondary"}
-        >
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/50 to-transparent"
+        />
+        <span className="absolute top-3 left-3 rounded-full bg-black/60 px-3.5 py-1.5 text-sm font-[250] text-white backdrop-blur-sm">
           {formatPricing(location.pricing_type, location.price)}
-        </Badge>
-        <span className="absolute right-2.5 bottom-2.5 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur">
-          View Details →
+        </span>
+        <span className="absolute right-3 bottom-3 flex items-center gap-1 text-sm font-[250] text-white">
+          View Details
+          <ArrowRight className="size-4" strokeWidth={2} />
         </span>
       </div>
-      <div className="flex flex-col gap-0.5">
-        <h3 className="font-heading text-base font-semibold">{location.name}</h3>
-        <p className="flex items-center gap-1 text-sm text-muted-foreground">
-          <MapPin className="size-3.5 shrink-0" />
+      <div className="flex flex-col gap-1">
+        <h3 className="font-sans text-lg font-[450] text-foreground">{location.name}</h3>
+        <p className="flex items-center gap-1.5 text-sm font-[220] text-muted-foreground">
+          <Globe className="size-3.5 shrink-0" />
           {[location.city?.name, location.state?.name].filter(Boolean).join(", ")}
           {location.distanceKm != null && (
             <span className="text-pb-brand"> · {location.distanceKm.toFixed(1)} km away</span>
