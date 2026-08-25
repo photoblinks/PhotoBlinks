@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { MapPin, Building2, LayoutGrid, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,6 +16,9 @@ type Option = { id: string; name: string; slug: string };
 type City = Option & { state_id: string };
 
 const ALL = "all";
+
+const FIELD_TRIGGER_CLASS =
+  "h-auto w-full justify-start gap-0 border-0 bg-transparent p-0 text-sm font-medium shadow-none hover:bg-transparent data-placeholder:text-muted-foreground";
 
 export function HomeFilter({
   states,
@@ -63,77 +67,95 @@ export function HomeFilter({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-3 rounded-xl border bg-background/95 p-4 shadow-lg backdrop-blur sm:flex-row sm:items-end sm:gap-2"
+      className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-xl sm:flex-row sm:items-stretch sm:gap-0 sm:divide-x sm:divide-border sm:p-3"
     >
-      <div className="flex flex-1 flex-col gap-1">
-        <span className="text-xs font-medium text-muted-foreground">State</span>
-        <Select value={stateId} onValueChange={(value) => handleStateChange(value ?? ALL)}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Where to?" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Any state</SelectItem>
-            {states.map((state) => (
-              <SelectItem key={state.id} value={state.id}>
-                {state.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-1 items-center gap-2.5 sm:px-4">
+        <MapPin className="size-4 shrink-0 text-pb-brand" />
+        <div className="flex w-full flex-col gap-0.5">
+          <span className="text-[0.7rem] text-muted-foreground">State</span>
+          <Select value={stateId} onValueChange={(value) => handleStateChange(value ?? ALL)}>
+            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+              <SelectValue placeholder="Where to?" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Any state</SelectItem>
+              {states.map((state) => (
+                <SelectItem key={state.id} value={state.id}>
+                  {state.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1">
-        <span className="text-xs font-medium text-muted-foreground">City</span>
-        <Select value={cityId} onValueChange={(value) => setCityId(value ?? ALL)} disabled={stateId === ALL}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Any city" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Any city</SelectItem>
-            {citiesForState.map((city) => (
-              <SelectItem key={city.id} value={city.id}>
-                {city.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-1 items-center gap-2.5 sm:px-4">
+        <Building2 className="size-4 shrink-0 text-pb-brand" />
+        <div className="flex w-full flex-col gap-0.5">
+          <span className="text-[0.7rem] text-muted-foreground">City</span>
+          <Select
+            value={cityId}
+            onValueChange={(value) => setCityId(value ?? ALL)}
+            disabled={stateId === ALL}
+          >
+            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+              <SelectValue placeholder="Any city" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Any city</SelectItem>
+              {citiesForState.map((city) => (
+                <SelectItem key={city.id} value={city.id}>
+                  {city.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1">
-        <span className="text-xs font-medium text-muted-foreground">Category</span>
-        <Select value={categorySlug} onValueChange={(value) => setCategorySlug(value ?? ALL)}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="All categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All categories</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.slug}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-1 items-center gap-2.5 sm:px-4">
+        <LayoutGrid className="size-4 shrink-0 text-pb-brand" />
+        <div className="flex w-full flex-col gap-0.5">
+          <span className="text-[0.7rem] text-muted-foreground">Category</span>
+          <Select value={categorySlug} onValueChange={(value) => setCategorySlug(value ?? ALL)}>
+            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All categories</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.slug}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1">
-        <span className="text-xs font-medium text-muted-foreground">Pricing</span>
-        <Select value={pricing} onValueChange={(value) => setPricing(value ?? ALL)}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Any budget" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Any budget</SelectItem>
-            <SelectItem value="free">Free</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="unknown">Unknown</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-1 items-center gap-2.5 sm:px-4">
+        <Tag className="size-4 shrink-0 text-pb-brand" />
+        <div className="flex w-full flex-col gap-0.5">
+          <span className="text-[0.7rem] text-muted-foreground">Pricing</span>
+          <Select value={pricing} onValueChange={(value) => setPricing(value ?? ALL)}>
+            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+              <SelectValue placeholder="Any budget" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Any budget</SelectItem>
+              <SelectItem value="free">Free</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="unknown">Unknown</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <Button type="submit" className="sm:w-auto">
-        Explore
-      </Button>
+      <div className="flex items-center pt-1 sm:pt-0 sm:pl-3">
+        <Button type="submit" className="w-full sm:w-auto">
+          Explore
+        </Button>
+      </div>
     </form>
   );
 }

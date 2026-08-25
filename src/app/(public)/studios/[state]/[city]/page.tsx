@@ -61,7 +61,7 @@ export default async function CityStudiosPage({ params }: Props) {
           { name: city.name, path: `/studios/${state.slug}/${city.slug}` },
         ]}
       />
-      <h1 className="text-3xl font-semibold">Photography Studios in {city.name}</h1>
+      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Photography Studios in {city.name}</h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
         Browse photography studios in {city.name}, {state.name} for indoor and preset photoshoots.
       </p>

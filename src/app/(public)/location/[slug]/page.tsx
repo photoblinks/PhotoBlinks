@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { Tag, Globe, Map as MapIcon, MapPin, Navigation } from "lucide-react";
 import { getPublishedLocationBySlug } from "@/lib/public-data";
 import { formatPricing } from "@/lib/format";
 import { ImageGallery } from "@/components/public/image-gallery";
@@ -64,13 +65,21 @@ export default async function LocationDetailPage({ params }: Props) {
     { name: location.name, path: `/location/${location.slug}` },
   ];
 
+  const infoRows = [
+    location.category && { icon: Tag, label: "Category", value: location.category.name },
+    { icon: Globe, label: "Country", value: location.country },
+    location.state && { icon: MapIcon, label: "State", value: location.state.name },
+    location.city && { icon: MapPin, label: "City", value: location.city.name },
+  ].filter(Boolean) as { icon: typeof Tag; label: string; value: string }[];
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <Breadcrumbs items={breadcrumbItems} />
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold">{location.name}</h1>
-          <p className="mt-1 text-muted-foreground">
+          <h1 className="font-heading text-3xl font-semibold sm:text-4xl">{location.name}</h1>
+          <p className="mt-1 flex items-center gap-1 text-muted-foreground">
+            <MapPin className="size-4" />
             {[location.city?.name, location.state?.name].filter(Boolean).join(", ")}
           </p>
         </div>
@@ -79,32 +88,19 @@ export default async function LocationDetailPage({ params }: Props) {
 
       <ImageGallery images={location.images} alt={location.name} />
 
-      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+      <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <h2 className="mb-3 text-xl font-semibold">About This Location</h2>
-          <dl className="mb-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-            {location.category && (
-              <div>
-                <dt className="text-muted-foreground">Category</dt>
-                <dd className="font-medium">{location.category.name}</dd>
+          <h2 className="font-heading mb-4 text-xl font-semibold">About This Location</h2>
+          <dl className="mb-5 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+            {infoRows.map((row) => (
+              <div key={row.label} className="flex items-start gap-2">
+                <row.icon className="mt-0.5 size-4 shrink-0 text-pb-brand" />
+                <div>
+                  <dt className="text-xs text-muted-foreground">{row.label}</dt>
+                  <dd className="font-medium">{row.value}</dd>
+                </div>
               </div>
-            )}
-            <div>
-              <dt className="text-muted-foreground">Country</dt>
-              <dd className="font-medium">{location.country}</dd>
-            </div>
-            {location.state && (
-              <div>
-                <dt className="text-muted-foreground">State</dt>
-                <dd className="font-medium">{location.state.name}</dd>
-              </div>
-            )}
-            {location.city && (
-              <div>
-                <dt className="text-muted-foreground">City</dt>
-                <dd className="font-medium">{location.city.name}</dd>
-              </div>
-            )}
+            ))}
           </dl>
           {location.description && (
             <p className="leading-relaxed text-foreground/90">{location.description}</p>
@@ -112,29 +108,21 @@ export default async function LocationDetailPage({ params }: Props) {
 
           {location.youtube_url && (
             <div className="mt-8">
-              <h2 className="mb-3 text-xl font-semibold">Location Video</h2>
+              <h2 className="font-heading mb-3 text-xl font-semibold">Location Video</h2>
               <YouTubeEmbed url={location.youtube_url} title={location.name} />
-            </div>
-          )}
-
-          {hasCoords && (
-            <div className="mt-8">
-              <h2 className="mb-3 text-xl font-semibold">Location &amp; Distance</h2>
-              <MiniMap latitude={location.latitude!} longitude={location.longitude!} label={location.name} />
-              <p className="mt-2 text-sm text-muted-foreground">
-                {[location.city?.name, location.state?.name].filter(Boolean).join(", ")} · {location.latitude!.toFixed(4)}, {location.longitude!.toFixed(4)}
-              </p>
-              <div className="mt-2">
-                <DistanceDisplay latitude={location.latitude!} longitude={location.longitude!} />
-              </div>
             </div>
           )}
         </div>
 
         <aside className="flex flex-col gap-4">
-          <div className="rounded-xl border p-4">
-            <p className="mb-1 text-sm text-muted-foreground">Pricing</p>
-            <p className="text-2xl font-semibold">
+          <div className="rounded-xl border bg-white p-4 shadow-sm">
+            <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="flex size-7 items-center justify-center rounded-full bg-pb-brand/10">
+                <Tag className="size-3.5 text-pb-brand" />
+              </span>
+              Pricing
+            </div>
+            <p className="font-heading text-3xl font-semibold">
               {formatPricing(location.pricing_type, location.price)}
             </p>
             {location.pricing_type === "paid" && (
@@ -144,14 +132,44 @@ export default async function LocationDetailPage({ params }: Props) {
               <p className="text-sm text-muted-foreground">Free Photoshoot Location</p>
             )}
           </div>
-
-          <GoToLocationButton
-            mapUrl={location.map_url}
-            latitude={location.latitude}
-            longitude={location.longitude}
-          />
         </aside>
       </div>
+
+      {(hasCoords || location.map_url) && (
+        <div className="mt-10">
+          <h2 className="font-heading mb-4 text-xl font-semibold">Location &amp; Distance</h2>
+          <div className="grid grid-cols-1 overflow-hidden rounded-xl border bg-white shadow-sm md:grid-cols-2">
+            <div className="flex flex-col justify-between gap-4 p-5">
+              <div>
+                <p className="font-medium">{location.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {[location.city?.name, location.state?.name].filter(Boolean).join(", ")}
+                </p>
+              </div>
+              {hasCoords && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Navigation className="size-4 text-pb-brand" />
+                  <DistanceDisplay latitude={location.latitude!} longitude={location.longitude!} />
+                </div>
+              )}
+              <GoToLocationButton
+                mapUrl={location.map_url}
+                latitude={location.latitude}
+                longitude={location.longitude}
+              />
+            </div>
+            <div className="min-h-64">
+              {hasCoords ? (
+                <MiniMap latitude={location.latitude!} longitude={location.longitude!} label={location.name} />
+              ) : (
+                <div className="flex h-full min-h-64 items-center justify-center bg-muted text-sm text-muted-foreground">
+                  Map unavailable
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <JsonLd data={buildPlaceJsonLd(location)} />
     </div>

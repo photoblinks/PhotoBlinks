@@ -31,7 +31,7 @@ export default async function StudiosIndexPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <Breadcrumbs items={[{ name: "Home", path: "/" }, { name: "Studios", path: "/studios" }]} />
-      <h1 className="text-3xl font-semibold">Photography Studios</h1>
+      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Photography Studios</h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
         Explore real, published PhotoBlinks photography studios by state across Karnataka and
         Kerala.

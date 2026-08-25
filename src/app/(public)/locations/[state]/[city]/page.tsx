@@ -71,7 +71,7 @@ export default async function CityLocationsPage({ params }: Props) {
           { name: city.name, path: `/locations/${state.slug}/${city.slug}` },
         ]}
       />
-      <h1 className="text-3xl font-semibold">Photoshoot Locations in {city.name}</h1>
+      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Photoshoot Locations in {city.name}</h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
         Explore photoshoot locations in {city.name}, {state.name}, including{" "}
         {categories.map((c) => c.name.toLowerCase()).join(", ")} and other scenic spots.

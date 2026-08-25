@@ -34,7 +34,7 @@ export default async function LocationsIndexPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <Breadcrumbs items={[{ name: "Home", path: "/" }, { name: "Locations", path: "/locations" }]} />
-      <h1 className="text-3xl font-semibold">Photoshoot Locations</h1>
+      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Photoshoot Locations</h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
         Explore real, published PhotoBlinks photoshoot locations by state — beaches, waterfalls,
         temples, hills, and more across Karnataka and Kerala.

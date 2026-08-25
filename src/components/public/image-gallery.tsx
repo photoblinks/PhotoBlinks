@@ -11,6 +11,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
 
   const [primary, ...rest] = images;
   const supporting = rest.slice(0, 4);
+  const remaining = rest.length - supporting.length;
 
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2 sm:[&>*:first-child]:row-span-2">
@@ -19,17 +20,25 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
       </div>
       {supporting.length > 0 && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-2">
-          {supporting.map((image, index) => (
-            <div key={image} className="relative aspect-4/3 overflow-hidden rounded-xl bg-muted">
-              <Image
-                src={image}
-                alt={`${alt} — photo ${index + 2}`}
-                fill
-                className="object-cover"
-                unoptimized
-              />
-            </div>
-          ))}
+          {supporting.map((image, index) => {
+            const isLast = index === supporting.length - 1;
+            return (
+              <div key={image} className="relative aspect-4/3 overflow-hidden rounded-xl bg-muted">
+                <Image
+                  src={image}
+                  alt={`${alt} — photo ${index + 2}`}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+                {isLast && remaining > 0 && (
+                  <span className="absolute right-2 bottom-2 rounded-full bg-black/70 px-2.5 py-1 text-xs font-medium text-white">
+                    +{remaining} photos
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

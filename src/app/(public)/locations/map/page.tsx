@@ -46,7 +46,7 @@ export default async function LocationsMapPage({
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
       <div>
-        <h1 className="text-2xl font-semibold">Locations Map</h1>
+        <h1 className="font-heading text-2xl font-semibold sm:text-3xl">Locations Map</h1>
         <p className="text-sm text-muted-foreground">
           {mappableCount} location{mappableCount === 1 ? "" : "s"} on the map
         </p>

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Map, { Marker, Popup } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { LocationPopupCard } from "@/components/public/location-popup-card";
+import { getCategoryMarkerStyle } from "@/lib/category-style";
 import type { PublicLocationCard } from "@/lib/public-data";
 
 const DEFAULT_VIEW = { longitude: 76.3, latitude: 11.5, zoom: 6.2 };
@@ -47,24 +48,30 @@ export function LocationsMap({ locations }: { locations: PublicLocationCard[] })
       mapStyle="mapbox://styles/mapbox/streets-v12"
       style={{ width: "100%", height: "100%" }}
     >
-      {mappable.map((location) => (
-        <Marker
-          key={location.id}
-          longitude={location.longitude}
-          latitude={location.latitude}
-          anchor="bottom"
-          onClick={(e) => {
-            e.originalEvent.stopPropagation();
-            setSelectedId(location.id);
-          }}
-        >
-          <button
-            type="button"
-            aria-label={location.name}
-            className="h-5 w-5 cursor-pointer rounded-full border-2 border-white bg-primary shadow-md"
-          />
-        </Marker>
-      ))}
+      {mappable.map((location) => {
+        const { color, icon: Icon } = getCategoryMarkerStyle(location.category?.slug);
+        return (
+          <Marker
+            key={location.id}
+            longitude={location.longitude}
+            latitude={location.latitude}
+            anchor="bottom"
+            onClick={(e) => {
+              e.originalEvent.stopPropagation();
+              setSelectedId(location.id);
+            }}
+          >
+            <button
+              type="button"
+              aria-label={location.name}
+              style={{ backgroundColor: color }}
+              className="flex size-8 cursor-pointer items-center justify-center rounded-full border-2 border-white text-white shadow-md"
+            >
+              <Icon className="size-4" strokeWidth={2} />
+            </button>
+          </Marker>
+        );
+      })}
 
       {selected && (
         <Popup

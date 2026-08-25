@@ -15,7 +15,11 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
             const isLast = index === items.length - 1;
             return (
               <li key={item.path} className="flex items-center gap-1.5">
-                {index > 0 && <span aria-hidden="true">/</span>}
+                {index > 0 && (
+                  <span aria-hidden="true" className="text-border">
+                    ›
+                  </span>
+                )}
                 {isLast ? (
                   <span aria-current="page" className="text-foreground">
                     {item.name}
