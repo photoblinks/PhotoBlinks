@@ -77,40 +77,26 @@ export default async function HomePage({
 
   return (
     <div>
-      <section className="relative overflow-hidden px-4 pt-20 pb-16 sm:px-6 sm:pt-28 sm:pb-20">
+      {/* Visually hidden — keeps a real H1 for SEO/accessibility without
+          putting text on top of the banner image. */}
+      <h1 className="sr-only">Find Your Next Photoshoot Location</h1>
+
+      <section className="relative h-[520px] overflow-hidden sm:h-[620px] lg:h-[720px]">
         {siteSettings.heroImageUrl ? (
-          <>
-            <Image
-              src={siteSettings.heroImageUrl}
-              alt=""
-              fill
-              priority
-              className="object-cover"
-              unoptimized
-            />
-            <div aria-hidden="true" className="absolute inset-0 bg-black/45" />
-          </>
+          <Image
+            src={siteSettings.heroImageUrl}
+            alt=""
+            fill
+            priority
+            className="object-cover"
+            unoptimized
+          />
         ) : (
-          <>
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 bg-linear-to-br from-emerald-950 via-pb-brand to-emerald-800"
-            />
-            <div
-              aria-hidden="true"
-              className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.08),transparent_45%),radial-gradient(circle_at_80%_60%,rgba(255,255,255,0.06),transparent_50%)]"
-            />
-          </>
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-linear-to-br from-emerald-950 via-pb-brand to-emerald-800"
+          />
         )}
-        <div className="relative mx-auto w-full max-w-6xl">
-          <h1 className="font-heading max-w-2xl text-4xl font-semibold text-white sm:text-6xl">
-            Find Your Next Photoshoot Location
-          </h1>
-          <p className="mt-4 max-w-xl text-emerald-50/90">
-            Handpicked places, real locations. Discover your next shoot across Karnataka and
-            Kerala.
-          </p>
-        </div>
       </section>
 
       <div className="relative z-10 mx-auto -mt-8 max-w-6xl px-4 sm:-mt-10 sm:px-6">
