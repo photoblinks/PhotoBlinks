@@ -28,7 +28,7 @@ export function LocationCard({ location }: { location: PublicLocationCard }) {
         >
           {formatPricing(location.pricing_type, location.price)}
         </Badge>
-        <span className="absolute right-2.5 bottom-2.5 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur">
+        <span className="absolute right-2.5 bottom-2.5 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur">
           View Details →
         </span>
       </div>
@@ -37,6 +37,9 @@ export function LocationCard({ location }: { location: PublicLocationCard }) {
         <p className="flex items-center gap-1 text-sm text-muted-foreground">
           <MapPin className="size-3.5 shrink-0" />
           {[location.city?.name, location.state?.name].filter(Boolean).join(", ")}
+          {location.distanceKm != null && (
+            <span className="text-pb-brand"> · {location.distanceKm.toFixed(1)} km away</span>
+          )}
         </p>
       </div>
     </Link>

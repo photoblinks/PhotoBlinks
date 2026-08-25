@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans-override, var(--font-geist-sans));
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-playfair);
+  --font-heading: var(--font-heading-override, var(--font-geist-sans));
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -137,6 +137,17 @@
   --pb-brand: #16382a;
   --pb-brand-bright: #2f8f4e;
   --pb-cream: #faf9f5;
+  --font-sans-override: var(--font-manrope);
+  --font-heading-override: var(--font-dm-serif);
+}
+
+/* Button/badge weight per the approved type hierarchy (600 instead of the
+   shared component's default 500) — scoped so admin keeps its own weight. */
+.pb-theme :where([data-slot="button"]) {
+  font-weight: 600;
+}
+.pb-theme :where([data-slot="badge"]) {
+  font-weight: 600;
 }
 
 @layer base {

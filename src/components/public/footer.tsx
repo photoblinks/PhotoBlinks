@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Aperture } from "lucide-react";
+import { getActiveCategories } from "@/lib/public-data";
 
 const EXPLORE_LINKS = [
   { href: "/", label: "Home" },
@@ -8,7 +9,9 @@ const EXPLORE_LINKS = [
   { href: "/locations/map", label: "Map" },
 ];
 
-export function Footer() {
+export async function Footer() {
+  const categories = await getActiveCategories();
+
   return (
     <footer className="bg-pb-brand text-white">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-12 sm:grid-cols-2 sm:px-6 md:grid-cols-3">
@@ -36,6 +39,26 @@ export function Footer() {
             ))}
           </ul>
         </div>
+
+        {categories.length > 0 && (
+          <div>
+            <h3 className="mb-3 text-sm font-semibold tracking-wide text-white/90 uppercase">
+              Categories
+            </h3>
+            <ul className="flex flex-col gap-2 text-sm text-white/70">
+              {categories.slice(0, 6).map((category) => (
+                <li key={category.id}>
+                  <Link
+                    href={`/?category=${category.slug}`}
+                    className="transition-colors hover:text-white"
+                  >
+                    {category.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="border-t border-white/10 px-4 py-5 text-center text-xs text-white/60 sm:px-6">

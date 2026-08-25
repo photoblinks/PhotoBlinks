@@ -3,7 +3,7 @@ import { Footer } from "@/components/public/footer";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="pb-theme flex min-h-screen flex-col bg-pb-cream">
+    <div className="pb-theme relative flex min-h-screen flex-col bg-pb-cream">
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />

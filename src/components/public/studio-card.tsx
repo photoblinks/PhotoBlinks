@@ -26,7 +26,7 @@ export function StudioCard({ studio }: { studio: PublicStudioCard }) {
             From ₹{studio.fromPrice.toLocaleString("en-IN")}
           </Badge>
         )}
-        <span className="absolute right-2.5 bottom-2.5 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur">
+        <span className="absolute right-2.5 bottom-2.5 rounded-full bg-black/70 px-3 py-1 text-xs font-semibold text-white shadow-sm backdrop-blur">
           View Studio →
         </span>
       </div>

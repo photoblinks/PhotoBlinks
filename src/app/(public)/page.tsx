@@ -42,7 +42,14 @@ function groupByCategory(locations: PublicLocationCard[]) {
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ state?: string; city?: string; category?: string; pricing?: string }>;
+  searchParams: Promise<{
+    state?: string;
+    city?: string;
+    category?: string;
+    pricing?: string;
+    lat?: string;
+    lng?: string;
+  }>;
 }) {
   const params = await searchParams;
   const [states, cities, categories] = await Promise.all([
@@ -58,8 +65,12 @@ export default async function HomePage({
     params.pricing === "free" || params.pricing === "paid" || params.pricing === "unknown"
       ? params.pricing
       : undefined;
+  const near =
+    params.lat && params.lng
+      ? { latitude: Number(params.lat), longitude: Number(params.lng) }
+      : undefined;
 
-  const hasFilters = Boolean(selectedState || selectedCity || selectedCategory || pricingType);
+  const hasFilters = Boolean(selectedState || selectedCity || selectedCategory || pricingType || near);
 
   return (
     <div>
@@ -89,6 +100,8 @@ export default async function HomePage({
             city: params.city,
             category: params.category,
             pricing: params.pricing,
+            lat: params.lat,
+            lng: params.lng,
           }}
         />
       </div>
@@ -99,6 +112,7 @@ export default async function HomePage({
           stateId={selectedState?.id}
           cityId={selectedCity?.id}
           pricingType={pricingType}
+          near={near}
         />
       ) : (
         <BrowseByCategory categories={categories} />
@@ -112,18 +126,21 @@ async function FilteredResults({
   stateId,
   cityId,
   pricingType,
+  near,
 }: {
   categoryId?: string;
   stateId?: string;
   cityId?: string;
   pricingType?: "free" | "paid" | "unknown";
+  near?: { latitude: number; longitude: number };
 }) {
-  const results = await getPublishedLocations({ categoryId, stateId, cityId, pricingType });
+  const results = await getPublishedLocations({ categoryId, stateId, cityId, pricingType, near });
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       <h2 className="font-heading mb-6 text-xl font-semibold">
         {results.length} location{results.length === 1 ? "" : "s"} found
+        {near && " · sorted by distance"}
       </h2>
       {results.length === 0 ? (
         <p className="text-muted-foreground">
@@ -217,7 +234,7 @@ async function BrowseByCategory({
       {featuredStudios.length > 0 && (
         <section className="mb-4">
           <p className="mb-1 text-xs font-semibold tracking-[0.2em] text-pb-brand-bright uppercase">
-            Preset Locations
+            Hourly Billed
           </p>
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="font-heading text-2xl font-semibold">Studios</h2>

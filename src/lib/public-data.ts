@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { haversineDistanceKm } from "@/lib/geo";
 
 export type PricingType = "free" | "paid" | "unknown";
 
@@ -16,6 +17,7 @@ export type PublicLocationCard = {
   latitude: number | null;
   longitude: number | null;
   updatedAt: string;
+  distanceKm: number | null;
 };
 
 export async function getActiveStates() {
@@ -55,6 +57,8 @@ export async function getPublishedLocations(filters?: {
   stateId?: string;
   cityId?: string;
   pricingType?: PricingType;
+  /** When provided, results are sorted nearest-first instead of newest-first. */
+  near?: { latitude: number; longitude: number };
 }): Promise<PublicLocationCard[]> {
   const supabase = await createClient();
 
@@ -73,10 +77,15 @@ export async function getPublishedLocations(filters?: {
 
   const { data } = await query;
 
-  return (data ?? []).map((location) => {
+  const results = (data ?? []).map((location) => {
     const primaryImageUrl =
       [...(location.location_images ?? [])].sort((a, b) => a.sort_order - b.sort_order)[0]
         ?.image_url ?? null;
+
+    const distanceKm =
+      filters?.near && location.latitude != null && location.longitude != null
+        ? haversineDistanceKm(filters.near, { latitude: location.latitude, longitude: location.longitude })
+        : null;
 
     return {
       id: location.id,
@@ -91,8 +100,15 @@ export async function getPublishedLocations(filters?: {
       latitude: location.latitude,
       longitude: location.longitude,
       updatedAt: location.updated_at,
+      distanceKm,
     };
   });
+
+  if (filters?.near) {
+    results.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+  }
+
+  return results;
 }
 
 export type PublicStudioCard = {
