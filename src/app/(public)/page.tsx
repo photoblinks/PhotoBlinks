@@ -93,13 +93,16 @@ export default async function HomePage({
             className="absolute inset-0 bg-linear-to-br from-emerald-950 via-pb-brand to-emerald-800"
           />
         )}
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 h-40 bg-linear-to-t from-black/50 to-transparent"
+        />
+        <div className="absolute inset-x-0 bottom-16 px-4 text-center sm:bottom-20 sm:px-6">
+          <h1 className="font-heading text-3xl font-semibold text-white sm:text-4xl">
+            Discover the Best Photoshoot Locations in India
+          </h1>
+        </div>
       </section>
-
-      <div className="mx-auto max-w-6xl px-4 pt-8 pb-12 text-center sm:px-6 sm:pt-10 sm:pb-16">
-        <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
-          Discover the Best Photoshoot Locations in India
-        </h1>
-      </div>
 
       <div className="relative z-10 mx-auto -mt-8 max-w-6xl px-4 sm:-mt-10 sm:px-6">
         <HomeFilter
