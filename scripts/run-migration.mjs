@@ -15,9 +15,11 @@ if (!filePath) {
 
 const sql = readFileSync(filePath, "utf8");
 
+const isLocal = /localhost|127\.0\.0\.1/.test(process.env.DATABASE_URL ?? "");
+
 const client = new Client({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: isLocal ? false : { rejectUnauthorized: false },
 });
 
 await client.connect();

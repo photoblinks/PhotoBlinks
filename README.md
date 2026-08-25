@@ -6,12 +6,26 @@ Photoshoot-location discovery platform for Karnataka and Kerala, India. See [CLA
 
 Next.js (App Router) + TypeScript + Tailwind + shadcn/ui, Supabase (DB/Auth), Cloudflare R2 (images), Mapbox (maps).
 
-## Setup
+## Local development (Docker)
 
-1. Copy `.env.local.example` to `.env.local` and fill in Supabase, R2, and Mapbox credentials.
-2. Run the schema in `supabase/migrations/20260825000000_init_schema.sql` against your Supabase project (SQL Editor, or `supabase db push` if using the Supabase CLI).
-3. `npm install`
+Development runs against a local Supabase stack (Postgres/Auth/Storage in Docker), not the hosted project, so nothing touches production data day-to-day.
+
+1. Docker Desktop must be running.
+2. `npm install`
+3. `npm run db:start` — starts the local stack and applies everything in `supabase/migrations/` (first run pulls images, slower). Prints local API URL + anon/service_role keys — `.env.local` is already wired to the default local keys, only re-copy them if `db:start` ever prints different ones.
 4. `npm run dev` — [http://localhost:3000](http://localhost:3000)
+
+New migration → `npm run db:reset` (rebuilds the local DB from scratch off every file in `supabase/migrations/`, so it also catches ordering mistakes). `npm run db:stop` shuts the containers down.
+
+### Pushing schema to production
+
+`.env.production-backup` (gitignored) holds the hosted Supabase project's credentials. To apply a new migration there too:
+
+```
+node --env-file=.env.production-backup scripts/run-migration.mjs supabase/migrations/<file>.sql
+```
+
+R2 and Mapbox are shared, real, external services in both environments — there's no local/mock version of them.
 
 ## Project structure
 
