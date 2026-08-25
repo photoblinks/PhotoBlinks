@@ -138,7 +138,7 @@
   --pb-brand-bright: #2f8f4e;
   --pb-cream: #faf9f5;
   --font-sans-override: var(--font-manrope);
-  --font-heading-override: var(--font-dm-serif);
+  --font-heading-override: var(--font-roboto);
 }
 
 /* Button/badge weight per the approved type hierarchy (600 instead of the

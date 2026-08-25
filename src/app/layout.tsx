@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, DM_Serif_Display, Manrope } from "next/font/google";
+import { Geist, Geist_Mono, Roboto, Manrope } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,9 +14,8 @@ const geistMono = Geist_Mono({
 
 // Public-site brand fonts, scoped in via .pb-theme (globals.css) so the
 // admin panel keeps Geist and is unaffected.
-const dmSerifDisplay = DM_Serif_Display({
-  variable: "--font-dm-serif",
-  weight: "400",
+const roboto = Roboto({
+  variable: "--font-roboto",
   subsets: ["latin"],
 });
 
@@ -38,7 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${dmSerifDisplay.variable} ${manrope.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${roboto.variable} ${manrope.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
