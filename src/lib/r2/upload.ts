@@ -20,7 +20,7 @@ export async function createPresignedUploadUrl(key: string, contentType: string)
     expiresIn: PRESIGNED_URL_TTL_SECONDS,
   });
 
-  const publicUrl = `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${key}`;
+  const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
 
   return { uploadUrl, publicUrl };
 }
