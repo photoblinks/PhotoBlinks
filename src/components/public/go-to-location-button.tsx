@@ -1,3 +1,4 @@
+import { ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buildGoToLocationUrl } from "@/lib/geo";
 
@@ -18,6 +19,7 @@ export function GoToLocationButton({
       render={<a href={href} target="_blank" rel="noopener noreferrer" />}
       className="w-full sm:w-auto"
     >
+      <ArrowUpRight className="size-4" />
       Go to Location
     </Button>
   );

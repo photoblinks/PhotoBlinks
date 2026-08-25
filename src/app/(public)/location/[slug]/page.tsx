@@ -91,14 +91,12 @@ export default async function LocationDetailPage({ params }: Props) {
       <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <h2 className="font-heading mb-4 text-xl font-semibold">About This Location</h2>
-          <dl className="mb-5 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+          <dl className="mb-5 flex flex-col gap-2.5 text-sm">
             {infoRows.map((row) => (
-              <div key={row.label} className="flex items-start gap-2">
-                <row.icon className="mt-0.5 size-4 shrink-0 text-pb-brand" />
-                <div>
-                  <dt className="text-xs text-muted-foreground">{row.label}</dt>
-                  <dd className="font-medium">{row.value}</dd>
-                </div>
+              <div key={row.label} className="flex items-center gap-3">
+                <row.icon className="size-4 shrink-0 text-muted-foreground" />
+                <dt className="w-20 shrink-0 text-muted-foreground">{row.label}</dt>
+                <dd className="font-medium">{row.value}</dd>
               </div>
             ))}
           </dl>
@@ -147,9 +145,12 @@ export default async function LocationDetailPage({ params }: Props) {
                 </p>
               </div>
               {hasCoords && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Navigation className="size-4 text-pb-brand" />
-                  <DistanceDisplay latitude={location.latitude!} longitude={location.longitude!} />
+                <div className="flex items-start gap-2 text-sm">
+                  <Navigation className="mt-0.5 size-4 shrink-0 text-pb-brand" />
+                  <div>
+                    <p className="text-muted-foreground">Distance from you</p>
+                    <DistanceDisplay latitude={location.latitude!} longitude={location.longitude!} />
+                  </div>
                 </div>
               )}
               <GoToLocationButton
