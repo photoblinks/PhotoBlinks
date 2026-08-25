@@ -15,6 +15,7 @@ export type PublicLocationCard = {
   primaryImageUrl: string | null;
   latitude: number | null;
   longitude: number | null;
+  updatedAt: string;
 };
 
 export async function getActiveStates() {
@@ -60,7 +61,7 @@ export async function getPublishedLocations(filters?: {
   let query = supabase
     .from("locations")
     .select(
-      "id, name, slug, pricing_type, price, latitude, longitude, categories(name, slug, sort_order), states(name, slug), cities(name, slug), location_images(image_url, sort_order)",
+      "id, name, slug, pricing_type, price, latitude, longitude, updated_at, categories(name, slug, sort_order), states(name, slug), cities(name, slug), location_images(image_url, sort_order)",
     )
     .eq("is_published", true)
     .order("created_at", { ascending: false });
@@ -89,6 +90,59 @@ export async function getPublishedLocations(filters?: {
       primaryImageUrl,
       latitude: location.latitude,
       longitude: location.longitude,
+      updatedAt: location.updated_at,
+    };
+  });
+}
+
+export type PublicStudioCard = {
+  id: string;
+  name: string;
+  slug: string;
+  state: { name: string; slug: string } | null;
+  city: { name: string; slug: string } | null;
+  primaryImageUrl: string | null;
+  fromPrice: number | null;
+  updatedAt: string;
+};
+
+/** All published studios matching the given filters, newest first. Each
+ * embeds its resolved state/city, primary (first) image, and the lowest of
+ * its saved pricing options (if any) for card display. */
+export async function getPublishedStudios(filters?: {
+  stateId?: string;
+  cityId?: string;
+}): Promise<PublicStudioCard[]> {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("studios")
+    .select(
+      "id, name, slug, updated_at, states(name, slug), cities(name, slug), studio_images(image_url, sort_order), studio_pricing_options(price)",
+    )
+    .eq("is_published", true)
+    .order("created_at", { ascending: false });
+
+  if (filters?.stateId) query = query.eq("state_id", filters.stateId);
+  if (filters?.cityId) query = query.eq("city_id", filters.cityId);
+
+  const { data } = await query;
+
+  return (data ?? []).map((studio) => {
+    const primaryImageUrl =
+      [...(studio.studio_images ?? [])].sort((a, b) => a.sort_order - b.sort_order)[0]
+        ?.image_url ?? null;
+    const prices = (studio.studio_pricing_options ?? []).map((o) => o.price);
+
+    return {
+      id: studio.id,
+      name: studio.name,
+      slug: studio.slug,
+      state: Array.isArray(studio.states) ? (studio.states[0] ?? null) : studio.states,
+      city: Array.isArray(studio.cities) ? (studio.cities[0] ?? null) : studio.cities,
+      primaryImageUrl,
+      fromPrice: prices.length > 0 ? Math.min(...prices) : null,
+      updatedAt: studio.updated_at,
     };
   });
 }

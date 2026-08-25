@@ -7,6 +7,9 @@ import { YouTubeEmbed } from "@/components/public/youtube-embed";
 import { MiniMap } from "@/components/public/mini-map";
 import { DistanceDisplay } from "@/components/public/distance-display";
 import { GoToLocationButton } from "@/components/public/go-to-location-button";
+import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { JsonLd } from "@/components/public/json-ld";
+import { absoluteUrl, buildLocalBusinessJsonLd } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -41,8 +44,19 @@ export default async function StudioDetailPage({ params }: Props) {
 
   const hasCoords = studio.latitude != null && studio.longitude != null;
 
+  const breadcrumbItems = [
+    { name: "Home", path: "/" },
+    { name: "Studios", path: "/studios" },
+    ...(studio.state ? [{ name: studio.state.name, path: `/studios/${studio.state.slug}` }] : []),
+    ...(studio.state && studio.city
+      ? [{ name: studio.city.name, path: `/studios/${studio.state.slug}/${studio.city.slug}` }]
+      : []),
+    { name: studio.name, path: `/studio/${studio.slug}` },
+  ];
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <Breadcrumbs items={breadcrumbItems} />
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold">{studio.name}</h1>
@@ -50,7 +64,7 @@ export default async function StudioDetailPage({ params }: Props) {
             {[studio.city?.name, studio.state?.name].filter(Boolean).join(", ")}
           </p>
         </div>
-        <ShareButton title={studio.name} url={`https://photoblinks.com/studio/${studio.slug}`} />
+        <ShareButton title={studio.name} url={absoluteUrl(`/studio/${studio.slug}`)} />
       </div>
 
       <ImageGallery images={studio.images} alt={studio.name} />
@@ -125,6 +139,8 @@ export default async function StudioDetailPage({ params }: Props) {
           />
         </aside>
       </div>
+
+      <JsonLd data={buildLocalBusinessJsonLd(studio)} />
     </div>
   );
 }

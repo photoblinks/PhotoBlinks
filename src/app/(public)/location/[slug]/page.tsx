@@ -8,6 +8,9 @@ import { YouTubeEmbed } from "@/components/public/youtube-embed";
 import { MiniMap } from "@/components/public/mini-map";
 import { DistanceDisplay } from "@/components/public/distance-display";
 import { GoToLocationButton } from "@/components/public/go-to-location-button";
+import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { JsonLd } from "@/components/public/json-ld";
+import { absoluteUrl, buildPlaceJsonLd } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -43,8 +46,27 @@ export default async function LocationDetailPage({ params }: Props) {
 
   const hasCoords = location.latitude != null && location.longitude != null;
 
+  const breadcrumbItems = [
+    { name: "Home", path: "/" },
+    { name: "Locations", path: "/locations" },
+    ...(location.state ? [{ name: location.state.name, path: `/locations/${location.state.slug}` }] : []),
+    ...(location.state && location.city
+      ? [{ name: location.city.name, path: `/locations/${location.state.slug}/${location.city.slug}` }]
+      : []),
+    ...(location.state && location.city && location.category
+      ? [
+          {
+            name: location.category.name,
+            path: `/locations/${location.state.slug}/${location.city.slug}/${location.category.slug}`,
+          },
+        ]
+      : []),
+    { name: location.name, path: `/location/${location.slug}` },
+  ];
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <Breadcrumbs items={breadcrumbItems} />
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold">{location.name}</h1>
@@ -52,7 +74,7 @@ export default async function LocationDetailPage({ params }: Props) {
             {[location.city?.name, location.state?.name].filter(Boolean).join(", ")}
           </p>
         </div>
-        <ShareButton title={location.name} url={`https://photoblinks.com/location/${location.slug}`} />
+        <ShareButton title={location.name} url={absoluteUrl(`/location/${location.slug}`)} />
       </div>
 
       <ImageGallery images={location.images} alt={location.name} />
@@ -130,6 +152,8 @@ export default async function LocationDetailPage({ params }: Props) {
           />
         </aside>
       </div>
+
+      <JsonLd data={buildPlaceJsonLd(location)} />
     </div>
   );
 }
