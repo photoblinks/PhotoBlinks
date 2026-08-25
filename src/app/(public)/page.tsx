@@ -77,11 +77,7 @@ export default async function HomePage({
 
   return (
     <div>
-      {/* Visually hidden — keeps a real H1 for SEO/accessibility without
-          putting text on top of the banner image. */}
-      <h1 className="sr-only">Find Your Next Photoshoot Location</h1>
-
-      <section className="relative h-[520px] overflow-hidden sm:h-[620px] lg:h-[720px]">
+      <section className="relative h-[300px] overflow-hidden sm:h-[360px] lg:h-[400px]">
         {siteSettings.heroImageUrl ? (
           <Image
             src={siteSettings.heroImageUrl}
@@ -113,6 +109,12 @@ export default async function HomePage({
             lng: params.lng,
           }}
         />
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 py-10 text-center sm:px-6 sm:py-12">
+        <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
+          Discover the Best Photoshoot Locations in India
+        </h1>
       </div>
 
       {hasFilters ? (
