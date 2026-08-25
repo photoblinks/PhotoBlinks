@@ -12,6 +12,7 @@ export function StudioCard({ studio }: { studio: PublicStudioCard }) {
             src={studio.primaryImageUrl}
             alt={studio.name}
             fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             unoptimized
           />
@@ -25,7 +26,7 @@ export function StudioCard({ studio }: { studio: PublicStudioCard }) {
           className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/50 to-transparent"
         />
         {studio.fromPrice != null && (
-          <span className="absolute top-3 left-3 rounded-full bg-black/60 px-3.5 py-1.5 text-sm font-[250] text-white backdrop-blur-sm">
+          <span className="absolute top-3 left-3 rounded-full bg-linear-to-b from-white/25 via-black/55 to-black/55 px-2.5 py-1 text-xs font-[250] text-white shadow-sm ring-1 ring-white/20 backdrop-blur-sm">
             From ₹{studio.fromPrice.toLocaleString("en-IN")}
           </span>
         )}

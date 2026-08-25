@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import {
   getActiveCategories,
@@ -8,11 +7,14 @@ import {
   getPublishedLocations,
   getPublishedStudios,
   getSiteSettings,
-  type PublicLocationCard,
+  groupLocationsByCategory,
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
+import { HeroBannerSlider } from "@/components/public/hero-banner-slider";
 import { LocationCard } from "@/components/public/location-card";
 import { StudioCard } from "@/components/public/studio-card";
+import { JsonLd } from "@/components/public/json-ld";
+import { DEFAULT_OG_IMAGE, buildOrganizationJsonLd, buildWebSiteJsonLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Find Your Perfect Photoshoot Location",
@@ -25,21 +27,11 @@ export const metadata: Metadata = {
     url: "/",
     siteName: "PhotoBlinks",
     type: "website",
+    images: [DEFAULT_OG_IMAGE],
   },
 };
 
 const PREVIEW_COUNT = 4;
-
-function groupByCategory(locations: PublicLocationCard[]) {
-  const grouped = new Map<string, PublicLocationCard[]>();
-  for (const location of locations) {
-    const slug = location.category?.slug;
-    if (!slug) continue;
-    if (!grouped.has(slug)) grouped.set(slug, []);
-    grouped.get(slug)!.push(location);
-  }
-  return grouped;
-}
 
 export default async function HomePage({
   searchParams,
@@ -78,15 +70,8 @@ export default async function HomePage({
   return (
     <div>
       <section className="relative h-[520px] overflow-hidden sm:h-[620px] lg:h-[720px]">
-        {siteSettings.heroImageUrl ? (
-          <Image
-            src={siteSettings.heroImageUrl}
-            alt=""
-            fill
-            priority
-            className="object-cover"
-            unoptimized
-          />
+        {siteSettings.bannerImages.length > 0 ? (
+          <HeroBannerSlider images={siteSettings.bannerImages} />
         ) : (
           <div
             aria-hidden="true"
@@ -99,7 +84,7 @@ export default async function HomePage({
         />
         <div className="absolute inset-x-0 bottom-16 px-4 text-center sm:bottom-20 sm:px-6">
           <h1 className="font-heading text-3xl font-semibold text-white sm:text-4xl">
-            Discover the Best Photoshoot Locations in India
+            Discover Stunning Pre-Wedding Photoshoot Locations in India
           </h1>
         </div>
       </section>
@@ -131,6 +116,9 @@ export default async function HomePage({
       ) : (
         <BrowseByCategory categories={categories} />
       )}
+
+      <JsonLd data={buildWebSiteJsonLd()} />
+      <JsonLd data={buildOrganizationJsonLd()} />
     </div>
   );
 }
@@ -180,13 +168,12 @@ async function BrowseByCategory({
     getPublishedLocations(),
     getPublishedStudios(),
   ]);
-  const grouped = groupByCategory(allPublished);
-  const paidLocations = allPublished.filter((l) => l.pricing_type === "paid").slice(0, PREVIEW_COUNT);
+  const grouped = groupLocationsByCategory(allPublished);
   const featuredStudios = studios.slice(0, PREVIEW_COUNT);
 
   const sectionsWithLocations = categories.filter((c) => (grouped.get(c.slug)?.length ?? 0) > 0);
 
-  if (sectionsWithLocations.length === 0 && paidLocations.length === 0 && featuredStudios.length === 0) {
+  if (sectionsWithLocations.length === 0 && featuredStudios.length === 0) {
     return (
       <section className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6">
         <p className="text-muted-foreground">
@@ -225,25 +212,6 @@ async function BrowseByCategory({
           </section>
         );
       })}
-
-      {paidLocations.length > 0 && (
-        <section className="mb-14">
-          <div className="mb-4 flex items-baseline justify-between">
-            <h2 className="font-heading text-2xl font-semibold">Paid Locations</h2>
-            <Link
-              href="/?pricing=paid"
-              className="text-sm font-medium text-pb-brand hover:underline"
-            >
-              View All →
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-            {paidLocations.map((location) => (
-              <LocationCard key={location.id} location={location} />
-            ))}
-          </div>
-        </section>
-      )}
 
       {featuredStudios.length > 0 && (
         <section className="mb-4">

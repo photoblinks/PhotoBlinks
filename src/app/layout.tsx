@@ -24,19 +24,39 @@ const manrope = Manrope({
   subsets: ["latin"],
 });
 
+const DEFAULT_TITLE = "PhotoBlinks - Discover Photoshoot Locations";
+const DEFAULT_DESCRIPTION = "Discover beautiful photoshoot locations across Karnataka and Kerala.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: {
-    default: "PhotoBlinks - Discover Photoshoot Locations",
+    default: DEFAULT_TITLE,
     template: "%s | PhotoBlinks",
   },
-  description: "Discover beautiful photoshoot locations across Karnataka and Kerala.",
+  description: DEFAULT_DESCRIPTION,
+  openGraph: {
+    siteName: "PhotoBlinks",
+    type: "website",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "PhotoBlinks — Photoshoot Locations",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
+      lang="en-IN"
       className={`${geistSans.variable} ${geistMono.variable} ${roboto.variable} ${manrope.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getPublishedLocations } from "@/lib/public-data";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Photoshoot Locations by State",
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     url: "/locations",
     siteName: "PhotoBlinks",
     type: "website",
+    images: [DEFAULT_OG_IMAGE],
   },
 };
 

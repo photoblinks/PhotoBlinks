@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Building2, LayoutGrid, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,8 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 type Option = { id: string; name: string; slug: string };
 type City = Option & { state_id: string };
@@ -21,18 +21,49 @@ const ALL = "all";
 const FIELD_TRIGGER_CLASS =
   "h-auto w-full justify-start gap-0 border-0 bg-transparent p-0 text-sm font-medium shadow-none hover:bg-transparent data-placeholder:text-muted-foreground";
 
+const PRICING_LABELS: Record<string, string> = { free: "Free", paid: "Paid", unknown: "Unknown" };
+
+/** Trigger content for one filter field: a caption + value on desktop
+ * (two lines), collapsed to a single line on mobile — just the field's
+ * label until something is picked, then the picked value. */
+function FilterFieldText({
+  label,
+  mobilePlaceholder,
+  desktopPlaceholder,
+  value,
+}: {
+  label: string;
+  mobilePlaceholder: string;
+  desktopPlaceholder: string;
+  value?: string;
+}) {
+  return (
+    <span className="flex flex-1 flex-col gap-0.5 overflow-hidden text-left">
+      <span className="hidden text-[0.7rem] font-semibold text-muted-foreground sm:block">
+        {label}
+      </span>
+      <span className="truncate text-sm font-medium">
+        <span className="sm:hidden">{value ?? mobilePlaceholder}</span>
+        <span className="hidden sm:inline">{value ?? desktopPlaceholder}</span>
+      </span>
+    </span>
+  );
+}
+
 export function HomeFilter({
   states,
   cities,
   categories,
   initial,
   basePath = "/",
+  className,
 }: {
   states: Option[];
   cities: City[];
   categories: Option[];
   initial: { state?: string; city?: string; category?: string; pricing?: string; lat?: string; lng?: string };
   basePath?: string;
+  className?: string;
 }) {
   const router = useRouter();
 
@@ -48,8 +79,33 @@ export function HomeFilter({
   );
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  // Guards against a getCurrentPosition callback resolving after the user
+  // has since reset the form, disabled location, or started a newer
+  // request — without this a slow/stale callback could resurrect old
+  // coordinates and navigate away from wherever the user just went.
+  const locationRequestIdRef = useRef(0);
 
   const citiesForState = cities.filter((c) => c.state_id === stateId);
+
+  const selectedStateName = stateId !== ALL ? states.find((s) => s.id === stateId)?.name : undefined;
+  const selectedCityName = cityId !== ALL ? cities.find((c) => c.id === cityId)?.name : undefined;
+  const selectedCategoryName =
+    categorySlug !== ALL ? categories.find((c) => c.slug === categorySlug)?.name : undefined;
+  const selectedPricingName = pricing !== ALL ? PRICING_LABELS[pricing] : undefined;
+
+  const isFiltered =
+    stateId !== ALL || cityId !== ALL || categorySlug !== ALL || pricing !== ALL || coords !== null;
+
+  function handleReset() {
+    locationRequestIdRef.current += 1;
+    setStateId(ALL);
+    setCityId(ALL);
+    setCategorySlug(ALL);
+    setPricing(ALL);
+    setCoords(null);
+    setLocationError(null);
+    router.push(basePath);
+  }
 
   function handleStateChange(value: string) {
     setStateId(value);
@@ -87,6 +143,7 @@ export function HomeFilter({
     setLocationError(null);
 
     if (!checked) {
+      locationRequestIdRef.current += 1;
       setCoords(null);
       navigate(buildParams(null));
       return;
@@ -97,9 +154,13 @@ export function HomeFilter({
       return;
     }
 
+    locationRequestIdRef.current += 1;
+    const requestId = locationRequestIdRef.current;
+
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        if (requestId !== locationRequestIdRef.current) return;
         const next = {
           lat: position.coords.latitude.toString(),
           lng: position.coords.longitude.toString(),
@@ -109,6 +170,7 @@ export function HomeFilter({
         navigate(buildParams(next));
       },
       () => {
+        if (requestId !== locationRequestIdRef.current) return;
         setLocating(false);
         setLocationError("Location permission was denied.");
       },
@@ -119,88 +181,99 @@ export function HomeFilter({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-xl sm:flex-row sm:items-stretch sm:gap-0 sm:divide-x sm:divide-border sm:p-3"
+      className={cn(
+        "flex flex-col gap-4 rounded-2xl bg-white p-4 shadow-xl sm:flex-row sm:items-stretch sm:gap-0 sm:divide-x sm:divide-border sm:p-3",
+        className,
+      )}
     >
-      <div className="flex flex-1 items-center gap-2.5 sm:px-4">
+      <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
         <MapPin className="size-4 shrink-0 text-pb-brand" />
-        <div className="flex w-full flex-col gap-0.5">
-          <span className="text-[0.7rem] font-semibold text-muted-foreground">State</span>
-          <Select value={stateId} onValueChange={(value) => handleStateChange(value ?? ALL)}>
-            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
-              <SelectValue placeholder="Where to?" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Any state</SelectItem>
-              {states.map((state) => (
-                <SelectItem key={state.id} value={state.id}>
-                  {state.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={stateId} onValueChange={(value) => handleStateChange(value ?? ALL)}>
+          <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+            <FilterFieldText
+              label="State"
+              mobilePlaceholder="State"
+              desktopPlaceholder="Where to?"
+              value={selectedStateName}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Any state</SelectItem>
+            {states.map((state) => (
+              <SelectItem key={state.id} value={state.id}>
+                {state.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="flex flex-1 items-center gap-2.5 sm:px-4">
+      <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
         <Building2 className="size-4 shrink-0 text-pb-brand" />
-        <div className="flex w-full flex-col gap-0.5">
-          <span className="text-[0.7rem] font-semibold text-muted-foreground">City</span>
-          <Select
-            value={cityId}
-            onValueChange={(value) => setCityId(value ?? ALL)}
-            disabled={stateId === ALL}
-          >
-            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
-              <SelectValue placeholder="Any city" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Any city</SelectItem>
-              {citiesForState.map((city) => (
-                <SelectItem key={city.id} value={city.id}>
-                  {city.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select
+          value={cityId}
+          onValueChange={(value) => setCityId(value ?? ALL)}
+          disabled={stateId === ALL}
+        >
+          <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+            <FilterFieldText
+              label="City"
+              mobilePlaceholder="City"
+              desktopPlaceholder="Any city"
+              value={selectedCityName}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Any city</SelectItem>
+            {citiesForState.map((city) => (
+              <SelectItem key={city.id} value={city.id}>
+                {city.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="flex flex-1 items-center gap-2.5 sm:px-4">
+      <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
         <LayoutGrid className="size-4 shrink-0 text-pb-brand" />
-        <div className="flex w-full flex-col gap-0.5">
-          <span className="text-[0.7rem] font-semibold text-muted-foreground">Category</span>
-          <Select value={categorySlug} onValueChange={(value) => setCategorySlug(value ?? ALL)}>
-            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
-              <SelectValue placeholder="All categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All categories</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.slug}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={categorySlug} onValueChange={(value) => setCategorySlug(value ?? ALL)}>
+          <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+            <FilterFieldText
+              label="Category"
+              mobilePlaceholder="Category"
+              desktopPlaceholder="All categories"
+              value={selectedCategoryName}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>All categories</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.slug}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      <div className="flex flex-1 items-center gap-2.5 sm:px-4">
+      <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
         <Tag className="size-4 shrink-0 text-pb-brand" />
-        <div className="flex w-full flex-col gap-0.5">
-          <span className="text-[0.7rem] font-semibold text-muted-foreground">Pricing</span>
-          <Select value={pricing} onValueChange={(value) => setPricing(value ?? ALL)}>
-            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
-              <SelectValue placeholder="Any budget" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>Any budget</SelectItem>
-              <SelectItem value="free">Free</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="unknown">Unknown</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={pricing} onValueChange={(value) => setPricing(value ?? ALL)}>
+          <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+            <FilterFieldText
+              label="Pricing"
+              mobilePlaceholder="Pricing"
+              desktopPlaceholder="Any budget"
+              value={selectedPricingName}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Any budget</SelectItem>
+            <SelectItem value="free">Free</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="unknown">Unknown</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex flex-col justify-center gap-1 sm:px-4">
@@ -215,10 +288,20 @@ export function HomeFilter({
         {locationError && <p className="text-xs text-destructive">{locationError}</p>}
       </div>
 
-      <div className="flex items-center pt-1 sm:pt-0 sm:pl-3">
+      <div className="flex flex-col items-stretch justify-center gap-2 pt-1 sm:pt-0 sm:pl-3">
         <Button type="submit" className="w-full sm:w-auto" disabled={locating}>
           {locating ? "Locating…" : "Explore"}
         </Button>
+        {isFiltered && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={handleReset}
+          >
+            Reset
+          </Button>
+        )}
       </div>
     </form>
   );

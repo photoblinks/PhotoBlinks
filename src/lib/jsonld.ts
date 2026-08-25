@@ -4,6 +4,41 @@ export function absoluteUrl(path: string) {
   return `${SITE_URL}${path}`;
 }
 
+/** Branded default social-share image for pages without their own
+ * location/studio photo. Next.js replaces a segment's whole `openGraph`
+ * object rather than deep-merging `images` from an ancestor layout, so
+ * every page's own `openGraph.images` needs this explicitly. */
+export const DEFAULT_OG_IMAGE = {
+  url: "/opengraph-image",
+  width: 1200,
+  height: 630,
+  alt: "PhotoBlinks — Photoshoot Locations",
+};
+
+/** WebSite schema for the homepage/root experience. No potentialAction
+ * (SearchAction) — the site has filters, not a dedicated search endpoint. */
+export function buildWebSiteJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "PhotoBlinks",
+    url: absoluteUrl("/"),
+  };
+}
+
+/** Organization schema for the homepage/root experience. Only fields that
+ * are actually true of the project today — no invented sameAs, contact
+ * info, or logo asset. */
+export function buildOrganizationJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "PhotoBlinks",
+    url: absoluteUrl("/"),
+    description: "Discover beautiful photoshoot locations across Karnataka and Kerala.",
+  };
+}
+
 export function buildBreadcrumbList(items: { name: string; path: string }[]) {
   return {
     "@context": "https://schema.org",

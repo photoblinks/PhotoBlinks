@@ -91,7 +91,7 @@ export default async function LocationDetailPage({ params }: Props) {
       <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <h2 className="font-heading mb-4 text-xl font-semibold">About This Location</h2>
-          <dl className="mb-5 flex flex-col gap-2.5 text-sm">
+          <dl className="flex flex-col gap-2.5 text-sm">
             {infoRows.map((row) => (
               <div key={row.label} className="flex items-center gap-3">
                 <row.icon className="size-4 shrink-0 text-muted-foreground" />
@@ -100,16 +100,6 @@ export default async function LocationDetailPage({ params }: Props) {
               </div>
             ))}
           </dl>
-          {location.description && (
-            <p className="leading-relaxed text-foreground/90">{location.description}</p>
-          )}
-
-          {location.youtube_url && (
-            <div className="mt-8">
-              <h2 className="font-heading mb-3 text-xl font-semibold">Location Video</h2>
-              <YouTubeEmbed url={location.youtube_url} title={location.name} />
-            </div>
-          )}
         </div>
 
         <aside className="flex flex-col gap-4">
@@ -132,6 +122,17 @@ export default async function LocationDetailPage({ params }: Props) {
           </div>
         </aside>
       </div>
+
+      {location.description && (
+        <p className="mt-6 leading-relaxed text-foreground/90">{location.description}</p>
+      )}
+
+      {location.youtube_url && (
+        <div className="mt-8">
+          <h2 className="font-heading mb-3 text-xl font-semibold">Location Video</h2>
+          <YouTubeEmbed url={location.youtube_url} title={location.name} />
+        </div>
+      )}
 
       {(hasCoords || location.map_url) && (
         <div className="mt-10">

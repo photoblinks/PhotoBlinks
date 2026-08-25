@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { uploadFileToR2 } from "@/lib/r2/upload-client";
 
 type GalleryUploaderProps = {
-  kind: "locations" | "studios";
+  kind: "locations" | "studios" | "site";
   slug: string;
   name: string;
   defaultValue?: string[];

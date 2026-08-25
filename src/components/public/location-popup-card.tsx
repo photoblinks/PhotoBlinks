@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Navigation } from "lucide-react";
 import { formatPricing } from "@/lib/format";
+import { formatDistanceKm } from "@/lib/geo";
 import type { PublicLocationCard } from "@/lib/public-data";
 
 /** Compact preview card shown inside a map marker's popup. */
@@ -13,6 +15,7 @@ export function LocationPopupCard({ location }: { location: PublicLocationCard }
             src={location.primaryImageUrl}
             alt={location.name}
             fill
+            sizes="80px"
             className="object-cover"
             unoptimized
           />
@@ -27,6 +30,12 @@ export function LocationPopupCard({ location }: { location: PublicLocationCard }
         <p className="truncate text-xs text-muted-foreground">
           {[location.city?.name, location.state?.name].filter(Boolean).join(", ")}
         </p>
+        {location.distanceKm != null && (
+          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Navigation className="size-3 shrink-0 text-pb-brand" />
+            {formatDistanceKm(location.distanceKm)}
+          </p>
+        )}
         <p className="text-xs font-medium text-pb-brand">
           {location.category ? `${location.category.name} · ` : ""}
           {formatPricing(location.pricing_type, location.price)}

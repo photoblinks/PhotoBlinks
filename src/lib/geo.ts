@@ -15,6 +15,11 @@ export function haversineDistanceKm(
   return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
+/** Human-readable "X km away" / "X m away" label for a distance in km. */
+export function formatDistanceKm(km: number) {
+  return km < 1 ? `${Math.round(km * 1000)} m away` : `${km.toFixed(1)} km away`;
+}
+
 /** Google Maps "Go to Location" deep link: the stored map URL if there is
  * one, otherwise a directions link built from coordinates. Null if neither
  * is available. */

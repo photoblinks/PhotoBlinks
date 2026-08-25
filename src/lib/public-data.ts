@@ -20,14 +20,27 @@ export type PublicLocationCard = {
   distanceKm: number | null;
 };
 
+/** Groups locations by category slug, dropping any without a category.
+ * Shared by every page that browses a set of locations organized into
+ * per-category sections (homepage, state/city listing pages). */
+export function groupLocationsByCategory(locations: PublicLocationCard[]) {
+  const grouped = new Map<string, PublicLocationCard[]>();
+  for (const location of locations) {
+    const slug = location.category?.slug;
+    if (!slug) continue;
+    if (!grouped.has(slug)) grouped.set(slug, []);
+    grouped.get(slug)!.push(location);
+  }
+  return grouped;
+}
+
 export async function getSiteSettings() {
   const supabase = await createClient();
   const { data } = await supabase
-    .from("site_settings")
-    .select("hero_image_url")
-    .eq("id", true)
-    .single();
-  return { heroImageUrl: data?.hero_image_url ?? null };
+    .from("site_banner_images")
+    .select("image_url")
+    .order("sort_order");
+  return { bannerImages: (data ?? []).map((row) => row.image_url) };
 }
 
 export async function getActiveStates() {
@@ -59,6 +72,45 @@ export async function getActiveCategories() {
     .order("sort_order");
   return data ?? [];
 }
+
+/** For each category, the real /locations/{state}/{city}/{category} SEO
+ * landing page for whichever city has the most published locations in
+ * that category — so site-wide nav (e.g. the footer) can link to an
+ * actual landing page instead of a homepage filter query. Categories with
+ * no published locations anywhere are omitted, not linked to a fake URL. */
+export const getCategoryLandingPaths = cache(async function getCategoryLandingPaths() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("locations")
+    .select("categories(slug), states(slug), cities(slug)")
+    .eq("is_published", true);
+
+  const cityCounts = new Map<string, { stateSlug: string; citySlug: string; count: number }>();
+  for (const location of data ?? []) {
+    const category = Array.isArray(location.categories) ? location.categories[0] : location.categories;
+    const state = Array.isArray(location.states) ? location.states[0] : location.states;
+    const city = Array.isArray(location.cities) ? location.cities[0] : location.cities;
+    if (!category || !state || !city) continue;
+
+    const key = `${category.slug}::${state.slug}/${city.slug}`;
+    const existing = cityCounts.get(key);
+    if (existing) existing.count += 1;
+    else cityCounts.set(key, { stateSlug: state.slug, citySlug: city.slug, count: 1 });
+  }
+
+  const bestPerCategory = new Map<string, { stateSlug: string; citySlug: string; count: number }>();
+  for (const [key, value] of cityCounts) {
+    const categorySlug = key.split("::")[0];
+    const current = bestPerCategory.get(categorySlug);
+    if (!current || value.count > current.count) bestPerCategory.set(categorySlug, value);
+  }
+
+  const paths = new Map<string, string>();
+  for (const [categorySlug, best] of bestPerCategory) {
+    paths.set(categorySlug, `/locations/${best.stateSlug}/${best.citySlug}/${categorySlug}`);
+  }
+  return paths;
+});
 
 /** All published locations matching the given filters, newest first. Each
  * embeds its resolved category/state/city and primary (first) image. */

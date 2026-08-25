@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Map, { Marker, Popup } from "react-map-gl/mapbox";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Map, { Marker, NavigationControl, Popup } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { Maximize2, Minimize2 } from "lucide-react";
 import { LocationPopupCard } from "@/components/public/location-popup-card";
 import { getCategoryMarkerStyle } from "@/lib/category-style";
 import type { PublicLocationCard } from "@/lib/public-data";
@@ -13,7 +14,25 @@ type MappableLocation = PublicLocationCard & { latitude: number; longitude: numb
 
 export function LocationsMap({ locations }: { locations: PublicLocationCard[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    }
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      containerRef.current?.requestFullscreen();
+    }
+  }
 
   const mappable = useMemo(
     () =>
@@ -41,49 +60,61 @@ export function LocationsMap({ locations }: { locations: PublicLocationCard[] })
   }
 
   return (
-    <Map
-      key={mappable.map((l) => l.id).join(",")}
-      mapboxAccessToken={token}
-      initialViewState={initialViewState}
-      mapStyle="mapbox://styles/mapbox/streets-v12"
-      style={{ width: "100%", height: "100%" }}
-    >
-      {mappable.map((location) => {
-        const { color, icon: Icon } = getCategoryMarkerStyle(location.category?.slug);
-        return (
-          <Marker
-            key={location.id}
-            longitude={location.longitude}
-            latitude={location.latitude}
-            anchor="bottom"
-            onClick={(e) => {
-              e.originalEvent.stopPropagation();
-              setSelectedId(location.id);
-            }}
-          >
-            <button
-              type="button"
-              aria-label={location.name}
-              style={{ backgroundColor: color }}
-              className="flex size-8 cursor-pointer items-center justify-center rounded-full border-2 border-white text-white shadow-md"
+    <div ref={containerRef} className="relative h-full w-full bg-background">
+      <Map
+        key={mappable.map((l) => l.id).join(",")}
+        mapboxAccessToken={token}
+        initialViewState={initialViewState}
+        mapStyle="mapbox://styles/mapbox/streets-v12"
+        style={{ width: "100%", height: "100%" }}
+      >
+        <NavigationControl position="bottom-right" showCompass={false} />
+        {mappable.map((location) => {
+          const { color, icon: Icon } = getCategoryMarkerStyle(location.category?.slug);
+          return (
+            <Marker
+              key={location.id}
+              longitude={location.longitude}
+              latitude={location.latitude}
+              anchor="bottom"
+              onClick={(e) => {
+                e.originalEvent.stopPropagation();
+                setSelectedId(location.id);
+              }}
             >
-              <Icon className="size-4" strokeWidth={2} />
-            </button>
-          </Marker>
-        );
-      })}
+              <button
+                type="button"
+                aria-label={location.name}
+                style={{ backgroundColor: color }}
+                className="flex size-8 cursor-pointer items-center justify-center rounded-full border-2 border-white text-white shadow-md"
+              >
+                <Icon className="size-4" strokeWidth={2} />
+              </button>
+            </Marker>
+          );
+        })}
 
-      {selected && (
-        <Popup
-          longitude={selected.longitude}
-          latitude={selected.latitude}
-          anchor="top"
-          onClose={() => setSelectedId(null)}
-          closeOnClick={false}
-        >
-          <LocationPopupCard location={selected} />
-        </Popup>
-      )}
-    </Map>
+        {selected && (
+          <Popup
+            longitude={selected.longitude}
+            latitude={selected.latitude}
+            anchor="top"
+            onClose={() => setSelectedId(null)}
+            closeOnClick={false}
+          >
+            <LocationPopupCard location={selected} />
+          </Popup>
+        )}
+      </Map>
+
+      <button
+        type="button"
+        onClick={toggleFullscreen}
+        aria-label={isFullscreen ? "Exit fullscreen" : "View fullscreen"}
+        className="absolute top-4 right-4 z-10 flex size-9 items-center justify-center rounded-full bg-white text-foreground shadow-md hover:bg-muted"
+      >
+        {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+      </button>
+    </div>
   );
 }

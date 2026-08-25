@@ -23,7 +23,11 @@ function Logo({ light }: { light?: boolean }) {
     <Link href="/" className="flex items-center gap-2">
       <Aperture className={light ? "size-6 text-white" : "size-6 text-pb-brand"} strokeWidth={1.75} />
       <span className="flex flex-col leading-none">
-        <span className="font-heading text-lg font-semibold tracking-tight">PhotoBlinks</span>
+        <span
+          className={`font-heading text-lg font-semibold tracking-tight ${light ? "text-white" : ""}`}
+        >
+          PhotoBlinks
+        </span>
         <span
           className={`text-[0.6rem] tracking-[0.2em] uppercase ${light ? "text-white/80" : "text-muted-foreground"}`}
         >

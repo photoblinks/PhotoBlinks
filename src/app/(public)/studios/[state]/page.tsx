@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { getActiveStates, getPublishedStudios } from "@/lib/public-data";
 import { StudioCard } from "@/components/public/studio-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ state: string }> };
 
@@ -37,6 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `/studios/${data.state.slug}`,
       siteName: "PhotoBlinks",
       type: "website",
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }

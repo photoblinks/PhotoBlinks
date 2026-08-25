@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { haversineDistanceKm } from "@/lib/geo";
+import { formatDistanceKm, haversineDistanceKm } from "@/lib/geo";
 
 export function DistanceDisplay({
   latitude,
@@ -53,9 +53,5 @@ export function DistanceDisplay({
     return <p className="text-sm text-muted-foreground">{state.message}</p>;
   }
 
-  return (
-    <p className="text-sm font-medium">
-      {state.km < 1 ? `${Math.round(state.km * 1000)} m away` : `${state.km.toFixed(1)} km away`}
-    </p>
-  );
+  return <p className="text-sm font-medium">{formatDistanceKm(state.km)}</p>;
 }

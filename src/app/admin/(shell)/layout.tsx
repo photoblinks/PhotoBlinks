@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
 import { logout } from "../login/actions";
 import { Button } from "@/components/ui/button";
 
@@ -16,10 +17,8 @@ export default async function AdminShellLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthorizedAdminUser();
+  if (!user) redirect("/admin/login");
 
   return (
     <div className="flex min-h-screen">
@@ -37,7 +36,7 @@ export default async function AdminShellLayout({
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-2 border-t pt-4">
-          <span className="truncate px-2 text-xs text-muted-foreground">{user?.email}</span>
+          <span className="truncate px-2 text-xs text-muted-foreground">{user.email}</span>
           <form action={logout}>
             <Button type="submit" variant="outline" size="sm" className="w-full">
               Log out

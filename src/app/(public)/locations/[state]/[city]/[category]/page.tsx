@@ -10,7 +10,7 @@ import {
 import { LocationCard } from "@/components/public/location-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { JsonLd } from "@/components/public/json-ld";
-import { buildItemListJsonLd } from "@/lib/jsonld";
+import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ state: string; city: string; category: string }> };
 
@@ -56,6 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: path,
       siteName: "PhotoBlinks",
       type: "website",
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }

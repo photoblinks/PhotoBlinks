@@ -2,9 +2,10 @@ import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getActiveStates, getPublishedLocations } from "@/lib/public-data";
+import { getActiveStates, getPublishedLocations, groupLocationsByCategory } from "@/lib/public-data";
 import { LocationCard } from "@/components/public/location-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ state: string }> };
 
@@ -37,6 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `/locations/${data.state.slug}`,
       siteName: "PhotoBlinks",
       type: "website",
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }
@@ -49,41 +51,18 @@ export default async function StateLocationsPage({ params }: Props) {
   const { state, locations } = data;
 
   const cityMap = new Map<string, { name: string; slug: string; count: number }>();
-  // category slug -> { name, total count, city slug -> count in that city }
-  const categoryMap = new Map<
-    string,
-    { name: string; slug: string; count: number; cityCounts: Map<string, number> }
-  >();
+  const categoryMap = new Map<string, { name: string; slug: string }>();
   for (const location of locations) {
     if (location.city) {
       const existing = cityMap.get(location.city.slug);
       if (existing) existing.count += 1;
       else cityMap.set(location.city.slug, { ...location.city, count: 1 });
     }
-    if (location.category && location.city) {
-      const citySlug = location.city.slug;
-      const existing = categoryMap.get(location.category.slug);
-      if (existing) {
-        existing.count += 1;
-        existing.cityCounts.set(citySlug, (existing.cityCounts.get(citySlug) ?? 0) + 1);
-      } else {
-        categoryMap.set(location.category.slug, {
-          ...location.category,
-          count: 1,
-          cityCounts: new Map([[citySlug, 1]]),
-        });
-      }
-    }
+    if (location.category) categoryMap.set(location.category.slug, location.category);
   }
   const cities = [...cityMap.values()].sort((a, b) => a.name.localeCompare(b.name));
-  // Link each category to whichever city in this state has the most
-  // locations in it, so the link always resolves to a real page.
-  const categories = [...categoryMap.values()]
-    .map((category) => {
-      const [bestCity] = [...category.cityCounts.entries()].sort((a, b) => b[1] - a[1]);
-      return { ...category, citySlug: bestCity[0] };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const categories = [...categoryMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const grouped = groupLocationsByCategory(locations);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -114,24 +93,21 @@ export default async function StateLocationsPage({ params }: Props) {
         </div>
       )}
 
-      {categories.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {categories.map((category) => (
-            <Link
-              key={category.slug}
-              href={`/locations/${state.slug}/${category.citySlug}/${category.slug}`}
-              className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-            >
-              {category.name} ({category.count})
-            </Link>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {locations.map((location) => (
-          <LocationCard key={location.id} location={location} />
-        ))}
+      <div className="mt-8">
+        {categories.map((category) => {
+          const items = grouped.get(category.slug) ?? [];
+          if (items.length === 0) return null;
+          return (
+            <section key={category.slug} className="mb-14">
+              <h2 className="font-heading mb-4 text-2xl font-semibold">{category.name}</h2>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+                {items.map((location) => (
+                  <LocationCard key={location.id} location={location} />
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </div>
   );

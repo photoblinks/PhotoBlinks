@@ -1,10 +1,15 @@
 import { cache } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getActiveCities, getActiveStates, getPublishedLocations } from "@/lib/public-data";
+import {
+  getActiveCities,
+  getActiveStates,
+  getPublishedLocations,
+  groupLocationsByCategory,
+} from "@/lib/public-data";
 import { LocationCard } from "@/components/public/location-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ state: string; city: string }> };
 
@@ -41,6 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `/locations/${data.state.slug}/${data.city.slug}`,
       siteName: "PhotoBlinks",
       type: "website",
+      images: [DEFAULT_OG_IMAGE],
     },
   };
 }
@@ -52,14 +58,12 @@ export default async function CityLocationsPage({ params }: Props) {
 
   const { state, city, locations } = data;
 
-  const categoryMap = new Map<string, { name: string; slug: string; count: number }>();
+  const categoryMap = new Map<string, { name: string; slug: string }>();
   for (const location of locations) {
-    if (!location.category) continue;
-    const existing = categoryMap.get(location.category.slug);
-    if (existing) existing.count += 1;
-    else categoryMap.set(location.category.slug, { ...location.category, count: 1 });
+    if (location.category) categoryMap.set(location.category.slug, location.category);
   }
   const categories = [...categoryMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const grouped = groupLocationsByCategory(locations);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -77,24 +81,21 @@ export default async function CityLocationsPage({ params }: Props) {
         {categories.map((c) => c.name.toLowerCase()).join(", ")} and other scenic spots.
       </p>
 
-      {categories.length > 0 && (
-        <div className="mt-6 flex flex-wrap gap-2">
-          {categories.map((category) => (
-            <Link
-              key={category.slug}
-              href={`/locations/${state.slug}/${city.slug}/${category.slug}`}
-              className="rounded-full border px-3 py-1 text-sm hover:bg-muted"
-            >
-              {category.name} ({category.count})
-            </Link>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {locations.map((location) => (
-          <LocationCard key={location.id} location={location} />
-        ))}
+      <div className="mt-8">
+        {categories.map((category) => {
+          const items = grouped.get(category.slug) ?? [];
+          if (items.length === 0) return null;
+          return (
+            <section key={category.slug} className="mb-14">
+              <h2 className="font-heading mb-4 text-2xl font-semibold">{category.name}</h2>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+                {items.map((location) => (
+                  <LocationCard key={location.id} location={location} />
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </div>
   );

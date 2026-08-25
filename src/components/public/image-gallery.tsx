@@ -31,7 +31,15 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
           supporting rows on the right (two full-width, one split in two). */}
       <div className="flex flex-col gap-2 sm:h-[420px] sm:flex-row lg:h-[480px]">
         <div className="relative aspect-4/3 shrink-0 overflow-hidden rounded-xl bg-muted sm:aspect-auto sm:h-full sm:w-[55%]">
-          <Image src={primary} alt={alt} fill priority className="object-cover" unoptimized />
+          <Image
+            src={primary}
+            alt={alt}
+            fill
+            priority
+            sizes="(min-width: 640px) 55vw, 100vw"
+            className="object-cover"
+            unoptimized
+          />
         </div>
 
         {supporting.length > 0 && (
@@ -42,6 +50,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
                   src={supporting[0]}
                   alt={`${alt} — photo 2`}
                   fill
+                  sizes="(min-width: 640px) 45vw, 50vw"
                   className="object-cover"
                   unoptimized
                 />
@@ -53,6 +62,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
                   src={supporting[1]}
                   alt={`${alt} — photo 3`}
                   fill
+                  sizes="(min-width: 640px) 45vw, 50vw"
                   className="object-cover"
                   unoptimized
                 />
@@ -66,6 +76,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
                       src={supporting[2]}
                       alt={`${alt} — photo 4`}
                       fill
+                      sizes="(min-width: 640px) 22vw, 50vw"
                       className="object-cover"
                       unoptimized
                     />
@@ -77,6 +88,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
                       src={supporting[3]}
                       alt={`${alt} — photo 5`}
                       fill
+                      sizes="(min-width: 640px) 22vw, 50vw"
                       className="object-cover"
                       unoptimized
                     />
@@ -113,6 +125,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
                   src={image}
                   alt={`${alt} — photo ${index + 1}`}
                   fill
+                  sizes="(min-width: 640px) 33vw, 50vw"
                   className="object-cover"
                   unoptimized
                 />

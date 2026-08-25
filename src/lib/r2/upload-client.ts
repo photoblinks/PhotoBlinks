@@ -10,9 +10,18 @@ export async function uploadFileToR2(
   const presignRes = await fetch("/api/admin/r2-presign", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ kind, slug, filename: file.name, contentType: file.type }),
+    body: JSON.stringify({
+      kind,
+      slug,
+      filename: file.name,
+      contentType: file.type,
+      fileSize: file.size,
+    }),
   });
-  if (!presignRes.ok) throw new Error("Could not get an upload URL.");
+  if (!presignRes.ok) {
+    const body = await presignRes.json().catch(() => null);
+    throw new Error(body?.error ?? "Could not get an upload URL.");
+  }
   const { uploadUrl, publicUrl } = await presignRes.json();
 
   const putRes = await fetch(uploadUrl, {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Globe, ArrowRight } from "lucide-react";
 import { formatPricing } from "@/lib/format";
+import { formatDistanceKm } from "@/lib/geo";
 import type { PublicLocationCard } from "@/lib/public-data";
 
 export function LocationCard({ location }: { location: PublicLocationCard }) {
@@ -13,6 +14,7 @@ export function LocationCard({ location }: { location: PublicLocationCard }) {
             src={location.primaryImageUrl}
             alt={location.name}
             fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             unoptimized
           />
@@ -25,7 +27,7 @@ export function LocationCard({ location }: { location: PublicLocationCard }) {
           aria-hidden="true"
           className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/50 to-transparent"
         />
-        <span className="absolute top-3 left-3 rounded-full bg-black/60 px-3.5 py-1.5 text-sm font-[250] text-white backdrop-blur-sm">
+        <span className="absolute top-3 left-3 rounded-full bg-linear-to-b from-white/25 via-black/55 to-black/55 px-2.5 py-1 text-xs font-[250] text-white shadow-sm ring-1 ring-white/20 backdrop-blur-sm">
           {formatPricing(location.pricing_type, location.price)}
         </span>
         <span className="absolute right-3 bottom-3 flex items-center gap-1 text-sm font-[250] text-white">
@@ -38,10 +40,12 @@ export function LocationCard({ location }: { location: PublicLocationCard }) {
         <p className="flex items-center gap-1.5 text-sm font-[220] text-muted-foreground">
           <Globe className="size-3.5 shrink-0" />
           {[location.city?.name, location.state?.name].filter(Boolean).join(", ")}
-          {location.distanceKm != null && (
-            <span className="text-pb-brand"> · {location.distanceKm.toFixed(1)} km away</span>
-          )}
         </p>
+        {location.distanceKm != null && (
+          <p className="text-sm font-semibold text-pb-brand">
+            {formatDistanceKm(location.distanceKm)}
+          </p>
+        )}
       </div>
     </Link>
   );

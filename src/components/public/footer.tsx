@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Aperture } from "lucide-react";
-import { getActiveCategories } from "@/lib/public-data";
+import { getActiveCategories, getCategoryLandingPaths } from "@/lib/public-data";
 
 const EXPLORE_LINKS = [
   { href: "/", label: "Home" },
@@ -10,7 +10,13 @@ const EXPLORE_LINKS = [
 ];
 
 export async function Footer() {
-  const categories = await getActiveCategories();
+  const [categories, landingPaths] = await Promise.all([
+    getActiveCategories(),
+    getCategoryLandingPaths(),
+  ]);
+  const linkedCategories = categories
+    .filter((category) => landingPaths.has(category.slug))
+    .slice(0, 6);
 
   return (
     <footer className="bg-pb-brand text-white">
@@ -40,16 +46,16 @@ export async function Footer() {
           </ul>
         </div>
 
-        {categories.length > 0 && (
+        {linkedCategories.length > 0 && (
           <div>
             <h3 className="mb-3 text-sm font-semibold tracking-wide text-white/90 uppercase">
               Categories
             </h3>
             <ul className="flex flex-col gap-2 text-sm text-white/70">
-              {categories.slice(0, 6).map((category) => (
+              {linkedCategories.map((category) => (
                 <li key={category.id}>
                   <Link
-                    href={`/?category=${category.slug}`}
+                    href={landingPaths.get(category.slug)!}
                     className="transition-colors hover:text-white"
                   >
                     {category.name}

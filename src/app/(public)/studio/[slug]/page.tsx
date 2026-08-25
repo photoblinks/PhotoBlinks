@@ -80,7 +80,7 @@ export default async function StudioDetailPage({ params }: Props) {
       <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <h2 className="font-heading mb-4 text-xl font-semibold">About This Studio</h2>
-          <dl className="mb-5 flex flex-col gap-2.5 text-sm">
+          <dl className="flex flex-col gap-2.5 text-sm">
             {infoRows.map((row) => (
               <div key={row.label} className="flex items-center gap-3">
                 <row.icon className="size-4 shrink-0 text-muted-foreground" />
@@ -89,16 +89,6 @@ export default async function StudioDetailPage({ params }: Props) {
               </div>
             ))}
           </dl>
-          {studio.description && (
-            <p className="leading-relaxed text-foreground/90">{studio.description}</p>
-          )}
-
-          {studio.youtube_url && (
-            <div className="mt-8">
-              <h2 className="font-heading mb-3 text-xl font-semibold">Studio Video</h2>
-              <YouTubeEmbed url={studio.youtube_url} title={studio.name} />
-            </div>
-          )}
         </div>
 
         <aside className="flex flex-col gap-4">
@@ -124,6 +114,17 @@ export default async function StudioDetailPage({ params }: Props) {
           </div>
         </aside>
       </div>
+
+      {studio.description && (
+        <p className="mt-6 leading-relaxed text-foreground/90">{studio.description}</p>
+      )}
+
+      {studio.youtube_url && (
+        <div className="mt-8">
+          <h2 className="font-heading mb-3 text-xl font-semibold">Studio Video</h2>
+          <YouTubeEmbed url={studio.youtube_url} title={studio.name} />
+        </div>
+      )}
 
       {(hasCoords || studio.map_url) && (
         <div className="mt-10">
