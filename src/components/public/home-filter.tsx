@@ -21,11 +21,13 @@ export function HomeFilter({
   cities,
   categories,
   initial,
+  basePath = "/",
 }: {
   states: Option[];
   cities: City[];
   categories: Option[];
   initial: { state?: string; city?: string; category?: string; pricing?: string };
+  basePath?: string;
 }) {
   const router = useRouter();
 
@@ -55,7 +57,7 @@ export function HomeFilter({
     if (citySlug) params.set("city", citySlug);
     if (categorySlug !== ALL) params.set("category", categorySlug);
     if (pricing !== ALL) params.set("pricing", pricing);
-    router.push(params.size > 0 ? `/?${params.toString()}` : "/");
+    router.push(params.size > 0 ? `${basePath}?${params.toString()}` : basePath);
   }
 
   return (

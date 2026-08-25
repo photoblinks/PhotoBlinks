@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,16 +9,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+function subscribeNoop() {
+  return () => {};
+}
+function getCanNativeShare() {
+  return typeof navigator !== "undefined" && !!navigator.share;
+}
+function getServerCanNativeShare() {
+  return false;
+}
+
 export function ShareButton({ title, url }: { title: string; url: string }) {
   const [copied, setCopied] = useState(false);
-  const [canNativeShare, setCanNativeShare] = useState(false);
 
-  // Checked post-mount only — `navigator` doesn't exist during SSR, so
-  // reading it during render would produce a client/server hydration
-  // mismatch between the simple button and the fallback dropdown.
-  useEffect(() => {
-    setCanNativeShare(typeof navigator !== "undefined" && !!navigator.share);
-  }, []);
+  // `navigator.share` never changes after mount, so this is a one-shot
+  // capability read rather than a real subscription — useSyncExternalStore
+  // still fits: it's the React-sanctioned way to read a browser-only API
+  // without a client/server hydration mismatch (SSR has no `navigator`).
+  const canNativeShare = useSyncExternalStore(
+    subscribeNoop,
+    getCanNativeShare,
+    getServerCanNativeShare,
+  );
 
   async function handleClick() {
     if (typeof navigator !== "undefined" && navigator.share) {

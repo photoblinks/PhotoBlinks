@@ -13,6 +13,8 @@ export type PublicLocationCard = {
   state: { name: string; slug: string } | null;
   city: { name: string; slug: string } | null;
   primaryImageUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export async function getActiveStates() {
@@ -58,7 +60,7 @@ export async function getPublishedLocations(filters?: {
   let query = supabase
     .from("locations")
     .select(
-      "id, name, slug, pricing_type, price, categories(name, slug, sort_order), states(name, slug), cities(name, slug), location_images(image_url, sort_order)",
+      "id, name, slug, pricing_type, price, latitude, longitude, categories(name, slug, sort_order), states(name, slug), cities(name, slug), location_images(image_url, sort_order)",
     )
     .eq("is_published", true)
     .order("created_at", { ascending: false });
@@ -85,6 +87,8 @@ export async function getPublishedLocations(filters?: {
       state: Array.isArray(location.states) ? (location.states[0] ?? null) : location.states,
       city: Array.isArray(location.cities) ? (location.cities[0] ?? null) : location.cities,
       primaryImageUrl,
+      latitude: location.latitude,
+      longitude: location.longitude,
     };
   });
 }
