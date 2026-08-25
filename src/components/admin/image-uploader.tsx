@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { uploadFileToR2 } from "@/lib/r2/upload-client";
 
 type ImageUploaderProps = {
   kind: "categories" | "locations" | "studios";
@@ -33,21 +34,7 @@ export function ImageUploader({ kind, slug, name, defaultValue }: ImageUploaderP
     setError(null);
 
     try {
-      const presignRes = await fetch("/api/admin/r2-presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, slug, filename: file.name, contentType: file.type }),
-      });
-      if (!presignRes.ok) throw new Error("Could not get an upload URL.");
-      const { uploadUrl, publicUrl } = await presignRes.json();
-
-      const putRes = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!putRes.ok) throw new Error("Upload to storage failed.");
-
+      const publicUrl = await uploadFileToR2(kind, slug, file);
       setUrl(publicUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed.");
