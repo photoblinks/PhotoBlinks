@@ -77,7 +77,7 @@ export default async function HomePage({
 
   return (
     <div>
-      <section className="relative h-[300px] overflow-hidden sm:h-[360px] lg:h-[400px]">
+      <section className="relative h-[520px] overflow-hidden sm:h-[620px] lg:h-[720px]">
         {siteSettings.heroImageUrl ? (
           <Image
             src={siteSettings.heroImageUrl}
@@ -95,6 +95,12 @@ export default async function HomePage({
         )}
       </section>
 
+      <div className="mx-auto max-w-6xl px-4 pt-8 pb-12 text-center sm:px-6 sm:pt-10 sm:pb-16">
+        <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
+          Discover the Best Photoshoot Locations in India
+        </h1>
+      </div>
+
       <div className="relative z-10 mx-auto -mt-8 max-w-6xl px-4 sm:-mt-10 sm:px-6">
         <HomeFilter
           states={states}
@@ -109,12 +115,6 @@ export default async function HomePage({
             lng: params.lng,
           }}
         />
-      </div>
-
-      <div className="mx-auto max-w-6xl px-4 py-10 text-center sm:px-6 sm:py-12">
-        <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
-          Discover the Best Photoshoot Locations in India
-        </h1>
       </div>
 
       {hasFilters ? (
