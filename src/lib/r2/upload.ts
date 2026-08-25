@@ -25,9 +25,9 @@ export async function createPresignedUploadUrl(key: string, contentType: string)
   return { uploadUrl, publicUrl };
 }
 
-/** locations/{slug}/{filename}, studios/{slug}/{filename}, or categories/{slug}/{filename}. */
+/** locations/{slug}/{filename}, studios/{slug}/{filename}, categories/{slug}/{filename}, or site/{slug}/{filename}. */
 export function buildImageKey(
-  kind: "locations" | "studios" | "categories",
+  kind: "locations" | "studios" | "categories" | "site",
   slug: string,
   filename: string,
 ) {

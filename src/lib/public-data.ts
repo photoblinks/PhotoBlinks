@@ -20,6 +20,16 @@ export type PublicLocationCard = {
   distanceKm: number | null;
 };
 
+export async function getSiteSettings() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("site_settings")
+    .select("hero_image_url")
+    .eq("id", true)
+    .single();
+  return { heroImageUrl: data?.hero_image_url ?? null };
+}
+
 export async function getActiveStates() {
   const supabase = await createClient();
   const { data } = await supabase

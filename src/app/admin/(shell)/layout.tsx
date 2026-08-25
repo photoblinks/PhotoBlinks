@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/locations", label: "Locations" },
   { href: "/admin/studios", label: "Studios" },
+  { href: "/admin/settings", label: "Settings" },
 ];
 
 export default async function AdminShellLayout({

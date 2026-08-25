@@ -7,15 +7,23 @@ import { Input } from "@/components/ui/input";
 import { uploadFileToR2 } from "@/lib/r2/upload-client";
 
 type ImageUploaderProps = {
-  kind: "categories" | "locations" | "studios";
+  kind: "categories" | "locations" | "studios" | "site";
   slug: string;
   name: string;
   defaultValue?: string | null;
+  /** Tailwind classes for the preview box. Defaults to a small square. */
+  previewClassName?: string;
 };
 
 /** Single-image uploader: uploads directly to R2 via a presigned URL and
  * writes the resulting public URL into a hidden input for form submission. */
-export function ImageUploader({ kind, slug, name, defaultValue }: ImageUploaderProps) {
+export function ImageUploader({
+  kind,
+  slug,
+  name,
+  defaultValue,
+  previewClassName = "h-32 w-32",
+}: ImageUploaderProps) {
   const [url, setUrl] = useState<string | null>(defaultValue ?? null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +55,7 @@ export function ImageUploader({ kind, slug, name, defaultValue }: ImageUploaderP
     <div className="flex flex-col gap-2">
       <input type="hidden" name={name} value={url ?? ""} />
       {url && (
-        <div className="relative h-32 w-32 overflow-hidden rounded-md border">
+        <div className={`relative overflow-hidden rounded-md border ${previewClassName}`}>
           <Image src={url} alt="" fill className="object-cover" unoptimized />
         </div>
       )}

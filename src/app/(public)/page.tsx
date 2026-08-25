@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import {
   getActiveCategories,
@@ -6,6 +7,7 @@ import {
   getActiveStates,
   getPublishedLocations,
   getPublishedStudios,
+  getSiteSettings,
   type PublicLocationCard,
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
@@ -52,10 +54,11 @@ export default async function HomePage({
   }>;
 }) {
   const params = await searchParams;
-  const [states, cities, categories] = await Promise.all([
+  const [states, cities, categories, siteSettings] = await Promise.all([
     getActiveStates(),
     getActiveCities(),
     getActiveCategories(),
+    getSiteSettings(),
   ]);
 
   const selectedState = states.find((s) => s.slug === params.state);
@@ -74,11 +77,31 @@ export default async function HomePage({
 
   return (
     <div>
-      <section className="relative overflow-hidden bg-linear-to-br from-emerald-950 via-pb-brand to-emerald-800 px-4 pt-20 pb-16 sm:px-6 sm:pt-28 sm:pb-20">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.08),transparent_45%),radial-gradient(circle_at_80%_60%,rgba(255,255,255,0.06),transparent_50%)]"
-        />
+      <section className="relative overflow-hidden px-4 pt-20 pb-16 sm:px-6 sm:pt-28 sm:pb-20">
+        {siteSettings.heroImageUrl ? (
+          <>
+            <Image
+              src={siteSettings.heroImageUrl}
+              alt=""
+              fill
+              priority
+              className="object-cover"
+              unoptimized
+            />
+            <div aria-hidden="true" className="absolute inset-0 bg-black/45" />
+          </>
+        ) : (
+          <>
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-linear-to-br from-emerald-950 via-pb-brand to-emerald-800"
+            />
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.08),transparent_45%),radial-gradient(circle_at_80%_60%,rgba(255,255,255,0.06),transparent_50%)]"
+            />
+          </>
+        )}
         <div className="relative mx-auto w-full max-w-6xl">
           <h1 className="font-heading max-w-2xl text-4xl font-semibold text-white sm:text-6xl">
             Find Your Next Photoshoot Location
