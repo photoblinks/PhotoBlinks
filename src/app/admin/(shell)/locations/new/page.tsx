@@ -10,10 +10,10 @@ export default async function NewLocationPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: categories }, { data: states }, { data: cities }] = await Promise.all([
+  const [{ data: categories }, { data: countries }, { data: states }] = await Promise.all([
     supabase.from("categories").select("id, name").order("sort_order"),
-    supabase.from("states").select("id, name").order("name"),
-    supabase.from("cities").select("id, name, state_id").order("name"),
+    supabase.from("countries").select("id, name").order("name"),
+    supabase.from("states").select("id, name, country_id").order("name"),
   ]);
 
   return (
@@ -22,8 +22,8 @@ export default async function NewLocationPage({
       <LocationForm
         action={createLocation}
         categories={categories ?? []}
+        countries={countries ?? []}
         states={states ?? []}
-        cities={cities ?? []}
         error={error}
       />
     </div>

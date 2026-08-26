@@ -6,11 +6,11 @@ import { StudioCard } from "@/components/public/studio-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
-type Props = { params: Promise<{ state: string; city: string }> };
+type Props = { params: Promise<{ country: string; state: string; city: string }> };
 
-const loadCityPage = cache(async (stateSlug: string, citySlug: string) => {
+const loadCityPage = cache(async (countrySlug: string, stateSlug: string, citySlug: string) => {
   const states = await getActiveStates();
-  const state = states.find((s) => s.slug === stateSlug);
+  const state = states.find((s) => s.slug === stateSlug && s.country?.slug === countrySlug);
   if (!state) return null;
 
   const cities = await getActiveCities();
@@ -24,21 +24,22 @@ const loadCityPage = cache(async (stateSlug: string, citySlug: string) => {
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { state: stateSlug, city: citySlug } = await params;
-  const data = await loadCityPage(stateSlug, citySlug);
+  const { country: countrySlug, state: stateSlug, city: citySlug } = await params;
+  const data = await loadCityPage(countrySlug, stateSlug, citySlug);
   if (!data) return {};
 
   const title = `Photography Studios in ${data.city.name}`;
   const description = `Browse photography studios in ${data.city.name}, ${data.state.name} for indoor and preset photoshoots.`;
+  const path = `/studios/${countrySlug}/${data.state.slug}/${data.city.slug}`;
 
   return {
     title,
     description,
-    alternates: { canonical: `/studios/${data.state.slug}/${data.city.slug}` },
+    alternates: { canonical: path },
     openGraph: {
       title: `${title} | PhotoBlinks`,
       description,
-      url: `/studios/${data.state.slug}/${data.city.slug}`,
+      url: path,
       siteName: "PhotoBlinks",
       type: "website",
       images: [DEFAULT_OG_IMAGE],
@@ -47,8 +48,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CityStudiosPage({ params }: Props) {
-  const { state: stateSlug, city: citySlug } = await params;
-  const data = await loadCityPage(stateSlug, citySlug);
+  const { country: countrySlug, state: stateSlug, city: citySlug } = await params;
+  const data = await loadCityPage(countrySlug, stateSlug, citySlug);
   if (!data) notFound();
 
   const { state, city, studios } = data;
@@ -59,8 +60,9 @@ export default async function CityStudiosPage({ params }: Props) {
         items={[
           { name: "Home", path: "/" },
           { name: "Studios", path: "/studios" },
-          { name: state.name, path: `/studios/${state.slug}` },
-          { name: city.name, path: `/studios/${state.slug}/${city.slug}` },
+          { name: state.country!.name, path: `/studios/${countrySlug}` },
+          { name: state.name, path: `/studios/${countrySlug}/${state.slug}` },
+          { name: city.name, path: `/studios/${countrySlug}/${state.slug}/${city.slug}` },
         ]}
       />
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Photography Studios in {city.name}</h1>

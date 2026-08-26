@@ -14,16 +14,16 @@ export default async function EditLocationPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: location }, { data: categories }, { data: states }, { data: cities }] =
+  const [{ data: location }, { data: categories }, { data: countries }, { data: states }] =
     await Promise.all([
       supabase
         .from("locations")
-        .select("*, location_images(image_url, sort_order)")
+        .select("*, cities(name), location_images(image_url, sort_order)")
         .eq("id", id)
         .single(),
       supabase.from("categories").select("id, name").order("sort_order"),
-      supabase.from("states").select("id, name").order("name"),
-      supabase.from("cities").select("id, name, state_id").order("name"),
+      supabase.from("countries").select("id, name").order("name"),
+      supabase.from("states").select("id, name, country_id").order("name"),
     ]);
 
   if (!location) notFound();
@@ -31,16 +31,17 @@ export default async function EditLocationPage({
   const images = [...(location.location_images ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((img) => img.image_url);
+  const cityRef = Array.isArray(location.cities) ? location.cities[0] : location.cities;
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-semibold">Edit location</h1>
       <LocationForm
         action={updateLocation.bind(null, id)}
-        location={{ ...location, images }}
+        location={{ ...location, images, city_name: cityRef?.name }}
         categories={categories ?? []}
+        countries={countries ?? []}
         states={states ?? []}
-        cities={cities ?? []}
         error={error}
       />
     </div>

@@ -4,6 +4,8 @@ import { haversineDistanceKm } from "@/lib/geo";
 
 export type PricingType = "free" | "paid" | "unknown";
 
+export type GeoRef = { name: string; slug: string };
+
 export type PublicLocationCard = {
   id: string;
   name: string;
@@ -11,8 +13,9 @@ export type PublicLocationCard = {
   pricing_type: PricingType;
   price: number | null;
   category: { name: string; slug: string; sort_order: number } | null;
-  state: { name: string; slug: string } | null;
-  city: { name: string; slug: string } | null;
+  country: GeoRef | null;
+  state: GeoRef | null;
+  city: GeoRef | null;
   primaryImageUrl: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -43,14 +46,30 @@ export async function getSiteSettings() {
   return { bannerImages: (data ?? []).map((row) => row.image_url) };
 }
 
+export async function getActiveCountries() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("countries")
+    .select("id, name, slug, code")
+    .eq("is_active", true)
+    .order("name");
+  return data ?? [];
+}
+
 export async function getActiveStates() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("states")
-    .select("id, name, slug")
+    .select("id, name, slug, country_id, countries(name, slug)")
     .eq("is_active", true)
     .order("name");
-  return data ?? [];
+  return (data ?? []).map((state) => ({
+    id: state.id,
+    name: state.name,
+    slug: state.slug,
+    country_id: state.country_id,
+    country: Array.isArray(state.countries) ? (state.countries[0] ?? null) : state.countries,
+  }));
 }
 
 export async function getActiveCities() {
@@ -82,23 +101,32 @@ export const getCategoryLandingPaths = cache(async function getCategoryLandingPa
   const supabase = await createClient();
   const { data } = await supabase
     .from("locations")
-    .select("categories(slug), states(slug), cities(slug)")
+    .select("categories(slug), countries(slug), states(slug), cities(slug)")
     .eq("is_published", true);
 
-  const cityCounts = new Map<string, { stateSlug: string; citySlug: string; count: number }>();
+  type Best = { countrySlug: string; stateSlug: string; citySlug: string; count: number };
+  const cityCounts = new Map<string, Best>();
   for (const location of data ?? []) {
     const category = Array.isArray(location.categories) ? location.categories[0] : location.categories;
+    const country = Array.isArray(location.countries) ? location.countries[0] : location.countries;
     const state = Array.isArray(location.states) ? location.states[0] : location.states;
     const city = Array.isArray(location.cities) ? location.cities[0] : location.cities;
-    if (!category || !state || !city) continue;
+    if (!category || !country || !state || !city) continue;
 
-    const key = `${category.slug}::${state.slug}/${city.slug}`;
+    const key = `${category.slug}::${country.slug}/${state.slug}/${city.slug}`;
     const existing = cityCounts.get(key);
     if (existing) existing.count += 1;
-    else cityCounts.set(key, { stateSlug: state.slug, citySlug: city.slug, count: 1 });
+    else {
+      cityCounts.set(key, {
+        countrySlug: country.slug,
+        stateSlug: state.slug,
+        citySlug: city.slug,
+        count: 1,
+      });
+    }
   }
 
-  const bestPerCategory = new Map<string, { stateSlug: string; citySlug: string; count: number }>();
+  const bestPerCategory = new Map<string, Best>();
   for (const [key, value] of cityCounts) {
     const categorySlug = key.split("::")[0];
     const current = bestPerCategory.get(categorySlug);
@@ -107,7 +135,10 @@ export const getCategoryLandingPaths = cache(async function getCategoryLandingPa
 
   const paths = new Map<string, string>();
   for (const [categorySlug, best] of bestPerCategory) {
-    paths.set(categorySlug, `/locations/${best.stateSlug}/${best.citySlug}/${categorySlug}`);
+    paths.set(
+      categorySlug,
+      `/locations/${best.countrySlug}/${best.stateSlug}/${best.citySlug}/${categorySlug}`,
+    );
   }
   return paths;
 });
@@ -116,6 +147,7 @@ export const getCategoryLandingPaths = cache(async function getCategoryLandingPa
  * embeds its resolved category/state/city and primary (first) image. */
 export async function getPublishedLocations(filters?: {
   categoryId?: string;
+  countryId?: string;
   stateId?: string;
   cityId?: string;
   pricingType?: PricingType;
@@ -127,12 +159,13 @@ export async function getPublishedLocations(filters?: {
   let query = supabase
     .from("locations")
     .select(
-      "id, name, slug, pricing_type, price, latitude, longitude, updated_at, categories(name, slug, sort_order), states(name, slug), cities(name, slug), location_images(image_url, sort_order)",
+      "id, name, slug, pricing_type, price, latitude, longitude, updated_at, categories(name, slug, sort_order), countries(name, slug), states(name, slug), cities(name, slug), location_images(image_url, sort_order)",
     )
     .eq("is_published", true)
     .order("created_at", { ascending: false });
 
   if (filters?.categoryId) query = query.eq("category_id", filters.categoryId);
+  if (filters?.countryId) query = query.eq("country_id", filters.countryId);
   if (filters?.stateId) query = query.eq("state_id", filters.stateId);
   if (filters?.cityId) query = query.eq("city_id", filters.cityId);
   if (filters?.pricingType) query = query.eq("pricing_type", filters.pricingType);
@@ -156,6 +189,7 @@ export async function getPublishedLocations(filters?: {
       pricing_type: location.pricing_type,
       price: location.price,
       category: Array.isArray(location.categories) ? (location.categories[0] ?? null) : location.categories,
+      country: Array.isArray(location.countries) ? (location.countries[0] ?? null) : location.countries,
       state: Array.isArray(location.states) ? (location.states[0] ?? null) : location.states,
       city: Array.isArray(location.cities) ? (location.cities[0] ?? null) : location.cities,
       primaryImageUrl,
@@ -177,8 +211,9 @@ export type PublicStudioCard = {
   id: string;
   name: string;
   slug: string;
-  state: { name: string; slug: string } | null;
-  city: { name: string; slug: string } | null;
+  country: GeoRef | null;
+  state: GeoRef | null;
+  city: GeoRef | null;
   primaryImageUrl: string | null;
   fromPrice: number | null;
   updatedAt: string;
@@ -188,6 +223,7 @@ export type PublicStudioCard = {
  * embeds its resolved state/city, primary (first) image, and the lowest of
  * its saved pricing options (if any) for card display. */
 export async function getPublishedStudios(filters?: {
+  countryId?: string;
   stateId?: string;
   cityId?: string;
 }): Promise<PublicStudioCard[]> {
@@ -196,11 +232,12 @@ export async function getPublishedStudios(filters?: {
   let query = supabase
     .from("studios")
     .select(
-      "id, name, slug, updated_at, states(name, slug), cities(name, slug), studio_images(image_url, sort_order), studio_pricing_options(price)",
+      "id, name, slug, updated_at, countries(name, slug), states(name, slug), cities(name, slug), studio_images(image_url, sort_order), studio_pricing_options(price)",
     )
     .eq("is_published", true)
     .order("created_at", { ascending: false });
 
+  if (filters?.countryId) query = query.eq("country_id", filters.countryId);
   if (filters?.stateId) query = query.eq("state_id", filters.stateId);
   if (filters?.cityId) query = query.eq("city_id", filters.cityId);
 
@@ -216,6 +253,7 @@ export async function getPublishedStudios(filters?: {
       id: studio.id,
       name: studio.name,
       slug: studio.slug,
+      country: Array.isArray(studio.countries) ? (studio.countries[0] ?? null) : studio.countries,
       state: Array.isArray(studio.states) ? (studio.states[0] ?? null) : studio.states,
       city: Array.isArray(studio.cities) ? (studio.cities[0] ?? null) : studio.cities,
       primaryImageUrl,
@@ -225,21 +263,35 @@ export async function getPublishedStudios(filters?: {
   });
 }
 
-export type PublicLocationDetail = {
+/** Optional detail fields shared by locations and studios — set by the
+ * admin, shown on the public page only when present. */
+export type ExtraDetails = {
+  drone_status: "allowed" | "restricted" | "conditional" | null;
+  entry_fee: string | null;
+  best_season: string | null;
+  best_time: string | null;
+  crowd: string | null;
+  access: string | null;
+  privacy: string | null;
+};
+
+const EXTRA_DETAIL_COLUMNS = "drone_status, entry_fee, best_season, best_time, crowd, access, privacy";
+
+export type PublicLocationDetail = ExtraDetails & {
   id: string;
   name: string;
   slug: string;
   description: string | null;
   pricing_type: PricingType;
   price: number | null;
-  country: string;
   map_url: string | null;
   latitude: number | null;
   longitude: number | null;
   youtube_url: string | null;
   category: { name: string; slug: string } | null;
-  state: { name: string; slug: string } | null;
-  city: { name: string; slug: string } | null;
+  country: GeoRef | null;
+  state: GeoRef | null;
+  city: GeoRef | null;
   images: string[];
 };
 
@@ -253,7 +305,7 @@ export const getPublishedLocationBySlug = cache(async function getPublishedLocat
   const { data } = await supabase
     .from("locations")
     .select(
-      "id, name, slug, description, pricing_type, price, country, map_url, latitude, longitude, youtube_url, categories(name, slug), states(name, slug), cities(name, slug), location_images(image_url, sort_order)",
+      `id, name, slug, description, pricing_type, price, map_url, latitude, longitude, youtube_url, ${EXTRA_DETAIL_COLUMNS}, categories(name, slug), countries(name, slug), states(name, slug), cities(name, slug), location_images(image_url, sort_order)`,
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -268,12 +320,19 @@ export const getPublishedLocationBySlug = cache(async function getPublishedLocat
     description: data.description,
     pricing_type: data.pricing_type,
     price: data.price,
-    country: data.country,
     map_url: data.map_url,
     latitude: data.latitude,
     longitude: data.longitude,
     youtube_url: data.youtube_url,
+    drone_status: data.drone_status,
+    entry_fee: data.entry_fee,
+    best_season: data.best_season,
+    best_time: data.best_time,
+    crowd: data.crowd,
+    access: data.access,
+    privacy: data.privacy,
     category: Array.isArray(data.categories) ? (data.categories[0] ?? null) : data.categories,
+    country: Array.isArray(data.countries) ? (data.countries[0] ?? null) : data.countries,
     state: Array.isArray(data.states) ? (data.states[0] ?? null) : data.states,
     city: Array.isArray(data.cities) ? (data.cities[0] ?? null) : data.cities,
     images: [...(data.location_images ?? [])]
@@ -282,18 +341,18 @@ export const getPublishedLocationBySlug = cache(async function getPublishedLocat
   };
 });
 
-export type PublicStudioDetail = {
+export type PublicStudioDetail = ExtraDetails & {
   id: string;
   name: string;
   slug: string;
   description: string | null;
-  country: string;
   map_url: string | null;
   latitude: number | null;
   longitude: number | null;
   youtube_url: string | null;
-  state: { name: string; slug: string } | null;
-  city: { name: string; slug: string } | null;
+  country: GeoRef | null;
+  state: GeoRef | null;
+  city: GeoRef | null;
   images: string[];
   pricingOptions: { label: string; price: number }[];
 };
@@ -307,7 +366,7 @@ export const getPublishedStudioBySlug = cache(async function getPublishedStudioB
   const { data } = await supabase
     .from("studios")
     .select(
-      "id, name, slug, description, country, map_url, latitude, longitude, youtube_url, states(name, slug), cities(name, slug), studio_images(image_url, sort_order), studio_pricing_options(label, price, sort_order)",
+      `id, name, slug, description, map_url, latitude, longitude, youtube_url, ${EXTRA_DETAIL_COLUMNS}, countries(name, slug), states(name, slug), cities(name, slug), studio_images(image_url, sort_order), studio_pricing_options(label, price, sort_order)`,
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -320,11 +379,18 @@ export const getPublishedStudioBySlug = cache(async function getPublishedStudioB
     name: data.name,
     slug: data.slug,
     description: data.description,
-    country: data.country,
     map_url: data.map_url,
     latitude: data.latitude,
     longitude: data.longitude,
     youtube_url: data.youtube_url,
+    drone_status: data.drone_status,
+    entry_fee: data.entry_fee,
+    best_season: data.best_season,
+    best_time: data.best_time,
+    crowd: data.crowd,
+    access: data.access,
+    privacy: data.privacy,
+    country: Array.isArray(data.countries) ? (data.countries[0] ?? null) : data.countries,
     state: Array.isArray(data.states) ? (data.states[0] ?? null) : data.states,
     city: Array.isArray(data.cities) ? (data.cities[0] ?? null) : data.cities,
     images: [...(data.studio_images ?? [])]

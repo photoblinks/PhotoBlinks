@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { resolveLocationGeo } from "@/lib/admin-geo";
 import { slugify } from "@/lib/slug";
 
 const optionalUrl = z.preprocess(
@@ -27,13 +28,20 @@ const studioSchema = z
     name: z.string().trim().min(1, "Name is required."),
     slug: z.string().trim().min(1),
     description: z.string().trim().optional(),
-    country: z.string().trim().min(1),
+    country_id: z.string().trim().min(1, "Country is required."),
     state_id: z.string().trim().min(1, "State is required."),
-    city_id: z.string().trim().min(1, "City is required."),
+    city_name: z.string().trim().min(1, "City is required."),
     map_url: optionalUrl,
     latitude: optionalCoord(-90, 90),
     longitude: optionalCoord(-180, 180),
     youtube_url: optionalUrl,
+    drone_status: z.enum(["allowed", "restricted", "conditional"]).optional(),
+    entry_fee: z.string().trim().optional(),
+    best_season: z.string().trim().optional(),
+    best_time: z.string().trim().optional(),
+    crowd: z.string().trim().optional(),
+    access: z.string().trim().optional(),
+    privacy: z.string().trim().optional(),
     is_published: z.boolean(),
     images: z.array(z.string().url()).default([]),
     pricingOptions: z.array(pricingOptionSchema).default([]),
@@ -61,13 +69,20 @@ function parseStudioForm(formData: FormData) {
     name,
     slug: slugInput ? slugify(slugInput) : slugify(name),
     description: String(formData.get("description") ?? "").trim() || undefined,
-    country: String(formData.get("country") ?? "India").trim() || "India",
+    country_id: String(formData.get("country_id") ?? ""),
     state_id: String(formData.get("state_id") ?? ""),
-    city_id: String(formData.get("city_id") ?? ""),
+    city_name: String(formData.get("city_name") ?? "").trim(),
     map_url: String(formData.get("map_url") ?? "").trim(),
     latitude: String(formData.get("latitude") ?? "").trim(),
     longitude: String(formData.get("longitude") ?? "").trim(),
     youtube_url: String(formData.get("youtube_url") ?? "").trim(),
+    drone_status: String(formData.get("drone_status") ?? "").trim() || undefined,
+    entry_fee: String(formData.get("entry_fee") ?? "").trim() || undefined,
+    best_season: String(formData.get("best_season") ?? "").trim() || undefined,
+    best_time: String(formData.get("best_time") ?? "").trim() || undefined,
+    crowd: String(formData.get("crowd") ?? "").trim() || undefined,
+    access: String(formData.get("access") ?? "").trim() || undefined,
+    privacy: String(formData.get("privacy") ?? "").trim() || undefined,
     is_published: formData.get("is_published") !== null,
     images: formData.getAll("images").map(String).filter(Boolean),
     pricingOptions,
@@ -122,9 +137,20 @@ export async function createStudio(formData: FormData) {
     redirect(`/admin/studios/new?error=${encodeURIComponent(message)}`);
   }
 
-  const { images, pricingOptions, ...studioValues } = values;
+  const { images, pricingOptions, city_name, ...studioValues } = values;
 
-  const { data, error } = await supabase.from("studios").insert(studioValues).select().single();
+  const cityId = await resolveLocationGeo(supabase, {
+    countryId: studioValues.country_id,
+    stateId: studioValues.state_id,
+    cityName: city_name,
+    errorRedirectPath: "/admin/studios/new",
+  });
+
+  const { data, error } = await supabase
+    .from("studios")
+    .insert({ ...studioValues, city_id: cityId })
+    .select()
+    .single();
 
   if (error) {
     redirect(`/admin/studios/new?error=${encodeURIComponent(error.message)}`);
@@ -148,9 +174,19 @@ export async function updateStudio(id: string, formData: FormData) {
     redirect(`/admin/studios/${id}/edit?error=${encodeURIComponent(message)}`);
   }
 
-  const { images, pricingOptions, ...studioValues } = values;
+  const { images, pricingOptions, city_name, ...studioValues } = values;
 
-  const { error } = await supabase.from("studios").update(studioValues).eq("id", id);
+  const cityId = await resolveLocationGeo(supabase, {
+    countryId: studioValues.country_id,
+    stateId: studioValues.state_id,
+    cityName: city_name,
+    errorRedirectPath: `/admin/studios/${id}/edit`,
+  });
+
+  const { error } = await supabase
+    .from("studios")
+    .update({ ...studioValues, city_id: cityId })
+    .eq("id", id);
 
   if (error) {
     redirect(`/admin/studios/${id}/edit?error=${encodeURIComponent(error.message)}`);

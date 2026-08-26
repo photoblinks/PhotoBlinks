@@ -5,26 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { GalleryUploader } from "@/components/admin/gallery-uploader";
 import { PricingOptionsEditor } from "@/components/admin/pricing-options-editor";
+import { ExtraDetailFields, type ExtraDetailsValue } from "@/components/admin/extra-detail-fields";
+import { GeoSelector } from "@/components/admin/geo-selector";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { slugify } from "@/lib/slug";
 
-type Studio = {
+type Studio = ExtraDetailsValue & {
   id: string;
   name: string;
   slug: string;
   description: string | null;
-  country: string;
+  country_id: string | null;
   state_id: string | null;
-  city_id: string | null;
+  city_name?: string;
   map_url: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -35,40 +30,29 @@ type Studio = {
 };
 
 type Option = { id: string; name: string };
-type City = Option & { state_id: string };
+type State = Option & { country_id: string };
 
 export function StudioForm({
   action,
   studio,
+  countries,
   states,
-  cities,
   error,
 }: {
   action: (formData: FormData) => void;
   studio?: Studio;
-  states: Option[];
-  cities: City[];
+  countries: Option[];
+  states: State[];
   error?: string;
 }) {
   const [name, setName] = useState(studio?.name ?? "");
   const [slug, setSlug] = useState(studio?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(false);
-  const [stateId, setStateId] = useState(studio?.state_id ?? "");
-  const [cityId, setCityId] = useState(studio?.city_id ?? "");
 
   function handleNameChange(value: string) {
     setName(value);
     if (!slugTouched) setSlug(slugify(value));
   }
-
-  function handleStateChange(value: string) {
-    setStateId(value);
-    if (!cities.some((c) => c.id === cityId && c.state_id === value)) {
-      setCityId("");
-    }
-  }
-
-  const citiesForState = cities.filter((c) => c.state_id === stateId);
 
   return (
     <form action={action} className="max-w-2xl">
@@ -110,53 +94,13 @@ export function StudioForm({
           />
         </Field>
 
-        <Field>
-          <FieldLabel htmlFor="country">Country</FieldLabel>
-          <Input id="country" name="country" defaultValue={studio?.country ?? "India"} required />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="state_id">State</FieldLabel>
-          <Select
-            name="state_id"
-            value={stateId || undefined}
-            onValueChange={(value) => handleStateChange(value ?? "")}
-            required
-          >
-            <SelectTrigger id="state_id" className="w-full">
-              <SelectValue placeholder="Select a state" />
-            </SelectTrigger>
-            <SelectContent>
-              {states.map((state) => (
-                <SelectItem key={state.id} value={state.id}>
-                  {state.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="city_id">City</FieldLabel>
-          <Select
-            name="city_id"
-            value={cityId || undefined}
-            onValueChange={(value) => setCityId(value ?? "")}
-            disabled={!stateId}
-            required
-          >
-            <SelectTrigger id="city_id" className="w-full">
-              <SelectValue placeholder={stateId ? "Select a city" : "Select a state first"} />
-            </SelectTrigger>
-            <SelectContent>
-              {citiesForState.map((city) => (
-                <SelectItem key={city.id} value={city.id}>
-                  {city.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+        <GeoSelector
+          countries={countries}
+          states={states}
+          defaultCountryId={studio?.country_id ?? undefined}
+          defaultStateId={studio?.state_id ?? undefined}
+          defaultCityName={studio?.city_name}
+        />
 
         <Field>
           <FieldLabel htmlFor="map_url">Google Maps URL</FieldLabel>
@@ -190,6 +134,8 @@ export function StudioForm({
           <FieldLabel htmlFor="youtube_url">YouTube URL</FieldLabel>
           <Input id="youtube_url" name="youtube_url" defaultValue={studio?.youtube_url ?? ""} />
         </Field>
+
+        <ExtraDetailFields defaultValue={studio} />
 
         <Field>
           <FieldLabel>Images</FieldLabel>

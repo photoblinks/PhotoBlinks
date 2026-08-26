@@ -10,6 +10,7 @@ import { MiniMap } from "@/components/public/mini-map";
 import { DistanceDisplay } from "@/components/public/distance-display";
 import { GoToLocationButton } from "@/components/public/go-to-location-button";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { ExtraDetailsList } from "@/components/public/extra-details-list";
 import { JsonLd } from "@/components/public/json-ld";
 import { absoluteUrl, buildPlaceJsonLd } from "@/lib/jsonld";
 
@@ -50,15 +51,25 @@ export default async function LocationDetailPage({ params }: Props) {
   const breadcrumbItems = [
     { name: "Home", path: "/" },
     { name: "Locations", path: "/locations" },
-    ...(location.state ? [{ name: location.state.name, path: `/locations/${location.state.slug}` }] : []),
-    ...(location.state && location.city
-      ? [{ name: location.city.name, path: `/locations/${location.state.slug}/${location.city.slug}` }]
+    ...(location.country
+      ? [{ name: location.country.name, path: `/locations/${location.country.slug}` }]
       : []),
-    ...(location.state && location.city && location.category
+    ...(location.country && location.state
+      ? [{ name: location.state.name, path: `/locations/${location.country.slug}/${location.state.slug}` }]
+      : []),
+    ...(location.country && location.state && location.city
+      ? [
+          {
+            name: location.city.name,
+            path: `/locations/${location.country.slug}/${location.state.slug}/${location.city.slug}`,
+          },
+        ]
+      : []),
+    ...(location.country && location.state && location.city && location.category
       ? [
           {
             name: location.category.name,
-            path: `/locations/${location.state.slug}/${location.city.slug}/${location.category.slug}`,
+            path: `/locations/${location.country.slug}/${location.state.slug}/${location.city.slug}/${location.category.slug}`,
           },
         ]
       : []),
@@ -67,7 +78,7 @@ export default async function LocationDetailPage({ params }: Props) {
 
   const infoRows = [
     location.category && { icon: Tag, label: "Category", value: location.category.name },
-    { icon: Globe, label: "Country", value: location.country },
+    location.country && { icon: Globe, label: "Country", value: location.country.name },
     location.state && { icon: MapIcon, label: "State", value: location.state.name },
     location.city && { icon: MapPin, label: "City", value: location.city.name },
   ].filter(Boolean) as { icon: typeof Tag; label: string; value: string }[];
@@ -100,6 +111,7 @@ export default async function LocationDetailPage({ params }: Props) {
               </div>
             ))}
           </dl>
+          <ExtraDetailsList details={location} />
         </div>
 
         <aside className="flex flex-col gap-4">

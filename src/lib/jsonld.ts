@@ -63,7 +63,7 @@ export function buildPlaceJsonLd(location: {
   longitude: number | null;
   city: { name: string } | null;
   state: { name: string } | null;
-  country: string;
+  country: { name: string } | null;
 }) {
   return {
     "@context": "https://schema.org",
@@ -76,7 +76,7 @@ export function buildPlaceJsonLd(location: {
       "@type": "PostalAddress",
       addressLocality: location.city?.name,
       addressRegion: location.state?.name,
-      addressCountry: location.country,
+      addressCountry: location.country?.name,
     },
     geo:
       location.latitude != null && location.longitude != null
@@ -100,7 +100,7 @@ export function buildLocalBusinessJsonLd(studio: {
   longitude: number | null;
   city: { name: string } | null;
   state: { name: string } | null;
-  country: string;
+  country: { name: string } | null;
 }) {
   return {
     "@context": "https://schema.org",
@@ -113,7 +113,7 @@ export function buildLocalBusinessJsonLd(studio: {
       "@type": "PostalAddress",
       addressLocality: studio.city?.name,
       addressRegion: studio.state?.name,
-      addressCountry: studio.country,
+      addressCountry: studio.country?.name,
     },
     geo:
       studio.latitude != null && studio.longitude != null

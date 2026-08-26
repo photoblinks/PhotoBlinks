@@ -14,14 +14,16 @@ export default async function EditStudioPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: studio }, { data: states }, { data: cities }] = await Promise.all([
+  const [{ data: studio }, { data: countries }, { data: states }] = await Promise.all([
     supabase
       .from("studios")
-      .select("*, studio_images(image_url, sort_order), studio_pricing_options(label, price, sort_order)")
+      .select(
+        "*, cities(name), studio_images(image_url, sort_order), studio_pricing_options(label, price, sort_order)",
+      )
       .eq("id", id)
       .single(),
-    supabase.from("states").select("id, name").order("name"),
-    supabase.from("cities").select("id, name, state_id").order("name"),
+    supabase.from("countries").select("id, name").order("name"),
+    supabase.from("states").select("id, name, country_id").order("name"),
   ]);
 
   if (!studio) notFound();
@@ -34,14 +36,16 @@ export default async function EditStudioPage({
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((o) => ({ label: o.label, price: o.price }));
 
+  const cityRef = Array.isArray(studio.cities) ? studio.cities[0] : studio.cities;
+
   return (
     <div>
       <h1 className="mb-6 text-2xl font-semibold">Edit studio</h1>
       <StudioForm
         action={updateStudio.bind(null, id)}
-        studio={{ ...studio, images, pricingOptions }}
+        studio={{ ...studio, images, pricingOptions, city_name: cityRef?.name }}
+        countries={countries ?? []}
         states={states ?? []}
-        cities={cities ?? []}
         error={error}
       />
     </div>

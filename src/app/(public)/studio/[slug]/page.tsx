@@ -9,6 +9,7 @@ import { MiniMap } from "@/components/public/mini-map";
 import { DistanceDisplay } from "@/components/public/distance-display";
 import { GoToLocationButton } from "@/components/public/go-to-location-button";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { ExtraDetailsList } from "@/components/public/extra-details-list";
 import { JsonLd } from "@/components/public/json-ld";
 import { absoluteUrl, buildLocalBusinessJsonLd } from "@/lib/jsonld";
 
@@ -48,15 +49,23 @@ export default async function StudioDetailPage({ params }: Props) {
   const breadcrumbItems = [
     { name: "Home", path: "/" },
     { name: "Studios", path: "/studios" },
-    ...(studio.state ? [{ name: studio.state.name, path: `/studios/${studio.state.slug}` }] : []),
-    ...(studio.state && studio.city
-      ? [{ name: studio.city.name, path: `/studios/${studio.state.slug}/${studio.city.slug}` }]
+    ...(studio.country ? [{ name: studio.country.name, path: `/studios/${studio.country.slug}` }] : []),
+    ...(studio.country && studio.state
+      ? [{ name: studio.state.name, path: `/studios/${studio.country.slug}/${studio.state.slug}` }]
+      : []),
+    ...(studio.country && studio.state && studio.city
+      ? [
+          {
+            name: studio.city.name,
+            path: `/studios/${studio.country.slug}/${studio.state.slug}/${studio.city.slug}`,
+          },
+        ]
       : []),
     { name: studio.name, path: `/studio/${studio.slug}` },
   ];
 
   const infoRows = [
-    { icon: Globe, label: "Country", value: studio.country },
+    studio.country && { icon: Globe, label: "Country", value: studio.country.name },
     studio.state && { icon: MapIcon, label: "State", value: studio.state.name },
     studio.city && { icon: MapPin, label: "City", value: studio.city.name },
   ].filter(Boolean) as { icon: typeof Globe; label: string; value: string }[];
@@ -89,6 +98,7 @@ export default async function StudioDetailPage({ params }: Props) {
               </div>
             ))}
           </dl>
+          <ExtraDetailsList details={studio} />
         </div>
 
         <aside className="flex flex-col gap-4">

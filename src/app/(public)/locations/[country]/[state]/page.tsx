@@ -7,11 +7,11 @@ import { LocationCard } from "@/components/public/location-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
-type Props = { params: Promise<{ state: string }> };
+type Props = { params: Promise<{ country: string; state: string }> };
 
-const loadStatePage = cache(async (stateSlug: string) => {
+const loadStatePage = cache(async (countrySlug: string, stateSlug: string) => {
   const states = await getActiveStates();
-  const state = states.find((s) => s.slug === stateSlug);
+  const state = states.find((s) => s.slug === stateSlug && s.country?.slug === countrySlug);
   if (!state) return null;
 
   const locations = await getPublishedLocations({ stateId: state.id });
@@ -21,21 +21,22 @@ const loadStatePage = cache(async (stateSlug: string) => {
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { state: stateSlug } = await params;
-  const data = await loadStatePage(stateSlug);
+  const { country: countrySlug, state: stateSlug } = await params;
+  const data = await loadStatePage(countrySlug, stateSlug);
   if (!data) return {};
 
   const title = `Photoshoot Locations in ${data.state.name}`;
   const description = `Explore photoshoot locations in ${data.state.name}, including beaches, temples, waterfalls, hills and other scenic spots.`;
+  const path = `/locations/${countrySlug}/${data.state.slug}`;
 
   return {
     title,
     description,
-    alternates: { canonical: `/locations/${data.state.slug}` },
+    alternates: { canonical: path },
     openGraph: {
       title: `${title} | PhotoBlinks`,
       description,
-      url: `/locations/${data.state.slug}`,
+      url: path,
       siteName: "PhotoBlinks",
       type: "website",
       images: [DEFAULT_OG_IMAGE],
@@ -44,8 +45,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function StateLocationsPage({ params }: Props) {
-  const { state: stateSlug } = await params;
-  const data = await loadStatePage(stateSlug);
+  const { country: countrySlug, state: stateSlug } = await params;
+  const data = await loadStatePage(countrySlug, stateSlug);
   if (!data) notFound();
 
   const { state, locations } = data;
@@ -70,7 +71,8 @@ export default async function StateLocationsPage({ params }: Props) {
         items={[
           { name: "Home", path: "/" },
           { name: "Locations", path: "/locations" },
-          { name: state.name, path: `/locations/${state.slug}` },
+          { name: state.country!.name, path: `/locations/${countrySlug}` },
+          { name: state.name, path: `/locations/${countrySlug}/${state.slug}` },
         ]}
       />
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Photoshoot Locations in {state.name}</h1>
@@ -84,7 +86,7 @@ export default async function StateLocationsPage({ params }: Props) {
           {cities.map((city) => (
             <Link
               key={city.slug}
-              href={`/locations/${state.slug}/${city.slug}`}
+              href={`/locations/${countrySlug}/${state.slug}/${city.slug}`}
               className="rounded-full border px-3 py-1 text-sm hover:bg-muted"
             >
               {city.name} ({city.count})

@@ -37,46 +37,52 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  // Location SEO tree: state, state/city, state/city/category — only
-  // combinations that actually have published content.
-  const stateGroups = new Map<string, { slug: string; dates: string[] }>();
-  const cityGroups = new Map<string, { statePath: string; citySlug: string; dates: string[] }>();
-  const categoryGroups = new Map<
-    string,
-    { statePath: string; citySlug: string; categorySlug: string; dates: string[] }
-  >();
+  // Location SEO tree: country, country/state, country/state/city,
+  // country/state/city/category — only combinations that actually have
+  // published content.
+  const countryGroups = new Map<string, { path: string; dates: string[] }>();
+  const stateGroups = new Map<string, { path: string; dates: string[] }>();
+  const cityGroups = new Map<string, { path: string; dates: string[] }>();
+  const categoryGroups = new Map<string, { path: string; dates: string[] }>();
 
   for (const location of locations) {
-    if (!location.state) continue;
-    const stateKey = location.state.slug;
-    if (!stateGroups.has(stateKey)) stateGroups.set(stateKey, { slug: stateKey, dates: [] });
+    if (!location.country || !location.state) continue;
+    const countryKey = location.country.slug;
+    if (!countryGroups.has(countryKey)) {
+      countryGroups.set(countryKey, { path: countryKey, dates: [] });
+    }
+    countryGroups.get(countryKey)!.dates.push(location.updatedAt);
+
+    const stateKey = `${countryKey}/${location.state.slug}`;
+    if (!stateGroups.has(stateKey)) stateGroups.set(stateKey, { path: stateKey, dates: [] });
     stateGroups.get(stateKey)!.dates.push(location.updatedAt);
 
     if (location.city) {
       const cityKey = `${stateKey}/${location.city.slug}`;
-      if (!cityGroups.has(cityKey)) {
-        cityGroups.set(cityKey, { statePath: stateKey, citySlug: location.city.slug, dates: [] });
-      }
+      if (!cityGroups.has(cityKey)) cityGroups.set(cityKey, { path: cityKey, dates: [] });
       cityGroups.get(cityKey)!.dates.push(location.updatedAt);
 
       if (location.category) {
-        const categoryKey = `${stateKey}/${location.city.slug}/${location.category.slug}`;
+        const categoryKey = `${cityKey}/${location.category.slug}`;
         if (!categoryGroups.has(categoryKey)) {
-          categoryGroups.set(categoryKey, {
-            statePath: stateKey,
-            citySlug: location.city.slug,
-            categorySlug: location.category.slug,
-            dates: [],
-          });
+          categoryGroups.set(categoryKey, { path: categoryKey, dates: [] });
         }
         categoryGroups.get(categoryKey)!.dates.push(location.updatedAt);
       }
     }
   }
 
+  for (const group of countryGroups.values()) {
+    entries.push({
+      url: `${SITE_URL}/locations/${group.path}`,
+      lastModified: latest(group.dates),
+      changeFrequency: "weekly",
+      priority: 0.6,
+    });
+  }
   for (const group of stateGroups.values()) {
     entries.push({
-      url: `${SITE_URL}/locations/${group.slug}`,
+      url: `${SITE_URL}/locations/${group.path}`,
       lastModified: latest(group.dates),
       changeFrequency: "weekly",
       priority: 0.6,
@@ -84,7 +90,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
   for (const group of cityGroups.values()) {
     entries.push({
-      url: `${SITE_URL}/locations/${group.statePath}/${group.citySlug}`,
+      url: `${SITE_URL}/locations/${group.path}`,
       lastModified: latest(group.dates),
       changeFrequency: "weekly",
       priority: 0.6,
@@ -92,35 +98,49 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
   for (const group of categoryGroups.values()) {
     entries.push({
-      url: `${SITE_URL}/locations/${group.statePath}/${group.citySlug}/${group.categorySlug}`,
+      url: `${SITE_URL}/locations/${group.path}`,
       lastModified: latest(group.dates),
       changeFrequency: "weekly",
       priority: 0.5,
     });
   }
 
-  // Studios SEO tree: state, state/city (no category level for studios).
-  const studioStateGroups = new Map<string, { slug: string; dates: string[] }>();
-  const studioCityGroups = new Map<string, { statePath: string; citySlug: string; dates: string[] }>();
+  // Studios SEO tree: country, country/state, country/state/city (no
+  // category level for studios).
+  const studioCountryGroups = new Map<string, { path: string; dates: string[] }>();
+  const studioStateGroups = new Map<string, { path: string; dates: string[] }>();
+  const studioCityGroups = new Map<string, { path: string; dates: string[] }>();
 
   for (const studio of studios) {
-    if (!studio.state) continue;
-    const stateKey = studio.state.slug;
-    if (!studioStateGroups.has(stateKey)) studioStateGroups.set(stateKey, { slug: stateKey, dates: [] });
+    if (!studio.country || !studio.state) continue;
+    const countryKey = studio.country.slug;
+    if (!studioCountryGroups.has(countryKey)) {
+      studioCountryGroups.set(countryKey, { path: countryKey, dates: [] });
+    }
+    studioCountryGroups.get(countryKey)!.dates.push(studio.updatedAt);
+
+    const stateKey = `${countryKey}/${studio.state.slug}`;
+    if (!studioStateGroups.has(stateKey)) studioStateGroups.set(stateKey, { path: stateKey, dates: [] });
     studioStateGroups.get(stateKey)!.dates.push(studio.updatedAt);
 
     if (studio.city) {
       const cityKey = `${stateKey}/${studio.city.slug}`;
-      if (!studioCityGroups.has(cityKey)) {
-        studioCityGroups.set(cityKey, { statePath: stateKey, citySlug: studio.city.slug, dates: [] });
-      }
+      if (!studioCityGroups.has(cityKey)) studioCityGroups.set(cityKey, { path: cityKey, dates: [] });
       studioCityGroups.get(cityKey)!.dates.push(studio.updatedAt);
     }
   }
 
+  for (const group of studioCountryGroups.values()) {
+    entries.push({
+      url: `${SITE_URL}/studios/${group.path}`,
+      lastModified: latest(group.dates),
+      changeFrequency: "weekly",
+      priority: 0.6,
+    });
+  }
   for (const group of studioStateGroups.values()) {
     entries.push({
-      url: `${SITE_URL}/studios/${group.slug}`,
+      url: `${SITE_URL}/studios/${group.path}`,
       lastModified: latest(group.dates),
       changeFrequency: "weekly",
       priority: 0.6,
@@ -128,7 +148,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
   for (const group of studioCityGroups.values()) {
     entries.push({
-      url: `${SITE_URL}/studios/${group.statePath}/${group.citySlug}`,
+      url: `${SITE_URL}/studios/${group.path}`,
       lastModified: latest(group.dates),
       changeFrequency: "weekly",
       priority: 0.6,
