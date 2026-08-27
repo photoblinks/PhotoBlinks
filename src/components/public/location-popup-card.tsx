@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Navigation } from "lucide-react";
-import { formatPricing } from "@/lib/format";
+import { formatPricingLabel } from "@/lib/format";
 import { formatDistanceKm } from "@/lib/geo";
 import type { PublicLocationCard } from "@/lib/public-data";
 
@@ -38,7 +38,7 @@ export function LocationPopupCard({ location }: { location: PublicLocationCard }
         )}
         <p className="text-xs font-medium text-pb-brand">
           {location.category ? `${location.category.name} · ` : ""}
-          {formatPricing(location.pricing_type, location.price)}
+          {formatPricingLabel(location.pricing_type)}
         </p>
         <Link
           href={`/location/${location.slug}`}

@@ -18,6 +18,9 @@ const locationSchema = z
     city_name: z.string().trim().min(1, "City is required."),
     pricing_type: z.enum(["free", "paid", "unknown"]),
     price: z.coerce.number().optional(),
+    price_note: z.string().trim().optional(),
+    action_type: z.enum(["book_now", "website", "call_now"]).optional(),
+    action_value: z.string().trim().optional(),
     map_url: z.string().trim().optional(),
     latitude: z.coerce.number().optional(),
     longitude: z.coerce.number().optional(),
@@ -35,6 +38,10 @@ const locationSchema = z
   .refine((data) => data.pricing_type !== "paid" || (data.price !== undefined && data.price > 0), {
     message: "Price is required when pricing is Paid.",
     path: ["price"],
+  })
+  .refine((data) => !data.action_type || !!data.action_value, {
+    message: "A URL or phone number is required when an Action Button is selected.",
+    path: ["action_value"],
   });
 
 function parseLocationForm(formData: FormData) {
@@ -51,6 +58,9 @@ function parseLocationForm(formData: FormData) {
     city_name: String(formData.get("city_name") ?? "").trim(),
     pricing_type: String(formData.get("pricing_type") ?? "unknown"),
     price: formData.get("price") ? Number(formData.get("price")) : undefined,
+    price_note: String(formData.get("price_note") ?? "").trim() || undefined,
+    action_type: String(formData.get("action_type") ?? "").trim() || undefined,
+    action_value: String(formData.get("action_value") ?? "").trim() || undefined,
     map_url: String(formData.get("map_url") ?? "").trim() || undefined,
     latitude: formData.get("latitude") ? Number(formData.get("latitude")) : undefined,
     longitude: formData.get("longitude") ? Number(formData.get("longitude")) : undefined,

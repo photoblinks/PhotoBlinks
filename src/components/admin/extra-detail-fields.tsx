@@ -19,8 +19,18 @@ export type ExtraDetailsValue = {
 };
 
 /** Shared optional detail fields for both locations and studios. All
- * optional — only shown on the public detail page when set. */
-export function ExtraDetailFields({ defaultValue }: { defaultValue?: ExtraDetailsValue }) {
+ * optional — only shown on the public detail page when set.
+ *
+ * `priceNote` is location-only (studios don't have a Pricing box with this
+ * caption) — pass it to render the field right after Entry Fee; omit it
+ * (as StudioForm does) to leave it out entirely. */
+export function ExtraDetailFields({
+  defaultValue,
+  priceNote,
+}: {
+  defaultValue?: ExtraDetailsValue;
+  priceNote?: { defaultValue?: string | null };
+}) {
   return (
     <>
       <Field>
@@ -41,6 +51,18 @@ export function ExtraDetailFields({ defaultValue }: { defaultValue?: ExtraDetail
         <FieldLabel htmlFor="entry_fee">Entry Fee</FieldLabel>
         <Input id="entry_fee" name="entry_fee" defaultValue={defaultValue?.entry_fee ?? ""} />
       </Field>
+
+      {priceNote && (
+        <Field>
+          <FieldLabel htmlFor="price_note">Price Caption</FieldLabel>
+          <Input
+            id="price_note"
+            name="price_note"
+            defaultValue={priceNote.defaultValue ?? ""}
+            placeholder="e.g. Photoshoot Price"
+          />
+        </Field>
+      )}
 
       <Field>
         <FieldLabel htmlFor="best_season">Best Season</FieldLabel>

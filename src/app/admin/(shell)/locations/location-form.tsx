@@ -14,11 +14,12 @@ import {
 } from "@/components/ui/select";
 import { GalleryUploader } from "@/components/admin/gallery-uploader";
 import { ExtraDetailFields, type ExtraDetailsValue } from "@/components/admin/extra-detail-fields";
+import { ActionButtonFields, type ActionButtonValue } from "@/components/admin/action-button-fields";
 import { GeoSelector } from "@/components/admin/geo-selector";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { slugify } from "@/lib/slug";
 
-type Location = ExtraDetailsValue & {
+type Location = ExtraDetailsValue & ActionButtonValue & {
   id: string;
   name: string;
   slug: string;
@@ -29,6 +30,7 @@ type Location = ExtraDetailsValue & {
   city_name?: string;
   pricing_type: "free" | "paid" | "unknown";
   price: number | null;
+  price_note: string | null;
   map_url: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -196,7 +198,12 @@ export function LocationForm({
           <Input id="youtube_url" name="youtube_url" defaultValue={location?.youtube_url ?? ""} />
         </Field>
 
-        <ExtraDetailFields defaultValue={location} />
+        <ActionButtonFields defaultValue={location} />
+
+        <ExtraDetailFields
+          defaultValue={location}
+          priceNote={{ defaultValue: location?.price_note }}
+        />
 
         <Field>
           <FieldLabel>Images</FieldLabel>

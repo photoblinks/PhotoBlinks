@@ -35,6 +35,8 @@ const studioSchema = z
     latitude: optionalCoord(-90, 90),
     longitude: optionalCoord(-180, 180),
     youtube_url: optionalUrl,
+    action_type: z.enum(["book_now", "website", "call_now"]).optional(),
+    action_value: z.string().trim().optional(),
     drone_status: z.enum(["allowed", "restricted", "conditional"]).optional(),
     entry_fee: z.string().trim().optional(),
     best_season: z.string().trim().optional(),
@@ -53,6 +55,10 @@ const studioSchema = z
   .refine((data) => !data.is_published || data.pricingOptions.length > 0, {
     message: "At least one pricing option is required before publishing.",
     path: ["pricingOptions"],
+  })
+  .refine((data) => !data.action_type || !!data.action_value, {
+    message: "A URL or phone number is required when an Action Button is selected.",
+    path: ["action_value"],
   });
 
 function parseStudioForm(formData: FormData) {
@@ -76,6 +82,8 @@ function parseStudioForm(formData: FormData) {
     latitude: String(formData.get("latitude") ?? "").trim(),
     longitude: String(formData.get("longitude") ?? "").trim(),
     youtube_url: String(formData.get("youtube_url") ?? "").trim(),
+    action_type: String(formData.get("action_type") ?? "").trim() || undefined,
+    action_value: String(formData.get("action_value") ?? "").trim() || undefined,
     drone_status: String(formData.get("drone_status") ?? "").trim() || undefined,
     entry_fee: String(formData.get("entry_fee") ?? "").trim() || undefined,
     best_season: String(formData.get("best_season") ?? "").trim() || undefined,

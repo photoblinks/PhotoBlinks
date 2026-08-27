@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Globe, ArrowRight } from "lucide-react";
-import { formatPricing } from "@/lib/format";
+import { formatPricingLabel } from "@/lib/format";
 import { formatDistanceKm } from "@/lib/geo";
 import type { PublicLocationCard } from "@/lib/public-data";
 
@@ -28,7 +28,7 @@ export function LocationCard({ location }: { location: PublicLocationCard }) {
           className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/50 to-transparent"
         />
         <span className="absolute top-3 left-3 rounded-full bg-linear-to-b from-white/25 via-black/55 to-black/55 px-2.5 py-1 text-xs font-[250] text-white shadow-sm ring-1 ring-white/20 backdrop-blur-sm">
-          {formatPricing(location.pricing_type, location.price)}
+          {formatPricingLabel(location.pricing_type)}
         </span>
         <span className="absolute right-3 bottom-3 flex items-center gap-1 text-sm font-[250] text-white">
           View Details

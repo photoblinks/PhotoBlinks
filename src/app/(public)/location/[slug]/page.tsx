@@ -9,6 +9,7 @@ import { YouTubeEmbed } from "@/components/public/youtube-embed";
 import { MiniMap } from "@/components/public/mini-map";
 import { DistanceDisplay } from "@/components/public/distance-display";
 import { GoToLocationButton } from "@/components/public/go-to-location-button";
+import { ActionButton } from "@/components/public/action-button";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { ExtraDetailsList } from "@/components/public/extra-details-list";
 import { JsonLd } from "@/components/public/json-ld";
@@ -83,6 +84,25 @@ export default async function LocationDetailPage({ params }: Props) {
     location.city && { icon: MapPin, label: "City", value: location.city.name },
   ].filter(Boolean) as { icon: typeof Tag; label: string; value: string }[];
 
+  // The Entry Fee detail (free text — can hold a range or conditions, e.g.
+  // "₹250 - ₹500") takes priority over the plain numeric price whenever
+  // it's been filled in; the numeric price is still collected either way
+  // for future sorting/filtering, but only shown here as a fallback.
+  const priceDisplay =
+    location.pricing_type === "paid" && location.entry_fee
+      ? location.entry_fee
+      : formatPricing(location.pricing_type, location.price);
+
+  // The admin-entered caption takes priority over the pricing-type defaults;
+  // falls back to the old hardcoded text for locations that haven't set it.
+  const priceCaption =
+    location.price_note ||
+    (location.pricing_type === "paid"
+      ? "Photoshoot Price"
+      : location.pricing_type === "free"
+        ? "Free Photoshoot Location"
+        : undefined);
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <Breadcrumbs items={breadcrumbItems} />
@@ -106,7 +126,7 @@ export default async function LocationDetailPage({ params }: Props) {
             {infoRows.map((row) => (
               <div key={row.label} className="flex items-center gap-3">
                 <row.icon className="size-4 shrink-0 text-muted-foreground" />
-                <dt className="w-20 shrink-0 text-muted-foreground">{row.label}</dt>
+                <dt className="w-24 shrink-0 text-muted-foreground">{row.label}</dt>
                 <dd className="font-medium">{row.value}</dd>
               </div>
             ))}
@@ -122,15 +142,13 @@ export default async function LocationDetailPage({ params }: Props) {
               </span>
               Pricing
             </div>
-            <p className="font-heading text-3xl font-semibold">
-              {formatPricing(location.pricing_type, location.price)}
-            </p>
-            {location.pricing_type === "paid" && (
-              <p className="text-sm text-muted-foreground">Photoshoot Price</p>
-            )}
-            {location.pricing_type === "free" && (
-              <p className="text-sm text-muted-foreground">Free Photoshoot Location</p>
-            )}
+            <p className="font-heading text-3xl font-semibold">{priceDisplay}</p>
+            {priceCaption && <p className="text-sm text-muted-foreground">{priceCaption}</p>}
+            <ActionButton
+              actionType={location.action_type}
+              actionValue={location.action_value}
+              className="mt-4 w-full"
+            />
           </div>
         </aside>
       </div>

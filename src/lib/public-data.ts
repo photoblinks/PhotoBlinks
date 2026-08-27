@@ -4,6 +4,11 @@ import { haversineDistanceKm } from "@/lib/geo";
 
 export type PricingType = "free" | "paid" | "unknown";
 
+/** Optional call-to-action button shown below "Go to Location" — shared by
+ * locations and studios. `action_value` holds a URL for book_now/website or
+ * a phone number for call_now. */
+export type ActionType = "book_now" | "website" | "call_now";
+
 export type GeoRef = { name: string; slug: string };
 
 export type PublicLocationCard = {
@@ -284,6 +289,9 @@ export type PublicLocationDetail = ExtraDetails & {
   description: string | null;
   pricing_type: PricingType;
   price: number | null;
+  price_note: string | null;
+  action_type: ActionType | null;
+  action_value: string | null;
   map_url: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -305,7 +313,7 @@ export const getPublishedLocationBySlug = cache(async function getPublishedLocat
   const { data } = await supabase
     .from("locations")
     .select(
-      `id, name, slug, description, pricing_type, price, map_url, latitude, longitude, youtube_url, ${EXTRA_DETAIL_COLUMNS}, categories(name, slug), countries(name, slug), states(name, slug), cities(name, slug), location_images(image_url, sort_order)`,
+      `id, name, slug, description, pricing_type, price, price_note, action_type, action_value, map_url, latitude, longitude, youtube_url, ${EXTRA_DETAIL_COLUMNS}, categories(name, slug), countries(name, slug), states(name, slug), cities(name, slug), location_images(image_url, sort_order)`,
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -320,6 +328,9 @@ export const getPublishedLocationBySlug = cache(async function getPublishedLocat
     description: data.description,
     pricing_type: data.pricing_type,
     price: data.price,
+    price_note: data.price_note,
+    action_type: data.action_type,
+    action_value: data.action_value,
     map_url: data.map_url,
     latitude: data.latitude,
     longitude: data.longitude,
@@ -346,6 +357,8 @@ export type PublicStudioDetail = ExtraDetails & {
   name: string;
   slug: string;
   description: string | null;
+  action_type: ActionType | null;
+  action_value: string | null;
   map_url: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -366,7 +379,7 @@ export const getPublishedStudioBySlug = cache(async function getPublishedStudioB
   const { data } = await supabase
     .from("studios")
     .select(
-      `id, name, slug, description, map_url, latitude, longitude, youtube_url, ${EXTRA_DETAIL_COLUMNS}, countries(name, slug), states(name, slug), cities(name, slug), studio_images(image_url, sort_order), studio_pricing_options(label, price, sort_order)`,
+      `id, name, slug, description, action_type, action_value, map_url, latitude, longitude, youtube_url, ${EXTRA_DETAIL_COLUMNS}, countries(name, slug), states(name, slug), cities(name, slug), studio_images(image_url, sort_order), studio_pricing_options(label, price, sort_order)`,
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -379,6 +392,8 @@ export const getPublishedStudioBySlug = cache(async function getPublishedStudioB
     name: data.name,
     slug: data.slug,
     description: data.description,
+    action_type: data.action_type,
+    action_value: data.action_value,
     map_url: data.map_url,
     latitude: data.latitude,
     longitude: data.longitude,

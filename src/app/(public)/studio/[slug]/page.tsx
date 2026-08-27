@@ -8,6 +8,7 @@ import { YouTubeEmbed } from "@/components/public/youtube-embed";
 import { MiniMap } from "@/components/public/mini-map";
 import { DistanceDisplay } from "@/components/public/distance-display";
 import { GoToLocationButton } from "@/components/public/go-to-location-button";
+import { ActionButton } from "@/components/public/action-button";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { ExtraDetailsList } from "@/components/public/extra-details-list";
 import { JsonLd } from "@/components/public/json-ld";
@@ -93,7 +94,7 @@ export default async function StudioDetailPage({ params }: Props) {
             {infoRows.map((row) => (
               <div key={row.label} className="flex items-center gap-3">
                 <row.icon className="size-4 shrink-0 text-muted-foreground" />
-                <dt className="w-20 shrink-0 text-muted-foreground">{row.label}</dt>
+                <dt className="w-24 shrink-0 text-muted-foreground">{row.label}</dt>
                 <dd className="font-medium">{row.value}</dd>
               </div>
             ))}
@@ -121,6 +122,11 @@ export default async function StudioDetailPage({ params }: Props) {
                 ))}
               </ul>
             )}
+            <ActionButton
+              actionType={studio.action_type}
+              actionValue={studio.action_value}
+              className="mt-4 w-full"
+            />
           </div>
         </aside>
       </div>

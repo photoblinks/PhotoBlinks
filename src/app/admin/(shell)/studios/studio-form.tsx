@@ -8,11 +8,12 @@ import { Switch } from "@/components/ui/switch";
 import { GalleryUploader } from "@/components/admin/gallery-uploader";
 import { PricingOptionsEditor } from "@/components/admin/pricing-options-editor";
 import { ExtraDetailFields, type ExtraDetailsValue } from "@/components/admin/extra-detail-fields";
+import { ActionButtonFields, type ActionButtonValue } from "@/components/admin/action-button-fields";
 import { GeoSelector } from "@/components/admin/geo-selector";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { slugify } from "@/lib/slug";
 
-type Studio = ExtraDetailsValue & {
+type Studio = ExtraDetailsValue & ActionButtonValue & {
   id: string;
   name: string;
   slug: string;
@@ -134,6 +135,8 @@ export function StudioForm({
           <FieldLabel htmlFor="youtube_url">YouTube URL</FieldLabel>
           <Input id="youtube_url" name="youtube_url" defaultValue={studio?.youtube_url ?? ""} />
         </Field>
+
+        <ActionButtonFields defaultValue={studio} />
 
         <ExtraDetailFields defaultValue={studio} />
 
