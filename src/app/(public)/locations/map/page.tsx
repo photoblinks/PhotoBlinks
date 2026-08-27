@@ -13,9 +13,9 @@ import { MapFiltersDrawer } from "@/components/public/map-filters-drawer";
 import { getCategoryMarkerStyle } from "@/lib/category-style";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
-const TITLE = "Photoshoot Locations Map";
+const TITLE = "Pre-Wedding Photoshoot Locations Map";
 const DESCRIPTION =
-  "Browse PhotoBlinks photoshoot locations on an interactive map — filter by state, city, category, and pricing to find your next shoot location.";
+  "Browse pre-wedding photoshoot locations on an interactive map — filter by state, city, category, and pricing to find your next shoot location.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -106,7 +106,7 @@ export default async function LocationsMapPage({
 
   return (
     <div>
-      <h1 className="sr-only">Locations Map</h1>
+      <h1 className="sr-only">Pre-Wedding Photoshoot Locations Map</h1>
 
       <div className="mx-auto hidden max-w-6xl px-4 py-4 sm:block sm:px-6">
         <HomeFilter

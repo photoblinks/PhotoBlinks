@@ -55,7 +55,6 @@ export function HeroBannerSlider({ images }: { images: string[] }) {
                 priority={i === 0}
                 sizes="100vw"
                 className="object-cover"
-                unoptimized
               />
             </div>
           ),

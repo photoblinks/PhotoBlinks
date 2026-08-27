@@ -3,7 +3,7 @@
 /** Uploads a single file to R2 via a presigned URL and returns its public URL.
  * Client-side only — calls the admin-gated /api/admin/r2-presign endpoint. */
 export async function uploadFileToR2(
-  kind: "categories" | "locations" | "studios" | "site",
+  kind: "categories" | "locations" | "studios" | "countries" | "states" | "cities" | "site",
   slug: string,
   file: File,
 ) {

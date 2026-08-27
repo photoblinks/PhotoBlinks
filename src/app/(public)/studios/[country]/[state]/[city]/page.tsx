@@ -8,6 +8,16 @@ import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ country: string; state: string; city: string }> };
 
+// No searchParams/cookies here, so this route is eligible for ISR — the
+// same 60s window as the underlying cached data queries (public-data.ts).
+// generateStaticParams is required (even empty) for a dynamic segment to
+// use ISR at all — see the matching comment in location/[slug]/page.tsx.
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  return [];
+}
+
 const loadCityPage = cache(async (countrySlug: string, stateSlug: string, citySlug: string) => {
   const states = await getActiveStates();
   const state = states.find((s) => s.slug === stateSlug && s.country?.slug === countrySlug);
@@ -28,8 +38,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await loadCityPage(countrySlug, stateSlug, citySlug);
   if (!data) return {};
 
-  const title = `Photography Studios in ${data.city.name}`;
-  const description = `Browse photography studios in ${data.city.name}, ${data.state.name} for indoor and preset photoshoots.`;
+  const title = `Pre-Wedding Photo Studios in ${data.city.name}`;
+  const description = `Browse pre-wedding photo studios in ${data.city.name}, ${data.state.name} for indoor and preset photoshoots.`;
   const path = `/studios/${countrySlug}/${data.state.slug}/${data.city.slug}`;
 
   return {
@@ -65,9 +75,11 @@ export default async function CityStudiosPage({ params }: Props) {
           { name: city.name, path: `/studios/${countrySlug}/${state.slug}/${city.slug}` },
         ]}
       />
-      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Photography Studios in {city.name}</h1>
+      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
+        Pre-Wedding Photo Studios in {city.name}
+      </h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
-        Browse photography studios in {city.name}, {state.name} for indoor and preset photoshoots.
+        Browse pre-wedding photo studios in {city.name}, {state.name} for indoor and preset photoshoots.
       </p>
 
       <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">

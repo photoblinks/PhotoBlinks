@@ -9,6 +9,16 @@ import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ country: string; state: string }> };
 
+// No searchParams/cookies here, so this route is eligible for ISR — the
+// same 60s window as the underlying cached data queries (public-data.ts).
+// generateStaticParams is required (even empty) for a dynamic segment to
+// use ISR at all — see the matching comment in location/[slug]/page.tsx.
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  return [];
+}
+
 const loadStatePage = cache(async (countrySlug: string, stateSlug: string) => {
   const states = await getActiveStates();
   const state = states.find((s) => s.slug === stateSlug && s.country?.slug === countrySlug);
@@ -25,8 +35,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await loadStatePage(countrySlug, stateSlug);
   if (!data) return {};
 
-  const title = `Photography Studios in ${data.state.name}`;
-  const description = `Browse photography studios in ${data.state.name} for indoor and preset photoshoots.`;
+  const title = `Pre-Wedding Photo Studios in ${data.state.name}`;
+  const description = `Browse pre-wedding photo studios in ${data.state.name} for indoor and preset photoshoots.`;
   const path = `/studios/${countrySlug}/${data.state.slug}`;
 
   return {
@@ -70,9 +80,11 @@ export default async function StateStudiosPage({ params }: Props) {
           { name: state.name, path: `/studios/${countrySlug}/${state.slug}` },
         ]}
       />
-      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Photography Studios in {state.name}</h1>
+      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
+        Pre-Wedding Photo Studios in {state.name}
+      </h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
-        Browse photography studios in {state.name} for indoor and preset photoshoots.
+        Browse pre-wedding photo studios in {state.name} for indoor and preset photoshoots.
       </p>
 
       {cities.length > 0 && (

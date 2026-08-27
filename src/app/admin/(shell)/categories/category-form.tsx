@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ImageUploader } from "@/components/admin/image-uploader";
-import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel, FieldError, FieldSeparator } from "@/components/ui/field";
 import { slugify } from "@/lib/slug";
 
 type Category = {
@@ -17,6 +17,9 @@ type Category = {
   image_url: string | null;
   sort_order: number;
   is_active: boolean;
+  h1_title: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
 };
 
 export function CategoryForm({
@@ -87,6 +90,9 @@ export function CategoryForm({
             name="image_url"
             defaultValue={category?.image_url}
           />
+          <p className="text-sm text-muted-foreground">
+            Also used as the banner image on this category&apos;s public page (/category/{slug || "..."}).
+          </p>
         </Field>
 
         <Field>
@@ -102,6 +108,39 @@ export function CategoryForm({
         <Field orientation="horizontal">
           <FieldLabel htmlFor="is_active">Active</FieldLabel>
           <Switch id="is_active" name="is_active" defaultChecked={category?.is_active ?? true} />
+        </Field>
+
+        <FieldSeparator>Category Page</FieldSeparator>
+
+        <Field>
+          <FieldLabel htmlFor="h1_title">Page Heading (H1)</FieldLabel>
+          <Input
+            id="h1_title"
+            name="h1_title"
+            defaultValue={category?.h1_title ?? ""}
+            placeholder={`e.g. ${name || "Category"} Photoshoot Locations`}
+          />
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="meta_title">Title Tag</FieldLabel>
+          <Input
+            id="meta_title"
+            name="meta_title"
+            defaultValue={category?.meta_title ?? ""}
+            placeholder="Shown as the page title in Google search results"
+          />
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="meta_description">Meta Description</FieldLabel>
+          <Textarea
+            id="meta_description"
+            name="meta_description"
+            defaultValue={category?.meta_description ?? ""}
+            placeholder="Shown as the page summary in Google search results"
+            rows={2}
+          />
         </Field>
 
         <Button type="submit">{category ? "Save changes" : "Create category"}</Button>

@@ -65,7 +65,6 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
             priority
             sizes="(min-width: 640px) 55vw, 100vw"
             className="object-cover"
-            unoptimized
           />
         </button>
 
@@ -84,7 +83,6 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
                   fill
                   sizes="(min-width: 640px) 45vw, 50vw"
                   className="object-cover"
-                  unoptimized
                 />
               </button>
             )}
@@ -101,7 +99,6 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
                   fill
                   sizes="(min-width: 640px) 45vw, 50vw"
                   className="object-cover"
-                  unoptimized
                 />
               </button>
             )}
@@ -120,7 +117,6 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
                       fill
                       sizes="(min-width: 640px) 22vw, 50vw"
                       className="object-cover"
-                      unoptimized
                     />
                   </button>
                 )}
@@ -137,7 +133,6 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
                       fill
                       sizes="(min-width: 640px) 22vw, 50vw"
                       className="object-cover"
-                      unoptimized
                     />
                     <span className="absolute inset-0 flex items-end justify-end bg-black/20 p-3 transition-colors hover:bg-black/35">
                       <span className="flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white">
@@ -182,7 +177,6 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
               fill
               sizes="100vw"
               className="object-contain"
-              unoptimized
             />
           </div>
 

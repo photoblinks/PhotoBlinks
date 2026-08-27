@@ -8,6 +8,16 @@ import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ country: string }> };
 
+// No searchParams/cookies here, so this route is eligible for ISR — the
+// same 60s window as the underlying cached data queries (public-data.ts).
+// generateStaticParams is required (even empty) for a dynamic segment to
+// use ISR at all — see the matching comment in location/[slug]/page.tsx.
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  return [];
+}
+
 const loadCountryPage = cache(async (countrySlug: string) => {
   const countries = await getActiveCountries();
   const country = countries.find((c) => c.slug === countrySlug);
@@ -24,8 +34,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await loadCountryPage(countrySlug);
   if (!data) return {};
 
-  const title = `Photography Studios in ${data.country.name}`;
-  const description = `Browse photography studios in ${data.country.name} by state.`;
+  const title = `Pre-Wedding Photo Studios in ${data.country.name}`;
+  const description = `Browse pre-wedding photo studios in ${data.country.name} by state.`;
 
   return {
     title,
@@ -59,7 +69,7 @@ export default async function CountryStudiosPage({ params }: Props) {
   const states = [...stateCounts.values()].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <Breadcrumbs
         items={[
           { name: "Home", path: "/" },
@@ -68,10 +78,10 @@ export default async function CountryStudiosPage({ params }: Props) {
         ]}
       />
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
-        Photography Studios in {country.name}
+        Pre-Wedding Photo Studios in {country.name}
       </h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
-        Explore photography studios in {country.name} by state.
+        Explore pre-wedding photo studios in {country.name} by state.
       </p>
 
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">

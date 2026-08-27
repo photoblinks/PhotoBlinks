@@ -57,6 +57,7 @@ export function GeoSelector({
         <FieldLabel htmlFor="country_id">Country</FieldLabel>
         <Select
           name="country_id"
+          items={countries.map((country) => ({ value: country.id, label: country.name }))}
           value={countryId || undefined}
           onValueChange={(value) => handleCountryChange(String(value))}
           required
@@ -78,6 +79,7 @@ export function GeoSelector({
         <FieldLabel htmlFor="state_id">State</FieldLabel>
         <Select
           name="state_id"
+          items={statesForCountry.map((state) => ({ value: state.id, label: state.name }))}
           value={stateId || undefined}
           onValueChange={(value) => handleStateChange(String(value))}
           disabled={!countryId}

@@ -7,9 +7,24 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveLocationGeo } from "@/lib/admin-geo";
 import { slugify } from "@/lib/slug";
 
+// Matches the "Not specified" sentinel item in the Drone Status/Amenities
+// dropdowns (see extra-detail-fields.tsx) — picking it clears the field.
+// Returns `null` (not `undefined`) in that case: an `undefined` value gets
+// dropped entirely from the Supabase update payload (JSON.stringify strips
+// undefined keys), which would silently leave the old value in place
+// instead of clearing it — `null` is required to actually null the column.
+const UNSET = "unspecified";
+
+function optionalField(formData: FormData, key: string) {
+  const value = String(formData.get(key) ?? "").trim();
+  if (!value) return undefined;
+  return value === UNSET ? null : value;
+}
+
 const locationSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required."),
+    card_name: z.string().trim().min(1, "Card Place Name is required."),
     slug: z.string().trim().min(1),
     description: z.string().trim().optional(),
     category_id: z.string().trim().min(1, "Category is required."),
@@ -19,16 +34,27 @@ const locationSchema = z
     pricing_type: z.enum(["free", "paid", "unknown"]),
     price: z.coerce.number().optional(),
     price_note: z.string().trim().optional(),
-    action_type: z.enum(["book_now", "website", "call_now"]).optional(),
+    meta_title: z.string().trim().optional(),
+    meta_description: z.string().trim().optional(),
+    action_type: z.enum(["book_now", "website", "call_now"]).nullable().optional(),
     action_value: z.string().trim().optional(),
     map_url: z.string().trim().optional(),
     latitude: z.coerce.number().optional(),
     longitude: z.coerce.number().optional(),
     youtube_url: z.string().trim().optional(),
-    drone_status: z.enum(["allowed", "restricted", "conditional"]).optional(),
+    pre_wedding_shoot: z.string().trim().optional(),
+    prior_booking: z.string().trim().optional(),
+    camera_charges: z.string().trim().optional(),
+    drone_status: z
+      .enum(["allowed", "allowed_with_permission", "restricted", "prohibited"])
+      .nullable()
+      .optional(),
     entry_fee: z.string().trim().optional(),
     best_season: z.string().trim().optional(),
     best_time: z.string().trim().optional(),
+    changing_rooms: z.enum(["available", "not_available"]).nullable().optional(),
+    parking_facility: z.enum(["available", "not_available"]).nullable().optional(),
+    facilities: z.string().trim().optional(),
     crowd: z.string().trim().optional(),
     access: z.string().trim().optional(),
     privacy: z.string().trim().optional(),
@@ -50,6 +76,7 @@ function parseLocationForm(formData: FormData) {
 
   const raw = {
     name,
+    card_name: String(formData.get("card_name") ?? "").trim(),
     slug: slugInput ? slugify(slugInput) : slugify(name),
     description: String(formData.get("description") ?? "").trim() || undefined,
     category_id: String(formData.get("category_id") ?? ""),
@@ -59,16 +86,24 @@ function parseLocationForm(formData: FormData) {
     pricing_type: String(formData.get("pricing_type") ?? "unknown"),
     price: formData.get("price") ? Number(formData.get("price")) : undefined,
     price_note: String(formData.get("price_note") ?? "").trim() || undefined,
-    action_type: String(formData.get("action_type") ?? "").trim() || undefined,
+    meta_title: String(formData.get("meta_title") ?? "").trim() || undefined,
+    meta_description: String(formData.get("meta_description") ?? "").trim() || undefined,
+    action_type: optionalField(formData, "action_type"),
     action_value: String(formData.get("action_value") ?? "").trim() || undefined,
     map_url: String(formData.get("map_url") ?? "").trim() || undefined,
     latitude: formData.get("latitude") ? Number(formData.get("latitude")) : undefined,
     longitude: formData.get("longitude") ? Number(formData.get("longitude")) : undefined,
     youtube_url: String(formData.get("youtube_url") ?? "").trim() || undefined,
-    drone_status: String(formData.get("drone_status") ?? "").trim() || undefined,
+    pre_wedding_shoot: String(formData.get("pre_wedding_shoot") ?? "").trim() || undefined,
+    prior_booking: String(formData.get("prior_booking") ?? "").trim() || undefined,
+    camera_charges: String(formData.get("camera_charges") ?? "").trim() || undefined,
+    drone_status: optionalField(formData, "drone_status"),
     entry_fee: String(formData.get("entry_fee") ?? "").trim() || undefined,
     best_season: String(formData.get("best_season") ?? "").trim() || undefined,
     best_time: String(formData.get("best_time") ?? "").trim() || undefined,
+    changing_rooms: optionalField(formData, "changing_rooms"),
+    parking_facility: optionalField(formData, "parking_facility"),
+    facilities: String(formData.get("facilities") ?? "").trim() || undefined,
     crowd: String(formData.get("crowd") ?? "").trim() || undefined,
     access: String(formData.get("access") ?? "").trim() || undefined,
     privacy: String(formData.get("privacy") ?? "").trim() || undefined,

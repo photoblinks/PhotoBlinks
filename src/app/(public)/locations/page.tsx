@@ -4,13 +4,19 @@ import { getActiveCountries, getPublishedLocations } from "@/lib/public-data";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
+// No searchParams/cookies here, so this route is eligible for ISR — the
+// same 60s window as the underlying cached data queries (public-data.ts).
+export const revalidate = 60;
+
 export const metadata: Metadata = {
-  title: "Photoshoot Locations by Country",
-  description: "Browse PhotoBlinks photoshoot locations by country.",
+  title: "Pre-Wedding Photoshoot Locations by Country",
+  description:
+    "Browse pre-wedding photoshoot locations by country, then narrow down by state and city.",
   alternates: { canonical: "/locations" },
   openGraph: {
-    title: "Photoshoot Locations by Country | PhotoBlinks",
-    description: "Browse PhotoBlinks photoshoot locations by country.",
+    title: "Pre-Wedding Photoshoot Locations by Country | PhotoBlinks",
+    description:
+      "Browse pre-wedding photoshoot locations by country, then narrow down by state and city.",
     url: "/locations",
     siteName: "PhotoBlinks",
     type: "website",
@@ -29,12 +35,14 @@ export default async function LocationsIndexPage() {
   const activeCountries = countries.filter((c) => (countryCounts.get(c.slug) ?? 0) > 0);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <Breadcrumbs items={[{ name: "Home", path: "/" }, { name: "Locations", path: "/locations" }]} />
-      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Photoshoot Locations</h1>
+      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
+        Pre-Wedding Photoshoot Locations
+      </h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
-        Explore real, published PhotoBlinks photoshoot locations by country — beaches, waterfalls,
-        temples, hills, and more.
+        Explore pre-wedding photoshoot locations by country — beaches, waterfalls, temples, hills,
+        and more. Pick a country below to narrow down by state and city.
       </p>
 
       {activeCountries.length === 0 ? (

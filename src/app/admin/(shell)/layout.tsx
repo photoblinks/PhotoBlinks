@@ -9,6 +9,9 @@ const NAV_LINKS = [
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/locations", label: "Locations" },
   { href: "/admin/studios", label: "Studios" },
+  { href: "/admin/country-pages", label: "Country Pages" },
+  { href: "/admin/state-pages", label: "State Pages" },
+  { href: "/admin/city-pages", label: "City Pages" },
   { href: "/admin/settings", label: "Settings" },
 ];
 

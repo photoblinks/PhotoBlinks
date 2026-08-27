@@ -1,3 +1,5 @@
+import type { ExtraDetails, PublicLocationDetail } from "./public-data";
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export function absoluteUrl(path: string) {
@@ -52,32 +54,91 @@ export function buildBreadcrumbList(items: { name: string; path: string }[]) {
   };
 }
 
-/** Place schema for a location detail page. Only includes fields that
- * actually exist in the database — no invented ratings/reviews/prices. */
-export function buildPlaceJsonLd(location: {
+/** Plain-text (no UI emoji) label for the drone_status enum, for use in
+ * structured data — see the emoji-prefixed DRONE_LABELS in
+ * extra-details-list.tsx for the visual equivalent. */
+const DRONE_STATUS_SCHEMA_LABELS: Record<NonNullable<ExtraDetails["drone_status"]>, string> = {
+  allowed: "Allowed",
+  allowed_with_permission: "Allowed with Permission",
+  restricted: "Restricted",
+  prohibited: "Prohibited",
+};
+
+const AVAILABILITY_BOOLEAN: Record<NonNullable<ExtraDetails["changing_rooms"]>, boolean> = {
+  available: true,
+  not_available: false,
+};
+
+type LocationFeature = {
+  "@type": "LocationFeatureSpecification";
   name: string;
-  slug: string;
-  description: string | null;
-  images: string[];
-  latitude: number | null;
-  longitude: number | null;
+  value: string | boolean;
+};
+
+/** Maps the location/studio "extra detail" fields (Shoot Details, Pricing &
+ * Timing, Amenities, Environment — the same fields rendered by
+ * ExtraDetailsList) into LocationFeatureSpecification entries. Only fields
+ * that are actually set are included — unknown/unset is omitted, never
+ * output as false. */
+function buildAmenityFeatures(details: ExtraDetails): LocationFeature[] {
+  const features: LocationFeature[] = [];
+  const add = (name: string, value: string | boolean | null) => {
+    if (value !== null && value !== "") features.push({ "@type": "LocationFeatureSpecification", name, value });
+  };
+
+  add("Pre-Wedding Shoot", details.pre_wedding_shoot);
+  add("Prior Booking", details.prior_booking);
+  add("Camera Charges", details.camera_charges);
+  add("Drone Status", details.drone_status ? DRONE_STATUS_SCHEMA_LABELS[details.drone_status] : null);
+  add("Entry Fee", details.entry_fee);
+  add("Best Season", details.best_season);
+  add("Best Time", details.best_time);
+  add("Changing Rooms", details.changing_rooms ? AVAILABILITY_BOOLEAN[details.changing_rooms] : null);
+  add("Parking Facility", details.parking_facility ? AVAILABILITY_BOOLEAN[details.parking_facility] : null);
+  add("Facilities", details.facilities);
+  add("Access", details.access);
+  add("Crowd", details.crowd);
+  add("Privacy", details.privacy);
+
+  return features;
+}
+
+function buildLocationAddress(location: {
   city: { name: string } | null;
   state: { name: string } | null;
   country: { name: string } | null;
 }) {
+  if (!location.city && !location.state && !location.country) return undefined;
   return {
-    "@context": "https://schema.org",
-    "@type": "TouristAttraction",
+    "@type": "PostalAddress",
+    addressLocality: location.city?.name,
+    addressRegion: location.state?.name,
+    addressCountry: location.country?.name,
+  };
+}
+
+/** Combined Place/TouristAttraction + BreadcrumbList structured data for a
+ * location detail page, as a single JSON-LD script with an @graph — see
+ * LocationJsonLd. Only includes fields that actually exist in the
+ * database — no invented ratings/reviews/prices/permissions. `location`
+ * and `breadcrumbItems` must be data the page already loaded/computed;
+ * this never queries Supabase itself. */
+export function buildLocationJsonLd(
+  location: PublicLocationDetail,
+  breadcrumbItems: { name: string; path: string }[],
+) {
+  const canonicalUrl = absoluteUrl(`/location/${location.slug}`);
+  const amenityFeature = buildAmenityFeatures(location);
+  const breadcrumbList = buildBreadcrumbList(breadcrumbItems);
+
+  const place = {
+    "@type": ["Place", "TouristAttraction"],
+    "@id": `${canonicalUrl}#place`,
     name: location.name,
-    url: absoluteUrl(`/location/${location.slug}`),
+    url: canonicalUrl,
     description: location.description ?? undefined,
     image: location.images.length > 0 ? location.images : undefined,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: location.city?.name,
-      addressRegion: location.state?.name,
-      addressCountry: location.country?.name,
-    },
+    address: buildLocationAddress(location),
     geo:
       location.latitude != null && location.longitude != null
         ? {
@@ -86,6 +147,24 @@ export function buildPlaceJsonLd(location: {
             longitude: location.longitude,
           }
         : undefined,
+    // TouristAttraction.isAccessibleForFree maps losslessly from
+    // pricing_type for "free"/"paid"; "unknown" is omitted rather than
+    // guessed as false.
+    isAccessibleForFree:
+      location.pricing_type === "free" ? true : location.pricing_type === "paid" ? false : undefined,
+    amenityFeature: amenityFeature.length > 0 ? amenityFeature : undefined,
+  };
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      place,
+      {
+        "@type": "BreadcrumbList",
+        "@id": `${canonicalUrl}#breadcrumb`,
+        itemListElement: breadcrumbList.itemListElement,
+      },
+    ],
   };
 }
 

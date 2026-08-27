@@ -45,9 +45,9 @@ export async function createPresignedUploadUrl(
   return { uploadUrl, publicUrl };
 }
 
-/** locations/{slug}/{filename}, studios/{slug}/{filename}, categories/{slug}/{filename}, or site/{slug}/{filename}. */
+/** locations/{slug}/{filename}, studios/{slug}/{filename}, categories/{slug}/{filename}, countries/{slug}/{filename}, states/{slug}/{filename}, cities/{slug}/{filename}, or site/{slug}/{filename}. */
 export function buildImageKey(
-  kind: "locations" | "studios" | "categories" | "site",
+  kind: "locations" | "studios" | "categories" | "countries" | "states" | "cities" | "site",
   slug: string,
   filename: string,
 ) {

@@ -10,12 +10,13 @@ import { PricingOptionsEditor } from "@/components/admin/pricing-options-editor"
 import { ExtraDetailFields, type ExtraDetailsValue } from "@/components/admin/extra-detail-fields";
 import { ActionButtonFields, type ActionButtonValue } from "@/components/admin/action-button-fields";
 import { GeoSelector } from "@/components/admin/geo-selector";
-import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel, FieldError, FieldSeparator } from "@/components/ui/field";
 import { slugify } from "@/lib/slug";
 
 type Studio = ExtraDetailsValue & ActionButtonValue & {
   id: string;
   name: string;
+  card_name: string | null;
   slug: string;
   description: string | null;
   country_id: string | null;
@@ -25,6 +26,8 @@ type Studio = ExtraDetailsValue & ActionButtonValue & {
   latitude: number | null;
   longitude: number | null;
   youtube_url: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
   is_published: boolean;
   images?: string[];
   pricingOptions?: { label: string; price: number }[];
@@ -47,11 +50,12 @@ export function StudioForm({
   error?: string;
 }) {
   const [name, setName] = useState(studio?.name ?? "");
+  const [cardName, setCardName] = useState(studio?.card_name ?? "");
   const [slug, setSlug] = useState(studio?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(false);
 
-  function handleNameChange(value: string) {
-    setName(value);
+  function handleCardNameChange(value: string) {
+    setCardName(value);
     if (!slugTouched) setSlug(slugify(value));
   }
 
@@ -66,7 +70,19 @@ export function StudioForm({
             id="name"
             name="name"
             value={name}
-            onChange={(e) => handleNameChange(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="card_name">Card Place Name</FieldLabel>
+          <Input
+            id="card_name"
+            name="card_name"
+            value={cardName}
+            onChange={(e) => handleCardNameChange(e.target.value)}
+            placeholder="Shorter name shown on studio cards"
             required
           />
         </Field>
@@ -148,6 +164,29 @@ export function StudioForm({
         <Field>
           <FieldLabel>Pricing options</FieldLabel>
           <PricingOptionsEditor defaultValue={studio?.pricingOptions} />
+        </Field>
+
+        <FieldSeparator>SEO</FieldSeparator>
+
+        <Field>
+          <FieldLabel htmlFor="meta_title">Title Tag</FieldLabel>
+          <Input
+            id="meta_title"
+            name="meta_title"
+            defaultValue={studio?.meta_title ?? ""}
+            placeholder="Shown as the page title in Google search results"
+          />
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="meta_description">Meta Description</FieldLabel>
+          <Textarea
+            id="meta_description"
+            name="meta_description"
+            defaultValue={studio?.meta_description ?? ""}
+            placeholder="Shown as the page summary in Google search results"
+            rows={2}
+          />
         </Field>
 
         <Field orientation="horizontal">

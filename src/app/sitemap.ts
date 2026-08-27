@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getPublishedLocations, getPublishedStudios } from "@/lib/public-data";
+import { getActiveCategories, getPublishedLocations, getPublishedStudios } from "@/lib/public-data";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -8,7 +8,11 @@ function latest(dates: string[]) {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [locations, studios] = await Promise.all([getPublishedLocations(), getPublishedStudios()]);
+  const [locations, studios, categories] = await Promise.all([
+    getPublishedLocations(),
+    getPublishedStudios(),
+    getActiveCategories(),
+  ]);
 
   const entries: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "daily", priority: 1 },
@@ -16,6 +20,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/studios`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/locations/map`, changeFrequency: "daily", priority: 0.7 },
   ];
+
+  // Dedicated per-category landing pages.
+  for (const category of categories) {
+    entries.push({
+      url: `${SITE_URL}/category/${category.slug}`,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    });
+  }
 
   // Location detail pages
   for (const location of locations) {

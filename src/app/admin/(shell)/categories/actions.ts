@@ -12,6 +12,9 @@ function parseCategoryForm(formData: FormData) {
   const image_url = String(formData.get("image_url") ?? "").trim() || null;
   const sort_order = Number(formData.get("sort_order") ?? 0) || 0;
   const is_active = formData.get("is_active") !== null;
+  const h1_title = String(formData.get("h1_title") ?? "").trim() || null;
+  const meta_title = String(formData.get("meta_title") ?? "").trim() || null;
+  const meta_description = String(formData.get("meta_description") ?? "").trim() || null;
 
   return {
     name,
@@ -20,6 +23,9 @@ function parseCategoryForm(formData: FormData) {
     image_url,
     sort_order,
     is_active,
+    h1_title,
+    meta_title,
+    meta_description,
   };
 }
 

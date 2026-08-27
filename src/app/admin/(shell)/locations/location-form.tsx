@@ -16,12 +16,13 @@ import { GalleryUploader } from "@/components/admin/gallery-uploader";
 import { ExtraDetailFields, type ExtraDetailsValue } from "@/components/admin/extra-detail-fields";
 import { ActionButtonFields, type ActionButtonValue } from "@/components/admin/action-button-fields";
 import { GeoSelector } from "@/components/admin/geo-selector";
-import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
+import { Field, FieldGroup, FieldLabel, FieldError, FieldSeparator } from "@/components/ui/field";
 import { slugify } from "@/lib/slug";
 
 type Location = ExtraDetailsValue & ActionButtonValue & {
   id: string;
   name: string;
+  card_name: string | null;
   slug: string;
   description: string | null;
   category_id: string | null;
@@ -31,6 +32,8 @@ type Location = ExtraDetailsValue & ActionButtonValue & {
   pricing_type: "free" | "paid" | "unknown";
   price: number | null;
   price_note: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
   map_url: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -58,12 +61,13 @@ export function LocationForm({
   error?: string;
 }) {
   const [name, setName] = useState(location?.name ?? "");
+  const [cardName, setCardName] = useState(location?.card_name ?? "");
   const [slug, setSlug] = useState(location?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(false);
   const [pricingType, setPricingType] = useState(location?.pricing_type ?? "unknown");
 
-  function handleNameChange(value: string) {
-    setName(value);
+  function handleCardNameChange(value: string) {
+    setCardName(value);
     if (!slugTouched) setSlug(slugify(value));
   }
 
@@ -78,7 +82,19 @@ export function LocationForm({
             id="name"
             name="name"
             value={name}
-            onChange={(e) => handleNameChange(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="card_name">Card Place Name</FieldLabel>
+          <Input
+            id="card_name"
+            name="card_name"
+            value={cardName}
+            onChange={(e) => handleCardNameChange(e.target.value)}
+            placeholder="Shorter name shown on location cards"
             required
           />
         </Field>
@@ -109,7 +125,12 @@ export function LocationForm({
 
         <Field>
           <FieldLabel htmlFor="category_id">Category</FieldLabel>
-          <Select name="category_id" defaultValue={location?.category_id ?? undefined} required>
+          <Select
+            name="category_id"
+            items={categories.map((category) => ({ value: category.id, label: category.name }))}
+            defaultValue={location?.category_id ?? undefined}
+            required
+          >
             <SelectTrigger id="category_id" className="w-full">
               <SelectValue placeholder="Select a category" />
             </SelectTrigger>
@@ -135,6 +156,11 @@ export function LocationForm({
           <FieldLabel htmlFor="pricing_type">Pricing</FieldLabel>
           <Select
             name="pricing_type"
+            items={[
+              { value: "free", label: "Free" },
+              { value: "paid", label: "Paid" },
+              { value: "unknown", label: "Unknown" },
+            ]}
             value={pricingType}
             onValueChange={(value) => setPricingType(value as typeof pricingType)}
             required
@@ -212,6 +238,29 @@ export function LocationForm({
             slug={slug}
             name="images"
             defaultValue={location?.images}
+          />
+        </Field>
+
+        <FieldSeparator>SEO</FieldSeparator>
+
+        <Field>
+          <FieldLabel htmlFor="meta_title">Title Tag</FieldLabel>
+          <Input
+            id="meta_title"
+            name="meta_title"
+            defaultValue={location?.meta_title ?? ""}
+            placeholder="Shown as the page title in Google search results"
+          />
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="meta_description">Meta Description</FieldLabel>
+          <Textarea
+            id="meta_description"
+            name="meta_description"
+            defaultValue={location?.meta_description ?? ""}
+            placeholder="Shown as the page summary in Google search results"
+            rows={2}
           />
         </Field>
 

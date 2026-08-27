@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import type { Metadata } from "next";
-import { Tag, Globe, Map as MapIcon, MapPin, Navigation } from "lucide-react";
+import { Tag, Navigation } from "lucide-react";
 import { getPublishedLocationBySlug } from "@/lib/public-data";
 import { formatPricing } from "@/lib/format";
 import { ImageGallery } from "@/components/public/image-gallery";
@@ -11,11 +12,25 @@ import { DistanceDisplay } from "@/components/public/distance-display";
 import { GoToLocationButton } from "@/components/public/go-to-location-button";
 import { ActionButton } from "@/components/public/action-button";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
-import { ExtraDetailsList } from "@/components/public/extra-details-list";
-import { JsonLd } from "@/components/public/json-ld";
-import { absoluteUrl, buildPlaceJsonLd } from "@/lib/jsonld";
+import { ExtraDetailsList, hasExtraDetails } from "@/components/public/extra-details-list";
+import { LocationJsonLd } from "@/components/public/location-json-ld";
+import { absoluteUrl } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ slug: string }> };
+
+// No searchParams/cookies here, so this route is eligible for ISR — the
+// same 60s window as the underlying cached data queries (public-data.ts).
+// generateStaticParams is required (even empty) for a dynamic segment to
+// use ISR at all — without it Next renders it fully dynamic on every
+// request regardless of `revalidate` (see Next's generateStaticParams
+// docs: "you must always return an array... otherwise the route will be
+// dynamically rendered"). An empty array means every slug is generated
+// on-demand on first visit, then served from cache until revalidation.
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -23,9 +38,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!location) return {};
 
   const place = [location.city?.name, location.state?.name].filter(Boolean).join(", ");
-  const title = `${location.name} - Photoshoot Location in ${location.city?.name ?? place}`;
+  const title =
+    location.meta_title ||
+    `${location.name} - Pre-Wedding Photoshoot Location in ${location.city?.name ?? place}`;
   const description =
-    location.description ?? `${location.name}, a photoshoot location in ${place}.`;
+    location.meta_description ||
+    location.description ||
+    (location.category
+      ? `${location.name}, a ${location.category.name.toLowerCase()} pre-wedding photoshoot location in ${place}.`
+      : `${location.name}, a pre-wedding photoshoot location in ${place}.`);
 
   return {
     title,
@@ -74,24 +95,22 @@ export default async function LocationDetailPage({ params }: Props) {
           },
         ]
       : []),
-    { name: location.name, path: `/location/${location.slug}` },
   ];
 
-  const infoRows = [
-    location.category && { icon: Tag, label: "Category", value: location.category.name },
-    location.country && { icon: Globe, label: "Country", value: location.country.name },
-    location.state && { icon: MapIcon, label: "State", value: location.state.name },
-    location.city && { icon: MapPin, label: "City", value: location.city.name },
-  ].filter(Boolean) as { icon: typeof Tag; label: string; value: string }[];
+  // "Heritage - India, Karnataka, Bangalore" — shown under the location
+  // name in place of a separate Category/Country/State/City list.
+  const subtitle = [
+    location.category?.name,
+    [location.country?.name, location.state?.name, location.city?.name].filter(Boolean).join(", "),
+  ]
+    .filter(Boolean)
+    .join(" - ");
 
-  // The Entry Fee detail (free text — can hold a range or conditions, e.g.
-  // "₹250 - ₹500") takes priority over the plain numeric price whenever
-  // it's been filled in; the numeric price is still collected either way
-  // for future sorting/filtering, but only shown here as a fallback.
-  const priceDisplay =
-    location.pricing_type === "paid" && location.entry_fee
-      ? location.entry_fee
-      : formatPricing(location.pricing_type, location.price);
+  // The headline price always reflects pricing_type/price — the photoshoot
+  // price PhotoBlinks itself charges. entry_fee is a distinct, separately
+  // labeled fact (e.g. a venue's own admission ticket) shown in the details
+  // table below; it must never stand in for the photoshoot price here.
+  const priceDisplay = formatPricing(location.pricing_type, location.price);
 
   // The admin-entered caption takes priority over the pricing-type defaults;
   // falls back to the old hardcoded text for locations that haven't set it.
@@ -103,45 +122,47 @@ export default async function LocationDetailPage({ params }: Props) {
         ? "Free Photoshoot Location"
         : undefined);
 
+  const imageAlt = location.city ? `${location.name} in ${location.city.name}` : location.name;
+
+  // Breadcrumbs are hidden below the sm breakpoint, so mobile visitors have
+  // no other way back up the location → category/city hierarchy without
+  // this — built entirely from data already on hand, no extra query.
+  const hasCategoryCityLink = Boolean(
+    location.country && location.state && location.city && location.category,
+  );
+  const hasCityLink = Boolean(location.country && location.state && location.city);
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <Breadcrumbs items={breadcrumbItems} />
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <Breadcrumbs items={breadcrumbItems} includeJsonLd={false} />
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h1 className="font-heading text-3xl font-semibold sm:text-4xl">{location.name}</h1>
-          <p className="mt-1 flex items-center gap-1 text-muted-foreground">
-            <MapPin className="size-4" />
-            {[location.city?.name, location.state?.name].filter(Boolean).join(", ")}
-          </p>
+          {subtitle && <p className="mt-1 text-muted-foreground">{subtitle}</p>}
         </div>
         <ShareButton title={location.name} url={absoluteUrl(`/location/${location.slug}`)} />
       </div>
 
-      <ImageGallery images={location.images} alt={location.name} />
+      <ImageGallery images={location.images} alt={imageAlt} />
 
       <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <h2 className="font-heading mb-4 text-xl font-semibold">About This Location</h2>
-          <dl className="flex flex-col gap-2.5 text-sm">
-            {infoRows.map((row) => (
-              <div key={row.label} className="flex items-center gap-3">
-                <row.icon className="size-4 shrink-0 text-muted-foreground" />
-                <dt className="w-24 shrink-0 text-muted-foreground">{row.label}</dt>
-                <dd className="font-medium">{row.value}</dd>
-              </div>
-            ))}
-          </dl>
-          <ExtraDetailsList details={location} />
+          {hasExtraDetails(location) && (
+            <>
+              <h2 className="font-heading mb-4 text-xl font-semibold">Photoshoot Information</h2>
+              <ExtraDetailsList details={location} />
+            </>
+          )}
         </div>
 
         <aside className="flex flex-col gap-4">
           <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+            <h2 className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
               <span className="flex size-7 items-center justify-center rounded-full bg-pb-brand/10">
                 <Tag className="size-3.5 text-pb-brand" />
               </span>
               Pricing
-            </div>
+            </h2>
             <p className="font-heading text-3xl font-semibold">{priceDisplay}</p>
             {priceCaption && <p className="text-sm text-muted-foreground">{priceCaption}</p>}
             <ActionButton
@@ -154,7 +175,10 @@ export default async function LocationDetailPage({ params }: Props) {
       </div>
 
       {location.description && (
-        <p className="mt-6 leading-relaxed text-foreground/90">{location.description}</p>
+        <div className="mt-6">
+          <h2 className="font-heading mb-3 text-xl font-semibold">Overview</h2>
+          <p className="leading-relaxed text-foreground/90">{location.description}</p>
+        </div>
       )}
 
       {location.youtube_url && (
@@ -203,7 +227,35 @@ export default async function LocationDetailPage({ params }: Props) {
         </div>
       )}
 
-      <JsonLd data={buildPlaceJsonLd(location)} />
+      {(hasCategoryCityLink || hasCityLink) && (
+        <div className="mt-10 border-t pt-6">
+          <h2 className="font-heading mb-3 text-xl font-semibold">Explore More Locations</h2>
+          <ul className="flex flex-col gap-2 text-sm">
+            {hasCategoryCityLink && (
+              <li>
+                <Link
+                  href={`/locations/${location.country!.slug}/${location.state!.slug}/${location.city!.slug}/${location.category!.slug}`}
+                  className="font-medium text-pb-brand hover:underline"
+                >
+                  More {location.category!.name} pre-wedding photoshoot locations in {location.city!.name}
+                </Link>
+              </li>
+            )}
+            {hasCityLink && (
+              <li>
+                <Link
+                  href={`/locations/${location.country!.slug}/${location.state!.slug}/${location.city!.slug}`}
+                  className="font-medium text-pb-brand hover:underline"
+                >
+                  All pre-wedding photoshoot locations in {location.city!.name}
+                </Link>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+
+      <LocationJsonLd location={location} breadcrumbItems={breadcrumbItems} />
     </div>
   );
 }

@@ -23,6 +23,17 @@ const VALUE_FIELD: Record<ActionType, { label: string; placeholder: string; type
   call_now: { label: "Phone Number", placeholder: "+91 98765 43210", type: "tel" },
 };
 
+// Matches the sentinel expected by parseLocationForm/parseStudioForm's
+// optionalField() — picking it clears the field back to unset.
+const UNSET = "unspecified";
+
+const ACTION_TYPE_ITEMS = [
+  { value: UNSET, label: "None" },
+  { value: "book_now", label: "Book Now" },
+  { value: "website", label: "Website" },
+  { value: "call_now", label: "Call Now" },
+];
+
 /** Optional call-to-action button shown below "Go to Location" on the
  * public detail page. Shared by locations and studios. */
 export function ActionButtonFields({ defaultValue }: { defaultValue?: ActionButtonValue }) {
@@ -35,13 +46,17 @@ export function ActionButtonFields({ defaultValue }: { defaultValue?: ActionButt
         <FieldLabel htmlFor="action_type">Action Button</FieldLabel>
         <Select
           name="action_type"
-          value={actionType || undefined}
-          onValueChange={(value) => setActionType(value as ActionType)}
+          items={ACTION_TYPE_ITEMS}
+          value={actionType || UNSET}
+          onValueChange={(value) => setActionType(value === UNSET ? "" : (value as ActionType))}
         >
           <SelectTrigger id="action_type" className="w-full">
             <SelectValue placeholder="None" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value={UNSET} className="text-muted-foreground">
+              None
+            </SelectItem>
             <SelectItem value="book_now">Book Now</SelectItem>
             <SelectItem value="website">Website</SelectItem>
             <SelectItem value="call_now">Call Now</SelectItem>

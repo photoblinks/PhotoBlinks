@@ -57,6 +57,9 @@ export function HomeFilter({
   initial,
   basePath = "/",
   className,
+  hideState = false,
+  hideCity = false,
+  hideCategory = false,
 }: {
   states: Option[];
   cities: City[];
@@ -64,6 +67,16 @@ export function HomeFilter({
   initial: { state?: string; city?: string; category?: string; pricing?: string; lat?: string; lng?: string };
   basePath?: string;
   className?: string;
+  /** Hide the State field — for a page already scoped to one state or city
+   * (e.g. a state or city SEO landing page), where it would be redundant.
+   * `initial.state` should still be set so the (hidden) state stays fixed
+   * and the City field, if shown, filters to cities within it. */
+  hideState?: boolean;
+  /** Hide the City field — for a page already scoped to one city. */
+  hideCity?: boolean;
+  /** Hide the Category field — for a page that's already scoped to one
+   * category (e.g. /category/[slug]), where it would be redundant. */
+  hideCategory?: boolean;
 }) {
   const router = useRouter();
 
@@ -94,13 +107,19 @@ export function HomeFilter({
   const selectedPricingName = pricing !== ALL ? PRICING_LABELS[pricing] : undefined;
 
   const isFiltered =
-    stateId !== ALL || cityId !== ALL || categorySlug !== ALL || pricing !== ALL || coords !== null;
+    (!hideState && stateId !== ALL) ||
+    (!hideCity && cityId !== ALL) ||
+    (!hideCategory && categorySlug !== ALL) ||
+    pricing !== ALL ||
+    coords !== null;
 
   function handleReset() {
     locationRequestIdRef.current += 1;
-    setStateId(ALL);
-    setCityId(ALL);
-    setCategorySlug(ALL);
+    // Fixed geography (hidden fields) stays put — only the fields the user
+    // can actually see and adjust get cleared.
+    if (!hideState) setStateId(ALL);
+    if (!hideCity) setCityId(ALL);
+    if (!hideCategory) setCategorySlug(ALL);
     setPricing(ALL);
     setCoords(null);
     setLocationError(null);
@@ -118,9 +137,9 @@ export function HomeFilter({
     const params = new URLSearchParams();
     const stateSlug = states.find((s) => s.id === stateId)?.slug;
     const citySlug = cities.find((c) => c.id === cityId)?.slug;
-    if (stateSlug) params.set("state", stateSlug);
-    if (citySlug) params.set("city", citySlug);
-    if (categorySlug !== ALL) params.set("category", categorySlug);
+    if (!hideState && stateSlug) params.set("state", stateSlug);
+    if (!hideCity && citySlug) params.set("city", citySlug);
+    if (!hideCategory && categorySlug !== ALL) params.set("category", categorySlug);
     if (pricing !== ALL) params.set("pricing", pricing);
     const effectiveCoords = overrideCoords === undefined ? coords : overrideCoords;
     if (effectiveCoords) {
@@ -186,75 +205,81 @@ export function HomeFilter({
         className,
       )}
     >
-      <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
-        <MapPin className="size-4 shrink-0 text-pb-brand" />
-        <Select value={stateId} onValueChange={(value) => handleStateChange(value ?? ALL)}>
-          <SelectTrigger className={FIELD_TRIGGER_CLASS}>
-            <FilterFieldText
-              label="State"
-              mobilePlaceholder="State"
-              desktopPlaceholder="Where to?"
-              value={selectedStateName}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Any state</SelectItem>
-            {states.map((state) => (
-              <SelectItem key={state.id} value={state.id}>
-                {state.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!hideState && (
+        <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
+          <MapPin className="size-4 shrink-0 text-pb-brand" />
+          <Select value={stateId} onValueChange={(value) => handleStateChange(value ?? ALL)}>
+            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+              <FilterFieldText
+                label="State"
+                mobilePlaceholder="State"
+                desktopPlaceholder="Where to?"
+                value={selectedStateName}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Any state</SelectItem>
+              {states.map((state) => (
+                <SelectItem key={state.id} value={state.id}>
+                  {state.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-      <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
-        <Building2 className="size-4 shrink-0 text-pb-brand" />
-        <Select
-          value={cityId}
-          onValueChange={(value) => setCityId(value ?? ALL)}
-          disabled={stateId === ALL}
-        >
-          <SelectTrigger className={FIELD_TRIGGER_CLASS}>
-            <FilterFieldText
-              label="City"
-              mobilePlaceholder="City"
-              desktopPlaceholder="Any city"
-              value={selectedCityName}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Any city</SelectItem>
-            {citiesForState.map((city) => (
-              <SelectItem key={city.id} value={city.id}>
-                {city.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!hideCity && (
+        <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
+          <Building2 className="size-4 shrink-0 text-pb-brand" />
+          <Select
+            value={cityId}
+            onValueChange={(value) => setCityId(value ?? ALL)}
+            disabled={stateId === ALL}
+          >
+            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+              <FilterFieldText
+                label="City"
+                mobilePlaceholder="City"
+                desktopPlaceholder="Any city"
+                value={selectedCityName}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Any city</SelectItem>
+              {citiesForState.map((city) => (
+                <SelectItem key={city.id} value={city.id}>
+                  {city.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-      <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
-        <LayoutGrid className="size-4 shrink-0 text-pb-brand" />
-        <Select value={categorySlug} onValueChange={(value) => setCategorySlug(value ?? ALL)}>
-          <SelectTrigger className={FIELD_TRIGGER_CLASS}>
-            <FilterFieldText
-              label="Category"
-              mobilePlaceholder="Category"
-              desktopPlaceholder="All categories"
-              value={selectedCategoryName}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>All categories</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category.id} value={category.slug}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!hideCategory && (
+        <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
+          <LayoutGrid className="size-4 shrink-0 text-pb-brand" />
+          <Select value={categorySlug} onValueChange={(value) => setCategorySlug(value ?? ALL)}>
+            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+              <FilterFieldText
+                label="Category"
+                mobilePlaceholder="Category"
+                desktopPlaceholder="All categories"
+                value={selectedCategoryName}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All categories</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.slug}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
         <Tag className="size-4 shrink-0 text-pb-brand" />

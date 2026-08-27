@@ -14,7 +14,6 @@ export function StudioCard({ studio }: { studio: PublicStudioCard }) {
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
-            unoptimized
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -36,7 +35,9 @@ export function StudioCard({ studio }: { studio: PublicStudioCard }) {
         </span>
       </div>
       <div className="flex flex-col gap-1">
-        <h3 className="font-sans text-lg font-[450] text-foreground">{studio.name}</h3>
+        <h3 className="font-sans text-lg font-[450] text-foreground">
+          {studio.cardName || studio.name}
+        </h3>
         <p className="flex items-center gap-1.5 text-sm font-[220] text-muted-foreground">
           <Globe className="size-3.5 shrink-0" />
           {[studio.city?.name, studio.state?.name].filter(Boolean).join(", ")}

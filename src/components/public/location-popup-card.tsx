@@ -17,7 +17,6 @@ export function LocationPopupCard({ location }: { location: PublicLocationCard }
             fill
             sizes="80px"
             className="object-cover"
-            unoptimized
           />
         ) : (
           <div className="flex h-full items-center justify-center text-[0.6rem] text-muted-foreground">

@@ -66,6 +66,13 @@ export default async function AdminCategoriesPage() {
               </TableCell>
               <TableCell className="flex justify-end gap-2">
                 <Button
+                  render={<Link href={`/category/${category.slug}`} target="_blank" />}
+                  variant="outline"
+                  size="sm"
+                >
+                  View page
+                </Button>
+                <Button
                   render={<Link href={`/admin/categories/${category.id}/edit`} />}
                   variant="outline"
                   size="sm"

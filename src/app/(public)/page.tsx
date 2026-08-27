@@ -17,13 +17,14 @@ import { JsonLd } from "@/components/public/json-ld";
 import { DEFAULT_OG_IMAGE, buildOrganizationJsonLd, buildWebSiteJsonLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
-  title: "Find Your Perfect Photoshoot Location",
+  title: "Pre-Wedding Photoshoot Locations in India",
   description:
-    "Discover beautiful photoshoot locations across Karnataka and Kerala — beaches, waterfalls, temples, hills, and more.",
+    "Discover pre-wedding photoshoot locations across Karnataka and Kerala — beaches, waterfalls, temples, hills, and more. Browse by state, city, or category.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "PhotoBlinks — Find Your Perfect Photoshoot Location",
-    description: "Discover beautiful photoshoot locations across Karnataka and Kerala.",
+    title: "PhotoBlinks — Pre-Wedding Photoshoot Locations in India",
+    description:
+      "Discover pre-wedding photoshoot locations across Karnataka and Kerala — beaches, waterfalls, temples, hills, and more.",
     url: "/",
     siteName: "PhotoBlinks",
     type: "website",
@@ -198,10 +199,10 @@ async function BrowseByCategory({
             <div className="mb-4 flex items-baseline justify-between">
               <h2 className="font-heading text-2xl font-semibold">{category.name}</h2>
               <Link
-                href={`/?category=${category.slug}`}
+                href={`/category/${category.slug}`}
                 className="text-sm font-medium text-pb-brand hover:underline"
               >
-                View All →
+                All {category.name} locations →
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
