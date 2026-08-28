@@ -155,16 +155,32 @@ export function buildLocationJsonLd(
     amenityFeature: amenityFeature.length > 0 ? amenityFeature : undefined,
   };
 
+  const graph: object[] = [
+    place,
+    {
+      "@type": "BreadcrumbList",
+      "@id": `${canonicalUrl}#breadcrumb`,
+      itemListElement: breadcrumbList.itemListElement,
+    },
+  ];
+
+  // Only ever built from FAQs actually rendered on the page — never
+  // fabricated, never present when the location has none.
+  if (location.faqs.length > 0) {
+    graph.push({
+      "@type": "FAQPage",
+      "@id": `${canonicalUrl}#faq`,
+      mainEntity: location.faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    });
+  }
+
   return {
     "@context": "https://schema.org",
-    "@graph": [
-      place,
-      {
-        "@type": "BreadcrumbList",
-        "@id": `${canonicalUrl}#breadcrumb`,
-        itemListElement: breadcrumbList.itemListElement,
-      },
-    ],
+    "@graph": graph,
   };
 }
 

@@ -21,6 +21,11 @@ function optionalField(formData: FormData, key: string) {
   return value === UNSET ? null : value;
 }
 
+const faqSchema = z.object({
+  question: z.string().trim().min(1, "FAQ question is required.").max(300, "FAQ question is too long."),
+  answer: z.string().trim().min(1, "FAQ answer is required.").max(2000, "FAQ answer is too long."),
+});
+
 const locationSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required."),
@@ -60,6 +65,7 @@ const locationSchema = z
     privacy: z.string().trim().optional(),
     is_published: z.boolean(),
     images: z.array(z.string().url()).default([]),
+    faqs: z.array(faqSchema).default([]),
   })
   .refine((data) => data.pricing_type !== "paid" || (data.price !== undefined && data.price > 0), {
     message: "Price is required when pricing is Paid.",
@@ -109,6 +115,13 @@ function parseLocationForm(formData: FormData) {
     privacy: String(formData.get("privacy") ?? "").trim() || undefined,
     is_published: formData.get("is_published") !== null,
     images: formData.getAll("images").map(String).filter(Boolean),
+    faqs: (() => {
+      const questions = formData.getAll("faq_question").map(String);
+      const answers = formData.getAll("faq_answer").map(String);
+      return questions
+        .map((question, i) => ({ question: question.trim(), answer: (answers[i] ?? "").trim() }))
+        .filter((f) => f.question !== "" || f.answer !== "");
+    })(),
   };
 
   return locationSchema.parse(raw);
@@ -131,6 +144,24 @@ async function replaceLocationImages(
   );
 }
 
+async function replaceLocationFaqs(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  locationId: string,
+  faqs: { question: string; answer: string }[],
+) {
+  await supabase.from("location_faqs").delete().eq("location_id", locationId);
+  if (faqs.length === 0) return;
+
+  await supabase.from("location_faqs").insert(
+    faqs.map((faq, index) => ({
+      location_id: locationId,
+      question: faq.question,
+      answer: faq.answer,
+      sort_order: index,
+    })),
+  );
+}
+
 export async function createLocation(formData: FormData) {
   const supabase = await createClient();
 
@@ -142,7 +173,7 @@ export async function createLocation(formData: FormData) {
     redirect(`/admin/locations/new?error=${encodeURIComponent(message)}`);
   }
 
-  const { images, city_name, ...locationValues } = values;
+  const { images, faqs, city_name, ...locationValues } = values;
 
   const cityId = await resolveLocationGeo(supabase, {
     countryId: locationValues.country_id,
@@ -162,6 +193,7 @@ export async function createLocation(formData: FormData) {
   }
 
   await replaceLocationImages(supabase, data.id, images);
+  await replaceLocationFaqs(supabase, data.id, faqs);
 
   revalidatePath("/admin/locations");
   redirect("/admin/locations");
@@ -178,7 +210,7 @@ export async function updateLocation(id: string, formData: FormData) {
     redirect(`/admin/locations/${id}/edit?error=${encodeURIComponent(message)}`);
   }
 
-  const { images, city_name, ...locationValues } = values;
+  const { images, faqs, city_name, ...locationValues } = values;
 
   const cityId = await resolveLocationGeo(supabase, {
     countryId: locationValues.country_id,
@@ -197,6 +229,7 @@ export async function updateLocation(id: string, formData: FormData) {
   }
 
   await replaceLocationImages(supabase, id, images);
+  await replaceLocationFaqs(supabase, id, faqs);
 
   revalidatePath("/admin/locations");
   redirect("/admin/locations");

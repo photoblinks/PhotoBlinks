@@ -18,7 +18,9 @@ export default async function EditLocationPage({
     await Promise.all([
       supabase
         .from("locations")
-        .select("*, cities(name), location_images(image_url, sort_order)")
+        .select(
+          "*, cities(name), location_images(image_url, sort_order), location_faqs(question, answer, sort_order)",
+        )
         .eq("id", id)
         .single(),
       supabase.from("categories").select("id, name").order("sort_order"),
@@ -31,6 +33,9 @@ export default async function EditLocationPage({
   const images = [...(location.location_images ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((img) => img.image_url);
+  const faqs = [...(location.location_faqs ?? [])]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((f) => ({ question: f.question, answer: f.answer }));
   const cityRef = Array.isArray(location.cities) ? location.cities[0] : location.cities;
 
   return (
@@ -38,7 +43,7 @@ export default async function EditLocationPage({
       <h1 className="mb-6 text-2xl font-semibold">Edit location</h1>
       <LocationForm
         action={updateLocation.bind(null, id)}
-        location={{ ...location, images, city_name: cityRef?.name }}
+        location={{ ...location, images, faqs, city_name: cityRef?.name }}
         categories={categories ?? []}
         countries={countries ?? []}
         states={states ?? []}

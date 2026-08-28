@@ -361,6 +361,7 @@ export type PublicLocationDetail = ExtraDetails & {
   state: GeoRef | null;
   city: GeoRef | null;
   images: string[];
+  faqs: { question: string; answer: string }[];
 };
 
 /** A single published location by slug, with every field the detail page
@@ -373,7 +374,7 @@ export const getPublishedLocationBySlug = cache(
   const { data } = await supabase
     .from("locations")
     .select(
-      `id, name, slug, description, pricing_type, price, price_note, action_type, action_value, meta_title, meta_description, map_url, latitude, longitude, youtube_url, ${EXTRA_DETAIL_COLUMNS}, categories(name, slug), countries(name, slug), states(name, slug), cities(name, slug), location_images(image_url, sort_order)`,
+      `id, name, slug, description, pricing_type, price, price_note, action_type, action_value, meta_title, meta_description, map_url, latitude, longitude, youtube_url, ${EXTRA_DETAIL_COLUMNS}, categories(name, slug), countries(name, slug), states(name, slug), cities(name, slug), location_images(image_url, sort_order), location_faqs(question, answer, sort_order)`,
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -417,6 +418,9 @@ export const getPublishedLocationBySlug = cache(
     images: [...(data.location_images ?? [])]
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((img) => img.image_url),
+    faqs: [...(data.location_faqs ?? [])]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((faq) => ({ question: faq.question, answer: faq.answer })),
   };
     },
     ["getPublishedLocationBySlug"],

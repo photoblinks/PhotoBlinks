@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Tag, Navigation } from "lucide-react";
-import { getPublishedLocationBySlug } from "@/lib/public-data";
+import { Tag, Navigation, ChevronDown } from "lucide-react";
+import { getActiveCategories, getPublishedLocationBySlug } from "@/lib/public-data";
 import { formatPricing } from "@/lib/format";
+import { getCategoryMarkerStyle } from "@/lib/category-style";
 import { ImageGallery } from "@/components/public/image-gallery";
 import { ShareButton } from "@/components/public/share-button";
 import { YouTubeEmbed } from "@/components/public/youtube-embed";
@@ -124,13 +125,13 @@ export default async function LocationDetailPage({ params }: Props) {
 
   const imageAlt = location.city ? `${location.name} in ${location.city.name}` : location.name;
 
-  // Breadcrumbs are hidden below the sm breakpoint, so mobile visitors have
-  // no other way back up the location → category/city hierarchy without
-  // this — built entirely from data already on hand, no extra query.
-  const hasCategoryCityLink = Boolean(
-    location.country && location.state && location.city && location.category,
-  );
-  const hasCityLink = Boolean(location.country && location.state && location.city);
+  // Quick-nav category cards at the bottom of the page — categories other
+  // than this location's own (more useful for exploring something
+  // different), capped at 4 for a clean small-card row.
+  const allCategories = await getActiveCategories();
+  const exploreCategories = allCategories
+    .filter((c) => c.slug !== location.category?.slug)
+    .slice(0, 4);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -145,24 +146,20 @@ export default async function LocationDetailPage({ params }: Props) {
 
       <ImageGallery images={location.images} alt={imageAlt} />
 
-      <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          {hasExtraDetails(location) && (
-            <>
-              <h2 className="font-heading mb-4 text-xl font-semibold">Photoshoot Information</h2>
-              <ExtraDetailsList details={location} />
-            </>
-          )}
-        </div>
+      <h2 className="font-heading mt-10 mb-4 text-xl font-semibold">
+        {location.name} Photoshoot Details &amp; Pricing
+      </h2>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2">{hasExtraDetails(location) && <ExtraDetailsList details={location} />}</div>
 
         <aside className="flex flex-col gap-4">
           <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <h2 className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+            <h3 className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
               <span className="flex size-7 items-center justify-center rounded-full bg-pb-brand/10">
                 <Tag className="size-3.5 text-pb-brand" />
               </span>
               Pricing
-            </h2>
+            </h3>
             <p className="font-heading text-3xl font-semibold">{priceDisplay}</p>
             {priceCaption && <p className="text-sm text-muted-foreground">{priceCaption}</p>}
             <ActionButton
@@ -176,21 +173,25 @@ export default async function LocationDetailPage({ params }: Props) {
 
       {location.description && (
         <div className="mt-6">
-          <h2 className="font-heading mb-3 text-xl font-semibold">Overview</h2>
+          <h2 className="font-heading mb-3 text-xl font-semibold">{location.name} Photoshoot Overview</h2>
           <p className="leading-relaxed text-foreground/90">{location.description}</p>
         </div>
       )}
 
       {location.youtube_url && (
         <div className="mt-8">
-          <h2 className="font-heading mb-3 text-xl font-semibold">Location Video</h2>
+          <h2 className="font-heading mb-3 text-xl font-semibold">
+            {location.name} Tour &amp; Photoshoot Video
+          </h2>
           <YouTubeEmbed url={location.youtube_url} title={location.name} />
         </div>
       )}
 
       {(hasCoords || location.map_url) && (
         <div className="mt-10">
-          <h2 className="font-heading mb-4 text-xl font-semibold">Location &amp; Distance</h2>
+          <h2 className="font-heading mb-4 text-xl font-semibold">
+            {location.name} Location &amp; Map Directions
+          </h2>
           <div className="grid grid-cols-1 overflow-hidden rounded-xl border bg-white shadow-sm md:grid-cols-2">
             <div className="flex flex-col justify-between gap-4 p-5">
               <div>
@@ -227,31 +228,48 @@ export default async function LocationDetailPage({ params }: Props) {
         </div>
       )}
 
-      {(hasCategoryCityLink || hasCityLink) && (
+      {location.faqs.length > 0 && (
+        <div className="mt-10">
+          <h2 className="font-heading mb-4 text-xl font-semibold">
+            Frequently Asked Questions About {location.name}
+          </h2>
+          <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-white shadow-sm">
+            {location.faqs.map((faq, index) => (
+              <details key={index} className="group p-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium marker:content-none">
+                  {faq.question}
+                  <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                </summary>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{faq.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {exploreCategories.length > 0 && (
         <div className="mt-10 border-t pt-6">
-          <h2 className="font-heading mb-3 text-xl font-semibold">Explore More Locations</h2>
-          <ul className="flex flex-col gap-2 text-sm">
-            {hasCategoryCityLink && (
-              <li>
+          <h2 className="font-heading mb-4 text-xl font-semibold">Explore More Locations</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {exploreCategories.map((category) => {
+              const { color, icon: Icon } = getCategoryMarkerStyle(category.slug);
+              return (
                 <Link
-                  href={`/locations/${location.country!.slug}/${location.state!.slug}/${location.city!.slug}/${location.category!.slug}`}
-                  className="font-medium text-pb-brand hover:underline"
+                  key={category.slug}
+                  href={`/category/${category.slug}`}
+                  className="flex flex-col items-center gap-2 rounded-xl border bg-white p-4 text-center shadow-sm transition-shadow hover:shadow-md"
                 >
-                  More {location.category!.name} pre-wedding photoshoot locations in {location.city!.name}
+                  <span
+                    style={{ backgroundColor: color }}
+                    className="flex size-10 items-center justify-center rounded-full text-white"
+                  >
+                    <Icon className="size-5" strokeWidth={2} />
+                  </span>
+                  <span className="text-sm font-medium">{category.name}</span>
                 </Link>
-              </li>
-            )}
-            {hasCityLink && (
-              <li>
-                <Link
-                  href={`/locations/${location.country!.slug}/${location.state!.slug}/${location.city!.slug}`}
-                  className="font-medium text-pb-brand hover:underline"
-                >
-                  All pre-wedding photoshoot locations in {location.city!.name}
-                </Link>
-              </li>
-            )}
-          </ul>
+              );
+            })}
+          </div>
         </div>
       )}
 

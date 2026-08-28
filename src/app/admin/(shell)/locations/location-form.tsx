@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { GalleryUploader } from "@/components/admin/gallery-uploader";
+import { FaqEditor } from "@/components/admin/faq-editor";
 import { ExtraDetailFields, type ExtraDetailsValue } from "@/components/admin/extra-detail-fields";
 import { ActionButtonFields, type ActionButtonValue } from "@/components/admin/action-button-fields";
 import { GeoSelector } from "@/components/admin/geo-selector";
@@ -40,6 +41,7 @@ type Location = ExtraDetailsValue & ActionButtonValue & {
   youtube_url: string | null;
   is_published: boolean;
   images?: string[];
+  faqs?: { question: string; answer: string }[];
 };
 
 type Option = { id: string; name: string };
@@ -239,6 +241,13 @@ export function LocationForm({
             name="images"
             defaultValue={location?.images}
           />
+        </Field>
+
+        <FieldSeparator>FAQs</FieldSeparator>
+
+        <Field>
+          <FieldLabel>Frequently Asked Questions</FieldLabel>
+          <FaqEditor defaultValue={location?.faqs} />
         </Field>
 
         <FieldSeparator>SEO</FieldSeparator>
