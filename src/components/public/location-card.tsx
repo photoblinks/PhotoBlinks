@@ -4,11 +4,13 @@ import { Globe, ArrowRight } from "lucide-react";
 import { formatPricingLabel } from "@/lib/format";
 import { formatDistanceKm } from "@/lib/geo";
 import type { PublicLocationCard } from "@/lib/public-data";
+import { FavouriteButton } from "./favourite-button";
 
 export function LocationCard({ location }: { location: PublicLocationCard }) {
   return (
     <Link href={`/location/${location.slug}`} className="group flex flex-col gap-3">
-      <div className="relative aspect-4/3 overflow-hidden rounded-2xl bg-muted">
+      <div className="relative aspect-square overflow-hidden rounded-2xl bg-muted sm:aspect-4/3">
+        <FavouriteButton locationId={location.id} className="absolute top-3 right-3 z-10" />
         {location.primaryImageUrl ? (
           <Image
             src={location.primaryImageUrl}
@@ -30,8 +32,10 @@ export function LocationCard({ location }: { location: PublicLocationCard }) {
           {formatPricingLabel(location.pricing_type)}
         </span>
         <span className="absolute right-3 bottom-3 flex items-center gap-1 text-sm font-[250] text-white">
-          View Details
-          <ArrowRight className="size-4" strokeWidth={2} />
+          <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 ease-out group-hover:max-w-[8rem] group-hover:opacity-100">
+            View Details
+          </span>
+          <ArrowRight className="size-4 shrink-0" strokeWidth={2} />
         </span>
       </div>
       <div className="flex flex-col gap-1">

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Building2, LayoutGrid, Tag } from "lucide-react";
+import { MapPin, Building2, LayoutGrid, Tag, Drone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -22,6 +22,16 @@ const FIELD_TRIGGER_CLASS =
   "h-auto w-full justify-start gap-0 border-0 bg-transparent p-0 text-sm font-medium shadow-none hover:bg-transparent data-placeholder:text-muted-foreground";
 
 const PRICING_LABELS: Record<string, string> = { free: "Free", paid: "Paid", unknown: "Unknown" };
+
+// The 3 filter buckets the product requests — not the 4 raw `drone_status`
+// database values. See public-data.ts's `droneFilterToStatus` for how
+// "not_allowed" maps to the existing 'prohibited' column value.
+const DRONE_LABELS: Record<string, string> = {
+  allowed: "🟢 Allowed",
+  not_allowed: "🔴 Not Allowed",
+  allowed_with_permission: "🟡 Allowed with Permission",
+};
+const DRONE_OPTIONS = ["allowed", "not_allowed", "allowed_with_permission"] as const;
 
 /** Trigger content for one filter field: a caption + value on desktop
  * (two lines), collapsed to a single line on mobile — just the field's
@@ -64,7 +74,15 @@ export function HomeFilter({
   states: Option[];
   cities: City[];
   categories: Option[];
-  initial: { state?: string; city?: string; category?: string; pricing?: string; lat?: string; lng?: string };
+  initial: {
+    state?: string;
+    city?: string;
+    category?: string;
+    pricing?: string;
+    drone?: string;
+    lat?: string;
+    lng?: string;
+  };
   basePath?: string;
   className?: string;
   /** Hide the State field — for a page already scoped to one state or city
@@ -87,6 +105,7 @@ export function HomeFilter({
   const [cityId, setCityId] = useState(initialCity?.id ?? ALL);
   const [categorySlug, setCategorySlug] = useState(initial.category ?? ALL);
   const [pricing, setPricing] = useState(initial.pricing ?? ALL);
+  const [droneStatus, setDroneStatus] = useState(initial.drone ?? ALL);
   const [coords, setCoords] = useState<{ lat: string; lng: string } | null>(
     initial.lat && initial.lng ? { lat: initial.lat, lng: initial.lng } : null,
   );
@@ -105,12 +124,14 @@ export function HomeFilter({
   const selectedCategoryName =
     categorySlug !== ALL ? categories.find((c) => c.slug === categorySlug)?.name : undefined;
   const selectedPricingName = pricing !== ALL ? PRICING_LABELS[pricing] : undefined;
+  const selectedDroneName = droneStatus !== ALL ? DRONE_LABELS[droneStatus] : undefined;
 
   const isFiltered =
     (!hideState && stateId !== ALL) ||
     (!hideCity && cityId !== ALL) ||
     (!hideCategory && categorySlug !== ALL) ||
     pricing !== ALL ||
+    droneStatus !== ALL ||
     coords !== null;
 
   function handleReset() {
@@ -121,6 +142,7 @@ export function HomeFilter({
     if (!hideCity) setCityId(ALL);
     if (!hideCategory) setCategorySlug(ALL);
     setPricing(ALL);
+    setDroneStatus(ALL);
     setCoords(null);
     setLocationError(null);
     router.push(basePath);
@@ -141,6 +163,7 @@ export function HomeFilter({
     if (!hideCity && citySlug) params.set("city", citySlug);
     if (!hideCategory && categorySlug !== ALL) params.set("category", categorySlug);
     if (pricing !== ALL) params.set("pricing", pricing);
+    if (droneStatus !== ALL) params.set("drone", droneStatus);
     const effectiveCoords = overrideCoords === undefined ? coords : overrideCoords;
     if (effectiveCoords) {
       params.set("lat", effectiveCoords.lat);
@@ -297,6 +320,28 @@ export function HomeFilter({
             <SelectItem value="free">Free</SelectItem>
             <SelectItem value="paid">Paid</SelectItem>
             <SelectItem value="unknown">Unknown</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
+        <Drone className="size-4 shrink-0 text-pb-brand" />
+        <Select value={droneStatus} onValueChange={(value) => setDroneStatus(value ?? ALL)}>
+          <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+            <FilterFieldText
+              label="Drone"
+              mobilePlaceholder="Drone"
+              desktopPlaceholder="Any drone policy"
+              value={selectedDroneName}
+            />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Any drone policy</SelectItem>
+            {DRONE_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {DRONE_LABELS[option]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

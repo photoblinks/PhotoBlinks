@@ -18,7 +18,7 @@ import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 type Props = {
   params: Promise<{ country: string; state: string }>;
-  searchParams: Promise<{ city?: string; category?: string; pricing?: string }>;
+  searchParams: Promise<{ city?: string; category?: string; pricing?: string; drone?: string }>;
 };
 
 const loadStatePage = cache(async (countrySlug: string, stateSlug: string) => {
@@ -75,7 +75,11 @@ export default async function StateLocationsPage({ params, searchParams }: Props
     query.pricing === "free" || query.pricing === "paid" || query.pricing === "unknown"
       ? query.pricing
       : undefined;
-  const hasFilters = Boolean(selectedCity || selectedCategory || pricingType);
+  const droneStatus =
+    query.drone === "allowed" || query.drone === "allowed_with_permission" || query.drone === "not_allowed"
+      ? query.drone
+      : undefined;
+  const hasFilters = Boolean(selectedCity || selectedCategory || pricingType || droneStatus);
 
   const heading = state.h1_title || `Pre-Wedding Photoshoot Locations in ${state.name}`;
 
@@ -105,18 +109,24 @@ export default async function StateLocationsPage({ params, searchParams }: Props
         </div>
       </section>
 
-      <div className="relative z-10 mx-auto -mt-8 max-w-6xl px-4 sm:-mt-10 sm:px-6">
+      <div className="relative z-10 mx-auto -mt-8 max-w-7xl px-4 sm:-mt-10 sm:px-6">
         <HomeFilter
           states={[state]}
           cities={cities}
           categories={categories}
           hideState
           basePath={`/locations/${countrySlug}/${state.slug}`}
-          initial={{ state: state.slug, city: query.city, category: query.category, pricing: query.pricing }}
+          initial={{
+            state: state.slug,
+            city: query.city,
+            category: query.category,
+            pricing: query.pricing,
+            drone: query.drone,
+          }}
         />
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <Breadcrumbs
           items={[
             { name: "Home", path: "/" },
@@ -132,6 +142,7 @@ export default async function StateLocationsPage({ params, searchParams }: Props
             cityId={selectedCity?.id}
             categoryId={selectedCategory?.id}
             pricingType={pricingType}
+            droneStatus={droneStatus}
           />
         ) : (
           <BrowseState countrySlug={countrySlug} state={state} locations={locations} />
@@ -146,13 +157,15 @@ async function FilteredResults({
   cityId,
   categoryId,
   pricingType,
+  droneStatus,
 }: {
   stateId: string;
   cityId?: string;
   categoryId?: string;
   pricingType?: "free" | "paid" | "unknown";
+  droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
 }) {
-  const results = await getPublishedLocations({ stateId, cityId, categoryId, pricingType });
+  const results = await getPublishedLocations({ stateId, cityId, categoryId, pricingType, droneStatus });
 
   return (
     <>
@@ -227,7 +240,14 @@ function BrowseState({
           if (items.length === 0) return null;
           return (
             <section key={category.slug} className="mb-14">
-              <h2 className="font-heading mb-4 text-2xl font-semibold">{category.name}</h2>
+              <Link
+                href={`/locations/${countrySlug}/${state.slug}/${category.slug}`}
+                className="group inline-block"
+              >
+                <h2 className="font-heading mb-4 text-2xl font-semibold group-hover:underline">
+                  {category.name} locations in {state.name}
+                </h2>
+              </Link>
               <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
                 {items.map((location) => (
                   <LocationCard key={location.id} location={location} />

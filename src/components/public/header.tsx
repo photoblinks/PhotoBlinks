@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { getActiveCategories } from "@/lib/public-data";
+import { AccountMenu } from "./account-menu";
 
 type Category = Awaited<ReturnType<typeof getActiveCategories>>[number];
 
@@ -103,6 +104,7 @@ function NavMenu({ light, categories }: { light?: boolean; categories: Category[
         </DropdownMenuSub>
         <DropdownMenuItem render={<Link href="/studios" />}>Studios</DropdownMenuItem>
         <DropdownMenuItem render={<Link href="/locations/map" />}>Map</DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/favourites" />}>Favourites</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -115,12 +117,15 @@ export function Header({ categories }: { categories: Category[] }) {
   if (isHome) {
     return (
       <header className="absolute inset-x-0 top-0 z-40">
-        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6">
           <Logo light />
-          <NavMenu light categories={categories} />
-          <Button render={<Link href="/locations" />} className="hidden sm:inline-flex">
-            Explore Locations
-          </Button>
+          <div className="flex items-center gap-3">
+            <AccountMenu light />
+            <NavMenu light categories={categories} />
+            <Button render={<Link href="/locations" />} className="hidden sm:inline-flex">
+              Explore Locations
+            </Button>
+          </div>
         </div>
       </header>
     );
@@ -128,24 +133,34 @@ export function Header({ categories }: { categories: Category[] }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         <Logo />
-        <nav className="hidden items-center gap-5 text-sm font-semibold sm:flex sm:gap-7">
-          <Link href="/" className="text-foreground/70 transition-colors hover:text-foreground">
-            Home
-          </Link>
-          <CategoryDropdown categories={categories} />
-          <Link href="/studios" className="text-foreground/70 transition-colors hover:text-foreground">
-            Studios
-          </Link>
-          <Link
-            href="/locations/map"
-            className="text-foreground/70 transition-colors hover:text-foreground"
-          >
-            Map
-          </Link>
-        </nav>
-        <div className="sm:hidden">
+        <div className="hidden items-center gap-7 sm:flex">
+          <nav className="flex items-center gap-5 text-sm font-semibold sm:gap-7">
+            <Link href="/" className="text-foreground/70 transition-colors hover:text-foreground">
+              Home
+            </Link>
+            <CategoryDropdown categories={categories} />
+            <Link href="/studios" className="text-foreground/70 transition-colors hover:text-foreground">
+              Studios
+            </Link>
+            <Link
+              href="/locations/map"
+              className="text-foreground/70 transition-colors hover:text-foreground"
+            >
+              Map
+            </Link>
+            <Link
+              href="/favourites"
+              className="text-foreground/70 transition-colors hover:text-foreground"
+            >
+              Favourites
+            </Link>
+          </nav>
+          <AccountMenu />
+        </div>
+        <div className="flex items-center gap-2 sm:hidden">
+          <AccountMenu />
           <NavMenu categories={categories} />
         </div>
       </div>

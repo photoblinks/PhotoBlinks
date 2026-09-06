@@ -29,6 +29,7 @@ export function MapFiltersDrawer({
     city?: string;
     category?: string;
     pricing?: string;
+    drone?: string;
     lat?: string;
     lng?: string;
   };

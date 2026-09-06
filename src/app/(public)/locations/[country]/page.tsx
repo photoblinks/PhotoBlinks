@@ -18,7 +18,13 @@ import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 type Props = {
   params: Promise<{ country: string }>;
-  searchParams: Promise<{ state?: string; city?: string; category?: string; pricing?: string }>;
+  searchParams: Promise<{
+    state?: string;
+    city?: string;
+    category?: string;
+    pricing?: string;
+    drone?: string;
+  }>;
 };
 
 const loadCountryPage = cache(async (countrySlug: string) => {
@@ -80,7 +86,13 @@ export default async function CountryLocationsPage({ params, searchParams }: Pro
     query.pricing === "free" || query.pricing === "paid" || query.pricing === "unknown"
       ? query.pricing
       : undefined;
-  const hasFilters = Boolean(selectedState || selectedCity || selectedCategory || pricingType);
+  const droneStatus =
+    query.drone === "allowed" || query.drone === "allowed_with_permission" || query.drone === "not_allowed"
+      ? query.drone
+      : undefined;
+  const hasFilters = Boolean(
+    selectedState || selectedCity || selectedCategory || pricingType || droneStatus,
+  );
 
   const heading = country.h1_title || `Pre-Wedding Photoshoot Locations in ${country.name}`;
 
@@ -110,7 +122,7 @@ export default async function CountryLocationsPage({ params, searchParams }: Pro
         </div>
       </section>
 
-      <div className="relative z-10 mx-auto -mt-8 max-w-6xl px-4 sm:-mt-10 sm:px-6">
+      <div className="relative z-10 mx-auto -mt-8 max-w-7xl px-4 sm:-mt-10 sm:px-6">
         <HomeFilter
           states={states}
           cities={cities}
@@ -121,11 +133,12 @@ export default async function CountryLocationsPage({ params, searchParams }: Pro
             city: query.city,
             category: query.category,
             pricing: query.pricing,
+            drone: query.drone,
           }}
         />
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <Breadcrumbs
           items={[
             { name: "Home", path: "/" },
@@ -141,6 +154,7 @@ export default async function CountryLocationsPage({ params, searchParams }: Pro
             cityId={selectedCity?.id}
             categoryId={selectedCategory?.id}
             pricingType={pricingType}
+            droneStatus={droneStatus}
           />
         ) : (
           <BrowseByState country={country} locations={locations} />
@@ -156,14 +170,23 @@ async function FilteredResults({
   cityId,
   categoryId,
   pricingType,
+  droneStatus,
 }: {
   countryId: string;
   stateId?: string;
   cityId?: string;
   categoryId?: string;
   pricingType?: "free" | "paid" | "unknown";
+  droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
 }) {
-  const results = await getPublishedLocations({ countryId, stateId, cityId, categoryId, pricingType });
+  const results = await getPublishedLocations({
+    countryId,
+    stateId,
+    cityId,
+    categoryId,
+    pricingType,
+    droneStatus,
+  });
 
   return (
     <>

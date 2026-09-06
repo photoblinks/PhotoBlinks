@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { GalleryUploader } from "@/components/admin/gallery-uploader";
 import { PricingOptionsEditor } from "@/components/admin/pricing-options-editor";
+import { FaqEditor } from "@/components/admin/faq-editor";
 import { ExtraDetailFields, type ExtraDetailsValue } from "@/components/admin/extra-detail-fields";
 import { ActionButtonFields, type ActionButtonValue } from "@/components/admin/action-button-fields";
 import { GeoSelector } from "@/components/admin/geo-selector";
@@ -31,6 +32,7 @@ type Studio = ExtraDetailsValue & ActionButtonValue & {
   is_published: boolean;
   images?: string[];
   pricingOptions?: { label: string; price: number }[];
+  faqs?: { question: string; answer: string }[];
 };
 
 type Option = { id: string; name: string };
@@ -164,6 +166,13 @@ export function StudioForm({
         <Field>
           <FieldLabel>Pricing options</FieldLabel>
           <PricingOptionsEditor defaultValue={studio?.pricingOptions} />
+        </Field>
+
+        <FieldSeparator>FAQs</FieldSeparator>
+
+        <Field>
+          <FieldLabel>Frequently Asked Questions</FieldLabel>
+          <FaqEditor defaultValue={studio?.faqs} />
         </Field>
 
         <FieldSeparator>SEO</FieldSeparator>

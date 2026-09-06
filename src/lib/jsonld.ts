@@ -1,4 +1,4 @@
-import type { ExtraDetails, PublicLocationDetail } from "./public-data";
+import type { ExtraDetails, PublicLocationDetail, PublicStudioDetail } from "./public-data";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -37,7 +37,7 @@ export function buildOrganizationJsonLd() {
     "@type": "Organization",
     name: "PhotoBlinks",
     url: absoluteUrl("/"),
-    description: "Discover beautiful photoshoot locations across Karnataka and Kerala.",
+    description: "Discover pre-wedding photoshoot locations across India.",
   };
 }
 
@@ -103,29 +103,34 @@ function buildAmenityFeatures(details: ExtraDetails): LocationFeature[] {
   return features;
 }
 
-function buildLocationAddress(location: {
+/** Shared by locations and studios — both embed the same city/state/country
+ * relations. Omitted entirely (not an empty object) when none are set. */
+function buildAddress(place: {
   city: { name: string } | null;
   state: { name: string } | null;
   country: { name: string } | null;
 }) {
-  if (!location.city && !location.state && !location.country) return undefined;
+  if (!place.city && !place.state && !place.country) return undefined;
   return {
     "@type": "PostalAddress",
-    addressLocality: location.city?.name,
-    addressRegion: location.state?.name,
-    addressCountry: location.country?.name,
+    addressLocality: place.city?.name,
+    addressRegion: place.state?.name,
+    addressCountry: place.country?.name,
   };
 }
 
 /** Combined Place/TouristAttraction + BreadcrumbList structured data for a
  * location detail page, as a single JSON-LD script with an @graph — see
  * LocationJsonLd. Only includes fields that actually exist in the
- * database — no invented ratings/reviews/prices/permissions. `location`
- * and `breadcrumbItems` must be data the page already loaded/computed;
- * this never queries Supabase itself. */
+ * database — no invented reviews/prices/permissions. `location`,
+ * `breadcrumbItems`, and `ratingSummary` must be data the page already
+ * loaded/computed; this never queries Supabase itself. `aggregateRating`
+ * is only ever built from real, admin-approved comment ratings (Phase
+ * 19C) — omitted entirely when there are none, never a fabricated score. */
 export function buildLocationJsonLd(
   location: PublicLocationDetail,
   breadcrumbItems: { name: string; path: string }[],
+  ratingSummary?: { average: number; count: number },
 ) {
   const canonicalUrl = absoluteUrl(`/location/${location.slug}`);
   const amenityFeature = buildAmenityFeatures(location);
@@ -138,7 +143,7 @@ export function buildLocationJsonLd(
     url: canonicalUrl,
     description: location.description ?? undefined,
     image: location.images.length > 0 ? location.images : undefined,
-    address: buildLocationAddress(location),
+    address: buildAddress(location),
     geo:
       location.latitude != null && location.longitude != null
         ? {
@@ -153,6 +158,16 @@ export function buildLocationJsonLd(
     isAccessibleForFree:
       location.pricing_type === "free" ? true : location.pricing_type === "paid" ? false : undefined,
     amenityFeature: amenityFeature.length > 0 ? amenityFeature : undefined,
+    aggregateRating:
+      ratingSummary && ratingSummary.count > 0
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: ratingSummary.average,
+            reviewCount: ratingSummary.count,
+            bestRating: 5,
+            worstRating: 1,
+          }
+        : undefined,
   };
 
   const graph: object[] = [
@@ -184,32 +199,27 @@ export function buildLocationJsonLd(
   };
 }
 
-/** LocalBusiness schema for a studio detail page. Only includes fields that
- * actually exist in the database. */
-export function buildLocalBusinessJsonLd(studio: {
-  name: string;
-  slug: string;
-  description: string | null;
-  images: string[];
-  latitude: number | null;
-  longitude: number | null;
-  city: { name: string } | null;
-  state: { name: string } | null;
-  country: { name: string } | null;
-}) {
-  return {
-    "@context": "https://schema.org",
+/** Combined LocalBusiness + BreadcrumbList (+ FAQPage when the studio has
+ * FAQs) structured data for a studio detail page, as a single JSON-LD
+ * script with an @graph — see StudioJsonLd. Mirrors buildLocationJsonLd.
+ * Only includes fields that actually exist in the database — no invented
+ * ratings/reviews/prices. `studio` and `breadcrumbItems` must be data the
+ * page already loaded/computed; this never queries Supabase itself. */
+export function buildStudioJsonLd(
+  studio: PublicStudioDetail,
+  breadcrumbItems: { name: string; path: string }[],
+) {
+  const canonicalUrl = absoluteUrl(`/studio/${studio.slug}`);
+  const breadcrumbList = buildBreadcrumbList(breadcrumbItems);
+
+  const business = {
     "@type": "LocalBusiness",
+    "@id": `${canonicalUrl}#business`,
     name: studio.name,
-    url: absoluteUrl(`/studio/${studio.slug}`),
+    url: canonicalUrl,
     description: studio.description ?? undefined,
     image: studio.images.length > 0 ? studio.images : undefined,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: studio.city?.name,
-      addressRegion: studio.state?.name,
-      addressCountry: studio.country?.name,
-    },
+    address: buildAddress(studio),
     geo:
       studio.latitude != null && studio.longitude != null
         ? {
@@ -218,6 +228,34 @@ export function buildLocalBusinessJsonLd(studio: {
             longitude: studio.longitude,
           }
         : undefined,
+  };
+
+  const graph: object[] = [
+    business,
+    {
+      "@type": "BreadcrumbList",
+      "@id": `${canonicalUrl}#breadcrumb`,
+      itemListElement: breadcrumbList.itemListElement,
+    },
+  ];
+
+  // Only ever built from FAQs actually rendered on the page — never
+  // fabricated, never present when the studio has none.
+  if (studio.faqs.length > 0) {
+    graph.push({
+      "@type": "FAQPage",
+      "@id": `${canonicalUrl}#faq`,
+      mainEntity: studio.faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    });
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": graph,
   };
 }
 

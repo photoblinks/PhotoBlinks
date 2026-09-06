@@ -160,7 +160,16 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# Port 3100 added for local `next start` testing (see Phase 19 report) —
+# 3000 is often already in use by another project's dev server. Both the
+# "localhost" and "127.0.0.1" spellings are listed since GoTrue matches
+# this list by exact string, not DNS-equivalence, and a real browser test
+# is likely to use "localhost".
+additional_redirect_urls = [
+  "https://127.0.0.1:3000",
+  "http://127.0.0.1:3100",
+  "http://localhost:3100",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -223,7 +232,10 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+# Phase 19: on, to match the intended production behavior and exercise the
+# real confirmation flow locally via Mailpit (http://127.0.0.1:54324)
+# instead of every signup silently getting an immediate session.
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -233,15 +245,29 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
+# Real Resend SMTP relay — verified working end-to-end in Phase 19 (real
+# delivery to contact@photoblinks.com confirmed), then turned back off here
+# so ordinary local testing (fake @*.test addresses, unrelated phases)
+# doesn't fail signup with "Error sending confirmation email" against a
+# real provider, or spend real Resend send quota. Uncomment to re-verify
+# real delivery again; local dev otherwise uses Mailpit (below) for every
+# outgoing auth email. This only affects the LOCAL CLI stack either way —
+# the hosted project needs the same values entered separately in its own
+# Dashboard (Authentication > Emails > SMTP Settings), which this file has
+# no effect on.
 # [auth.email.smtp]
 # enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# host = "smtp.resend.com"
+# port = 465
+# user = "resend"
+# pass = "env(RESEND_API_KEY)"
+# admin_email = "noreply@photoblinks.com"
+# sender_name = "PhotoBlinks"
+
+# PhotoBlinks-branded confirmation email — see supabase/templates/confirmation.html
+[auth.email.template.confirmation]
+subject = "Confirm your PhotoBlinks account"
+content_path = "./supabase/templates/confirmation.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
@@ -333,6 +359,17 @@ url = ""
 skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
+
+# Google Sign-In (Phase 19). Real Google Cloud OAuth client credentials are
+# in .env.local (server-only, never committed). Has no effect on the
+# hosted project either way — that's configured separately via the
+# Supabase Dashboard (Authentication > Providers > Google).
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+redirect_uri = ""
+skip_nonce_check = true
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getActiveCategories, getPublishedLocations, getPublishedStudios } from "@/lib/public-data";
+import { isSeoEligible } from "@/lib/seo-eligibility";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
@@ -19,10 +20,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/locations`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/studios`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/locations/map`, changeFrequency: "daily", priority: 0.7 },
+    // Static trust/transparency pages — not location/category SEO landing
+    // pages, so they're unconditional and don't use isSeoEligible.
+    { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.3 },
+    { url: `${SITE_URL}/how-it-works`, changeFrequency: "monthly", priority: 0.3 },
+    { url: `${SITE_URL}/data-and-verification`, changeFrequency: "monthly", priority: 0.3 },
+    { url: `${SITE_URL}/report-an-issue`, changeFrequency: "monthly", priority: 0.3 },
+    { url: `${SITE_URL}/contact`, changeFrequency: "monthly", priority: 0.3 },
+    { url: `${SITE_URL}/privacy`, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${SITE_URL}/terms`, changeFrequency: "yearly", priority: 0.2 },
   ];
 
-  // Dedicated per-category landing pages.
+  // Dedicated per-category landing pages — only once the category clears
+  // the same SEO eligibility threshold as City + Category / State +
+  // Category. Counted from the same `locations` array already fetched
+  // above, grouped in memory — no extra query.
+  const categoryLocationCounts = new Map<string, number>();
+  for (const location of locations) {
+    if (!location.category) continue;
+    categoryLocationCounts.set(
+      location.category.slug,
+      (categoryLocationCounts.get(location.category.slug) ?? 0) + 1,
+    );
+  }
   for (const category of categories) {
+    if (!isSeoEligible(categoryLocationCounts.get(category.slug) ?? 0)) continue;
     entries.push({
       url: `${SITE_URL}/category/${category.slug}`,
       changeFrequency: "weekly",
@@ -57,6 +79,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const stateGroups = new Map<string, { path: string; dates: string[] }>();
   const cityGroups = new Map<string, { path: string; dates: string[] }>();
   const categoryGroups = new Map<string, { path: string; dates: string[] }>();
+  const stateCategoryGroups = new Map<string, { path: string; dates: string[] }>();
 
   for (const location of locations) {
     if (!location.country || !location.state) continue;
@@ -69,6 +92,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const stateKey = `${countryKey}/${location.state.slug}`;
     if (!stateGroups.has(stateKey)) stateGroups.set(stateKey, { path: stateKey, dates: [] });
     stateGroups.get(stateKey)!.dates.push(location.updatedAt);
+
+    if (location.category) {
+      const stateCategoryKey = `${stateKey}/${location.category.slug}`;
+      if (!stateCategoryGroups.has(stateCategoryKey)) {
+        stateCategoryGroups.set(stateCategoryKey, { path: stateCategoryKey, dates: [] });
+      }
+      stateCategoryGroups.get(stateCategoryKey)!.dates.push(location.updatedAt);
+    }
 
     if (location.city) {
       const cityKey = `${stateKey}/${location.city.slug}`;
@@ -109,7 +140,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     });
   }
+  // State + category pages only earn a sitemap entry once they clear the
+  // same SEO eligibility threshold as City + category, below.
+  for (const group of stateCategoryGroups.values()) {
+    if (!isSeoEligible(group.dates.length)) continue;
+    entries.push({
+      url: `${SITE_URL}/locations/${group.path}`,
+      lastModified: latest(group.dates),
+      changeFrequency: "weekly",
+      priority: 0.55,
+    });
+  }
+  // City + category pages only earn a sitemap entry once they clear the
+  // SEO eligibility threshold (dates.length === published location count
+  // for that combination) — same rule the page itself uses for noindex.
   for (const group of categoryGroups.values()) {
+    if (!isSeoEligible(group.dates.length)) continue;
     entries.push({
       url: `${SITE_URL}/locations/${group.path}`,
       lastModified: latest(group.dates),

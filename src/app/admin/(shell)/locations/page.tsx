@@ -13,15 +13,29 @@ import {
 } from "@/components/ui/table";
 import { deleteLocation, toggleLocationPublished } from "./actions";
 import { formatPricing } from "@/lib/format";
+import { isSeoEligible, seoEligibilityLabel } from "@/lib/seo-eligibility";
 
 export default async function AdminLocationsPage() {
   const supabase = await createClient();
-  const { data: locations } = await supabase
-    .from("locations")
-    .select(
-      "*, categories(name), states(name), cities(name), location_images(image_url, sort_order)",
-    )
-    .order("created_at", { ascending: false });
+  const [{ data: locations }, { data: publishedForSeo }] = await Promise.all([
+    supabase
+      .from("locations")
+      .select(
+        "*, categories(name, slug), states(name), cities(name, slug), location_images(image_url, sort_order)",
+      )
+      .order("created_at", { ascending: false }),
+    // One grouped aggregate — not one query per row — for the City +
+    // Category SEO eligibility count shown alongside each location. Same
+    // rule as the Phase 3 inventory (src/lib/seo-eligibility.ts).
+    supabase.from("locations").select("city_id, category_id").eq("is_published", true),
+  ]);
+
+  const seoCounts = new Map<string, number>();
+  for (const location of publishedForSeo ?? []) {
+    if (!location.city_id || !location.category_id) continue;
+    const key = `${location.city_id}|${location.category_id}`;
+    seoCounts.set(key, (seoCounts.get(key) ?? 0) + 1);
+  }
 
   return (
     <div>
@@ -40,6 +54,7 @@ export default async function AdminLocationsPage() {
             <TableHead>City</TableHead>
             <TableHead>Pricing</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>SEO</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -48,6 +63,17 @@ export default async function AdminLocationsPage() {
             const primaryImage = [...(location.location_images ?? [])].sort(
               (a, b) => a.sort_order - b.sort_order,
             )[0]?.image_url;
+
+            const categorySlug = location.categories?.slug;
+            const citySlug = location.cities?.slug;
+            const seoCount =
+              location.city_id && location.category_id
+                ? (seoCounts.get(`${location.city_id}|${location.category_id}`) ?? 0)
+                : null;
+            const seoHref =
+              citySlug && categorySlug
+                ? `/admin/seo/location-categories?city=${citySlug}&category=${categorySlug}`
+                : undefined;
 
             return (
               <TableRow key={location.id}>
@@ -75,6 +101,18 @@ export default async function AdminLocationsPage() {
                   <Badge variant={location.is_published ? "default" : "secondary"}>
                     {location.is_published ? "Published" : "Unpublished"}
                   </Badge>
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {seoCount === null ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : (
+                    <Badge
+                      render={seoHref ? <Link href={seoHref} /> : undefined}
+                      variant={isSeoEligible(seoCount) ? "default" : "secondary"}
+                    >
+                      {seoCount} location{seoCount === 1 ? "" : "s"} · {seoEligibilityLabel(seoCount)}
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell className="flex justify-end gap-2">
                   <Button

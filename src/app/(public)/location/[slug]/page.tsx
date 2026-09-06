@@ -1,12 +1,20 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Tag, Navigation, ChevronDown } from "lucide-react";
-import { getActiveCategories, getPublishedLocationBySlug } from "@/lib/public-data";
+import { Tag, Navigation, ChevronDown, Star } from "lucide-react";
+import {
+  getActiveCategories,
+  getActiveSponsoredPhotographerByState,
+  getApprovedLocationComments,
+  getApprovedLocationCommentCount,
+  getLocationRatingSummary,
+  getPublishedLocationBySlug,
+} from "@/lib/public-data";
 import { formatPricing } from "@/lib/format";
 import { getCategoryMarkerStyle } from "@/lib/category-style";
 import { ImageGallery } from "@/components/public/image-gallery";
 import { ShareButton } from "@/components/public/share-button";
+import { FavouriteButton } from "@/components/public/favourite-button";
 import { YouTubeEmbed } from "@/components/public/youtube-embed";
 import { MiniMap } from "@/components/public/mini-map";
 import { DistanceDisplay } from "@/components/public/distance-display";
@@ -14,7 +22,10 @@ import { GoToLocationButton } from "@/components/public/go-to-location-button";
 import { ActionButton } from "@/components/public/action-button";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { ExtraDetailsList, hasExtraDetails } from "@/components/public/extra-details-list";
+import { SponsoredPhotographerCard } from "@/components/public/sponsored-photographer-card";
 import { LocationJsonLd } from "@/components/public/location-json-ld";
+import { ReadMoreText } from "@/components/public/read-more-text";
+import { LocationComments } from "@/components/public/location-comments";
 import { absoluteUrl } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -125,6 +136,11 @@ export default async function LocationDetailPage({ params }: Props) {
 
   const imageAlt = location.city ? `${location.name} in ${location.city.name}` : location.name;
 
+  // The composed section headings below ("{name} Photoshoot Overview" etc.)
+  // use the shorter Card Place Name — the H1 above keeps the full stored
+  // Name, unaffected.
+  const displayName = location.cardName || location.name;
+
   // Quick-nav category cards at the bottom of the page — categories other
   // than this location's own (more useful for exploring something
   // different), capped at 4 for a clean small-card row.
@@ -133,32 +149,61 @@ export default async function LocationDetailPage({ params }: Props) {
     .filter((c) => c.slug !== location.category?.slug)
     .slice(0, 4);
 
+  // Commercial/sponsored placement — Photographer -> State, never assigned
+  // per-location. Deliberately excluded from LocationJsonLd/SEO schema below.
+  const sponsoredPhotographer = location.state_id
+    ? await getActiveSponsoredPhotographerByState(location.state_id)
+    : null;
+
+  const [initialComments, commentCount, ratingSummary] = await Promise.all([
+    getApprovedLocationComments(location.id),
+    getApprovedLocationCommentCount(location.id),
+    getLocationRatingSummary(location.id),
+  ]);
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       <Breadcrumbs items={breadcrumbItems} includeJsonLd={false} />
-      <div className="mb-4 flex items-start justify-between gap-4">
+      <div className="mb-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
           <h1 className="font-heading text-3xl font-semibold sm:text-4xl">{location.name}</h1>
-          {subtitle && <p className="mt-1 text-muted-foreground">{subtitle}</p>}
+          {(subtitle || ratingSummary.count > 0) && (
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-muted-foreground">
+              {ratingSummary.count > 0 && (
+                <a href="#comments" className="flex items-center gap-1 hover:text-foreground">
+                  <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden="true" />
+                  <span className="font-medium text-foreground">{ratingSummary.average}</span>
+                  <span>
+                    · ({ratingSummary.count} user rating{ratingSummary.count === 1 ? "" : "s"})
+                  </span>
+                </a>
+              )}
+              {ratingSummary.count > 0 && subtitle && <span>-</span>}
+              {subtitle && <span>{subtitle}</span>}
+            </p>
+          )}
         </div>
-        <ShareButton title={location.name} url={absoluteUrl(`/location/${location.slug}`)} />
+        <div className="flex shrink-0 items-center justify-end gap-2">
+          <FavouriteButton locationId={location.id} showLabel />
+          <ShareButton title={location.name} url={absoluteUrl(`/location/${location.slug}`)} />
+        </div>
       </div>
 
       <ImageGallery images={location.images} alt={imageAlt} />
 
-      <h2 className="font-heading mt-10 mb-4 text-xl font-semibold">
-        {location.name} Photoshoot Details &amp; Pricing
+      <h2 className="font-heading mt-14 mb-4 text-xl font-semibold">
+        {displayName} Photoshoot Details &amp; Pricing
       </h2>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">{hasExtraDetails(location) && <ExtraDetailsList details={location} />}</div>
 
-        <aside className="flex flex-col gap-4">
+        <aside className="flex flex-col gap-6">
           <div className="rounded-xl border bg-white p-4 shadow-sm">
             <h3 className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
               <span className="flex size-7 items-center justify-center rounded-full bg-pb-brand/10">
                 <Tag className="size-3.5 text-pb-brand" />
               </span>
-              Pricing
+              Photography Pricing
             </h3>
             <p className="font-heading text-3xl font-semibold">{priceDisplay}</p>
             {priceCaption && <p className="text-sm text-muted-foreground">{priceCaption}</p>}
@@ -168,29 +213,38 @@ export default async function LocationDetailPage({ params }: Props) {
               className="mt-4 w-full"
             />
           </div>
+
+          {sponsoredPhotographer && (
+            <SponsoredPhotographerCard
+              photographer={sponsoredPhotographer}
+              photographerId={sponsoredPhotographer.id}
+              locationId={location.id}
+              pagePath={`/location/${location.slug}`}
+            />
+          )}
         </aside>
       </div>
 
       {location.description && (
-        <div className="mt-6">
-          <h2 className="font-heading mb-3 text-xl font-semibold">{location.name} Photoshoot Overview</h2>
-          <p className="leading-relaxed text-foreground/90">{location.description}</p>
+        <div className="mt-10">
+          <h2 className="font-heading mb-3 text-xl font-semibold">{displayName} Photoshoot Overview</h2>
+          <ReadMoreText text={location.description} className="leading-relaxed text-foreground/90" />
         </div>
       )}
 
       {location.youtube_url && (
-        <div className="mt-8">
+        <div className="mt-12">
           <h2 className="font-heading mb-3 text-xl font-semibold">
-            {location.name} Tour &amp; Photoshoot Video
+            {displayName} Tour &amp; Photoshoot Video
           </h2>
           <YouTubeEmbed url={location.youtube_url} title={location.name} />
         </div>
       )}
 
       {(hasCoords || location.map_url) && (
-        <div className="mt-10">
+        <div className="mt-14">
           <h2 className="font-heading mb-4 text-xl font-semibold">
-            {location.name} Location &amp; Map Directions
+            {displayName} Location &amp; Map Directions
           </h2>
           <div className="grid grid-cols-1 overflow-hidden rounded-xl border bg-white shadow-sm md:grid-cols-2">
             <div className="flex flex-col justify-between gap-4 p-5">
@@ -229,9 +283,9 @@ export default async function LocationDetailPage({ params }: Props) {
       )}
 
       {location.faqs.length > 0 && (
-        <div className="mt-10">
+        <div className="mt-14">
           <h2 className="font-heading mb-4 text-xl font-semibold">
-            Frequently Asked Questions About {location.name}
+            Frequently Asked Questions About {displayName}
           </h2>
           <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-white shadow-sm">
             {location.faqs.map((faq, index) => (
@@ -247,8 +301,17 @@ export default async function LocationDetailPage({ params }: Props) {
         </div>
       )}
 
+      <div id="comments" className="mt-14 scroll-mt-20">
+        <LocationComments
+          locationId={location.id}
+          initialComments={initialComments}
+          initialCount={commentCount}
+          ratingSummary={ratingSummary}
+        />
+      </div>
+
       {exploreCategories.length > 0 && (
-        <div className="mt-10 border-t pt-6">
+        <div className="mt-14 border-t pt-8">
           <h2 className="font-heading mb-4 text-xl font-semibold">Explore More Locations</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {exploreCategories.map((category) => {
@@ -273,7 +336,7 @@ export default async function LocationDetailPage({ params }: Props) {
         </div>
       )}
 
-      <LocationJsonLd location={location} breadcrumbItems={breadcrumbItems} />
+      <LocationJsonLd location={location} breadcrumbItems={breadcrumbItems} ratingSummary={ratingSummary} />
     </div>
   );
 }

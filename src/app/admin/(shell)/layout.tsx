@@ -9,9 +9,13 @@ const NAV_LINKS = [
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/locations", label: "Locations" },
   { href: "/admin/studios", label: "Studios" },
+  { href: "/admin/photographers", label: "Sponsored Photographers" },
+  { href: "/admin/comments", label: "Comments" },
   { href: "/admin/country-pages", label: "Country Pages" },
   { href: "/admin/state-pages", label: "State Pages" },
   { href: "/admin/city-pages", label: "City Pages" },
+  { href: "/admin/seo/location-categories", label: "Location + Category SEO" },
+  { href: "/admin/seo/location-state-categories", label: "State + Category SEO" },
   { href: "/admin/settings", label: "Settings" },
 ];
 

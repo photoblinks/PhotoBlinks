@@ -37,6 +37,11 @@ const pricingOptionSchema = z.object({
   price: z.coerce.number().positive("Pricing option price must be a positive number."),
 });
 
+const faqSchema = z.object({
+  question: z.string().trim().min(1, "FAQ question is required.").max(300, "FAQ question is too long."),
+  answer: z.string().trim().min(1, "FAQ answer is required.").max(2000, "FAQ answer is too long."),
+});
+
 const studioSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required."),
@@ -73,6 +78,7 @@ const studioSchema = z
     is_published: z.boolean(),
     images: z.array(z.string().url()).default([]),
     pricingOptions: z.array(pricingOptionSchema).default([]),
+    faqs: z.array(faqSchema).default([]),
   })
   .refine((data) => !data.is_published || data.images.length > 0, {
     message: "At least one image is required before publishing.",
@@ -129,6 +135,13 @@ function parseStudioForm(formData: FormData) {
     is_published: formData.get("is_published") !== null,
     images: formData.getAll("images").map(String).filter(Boolean),
     pricingOptions,
+    faqs: (() => {
+      const questions = formData.getAll("faq_question").map(String);
+      const answers = formData.getAll("faq_answer").map(String);
+      return questions
+        .map((question, i) => ({ question: question.trim(), answer: (answers[i] ?? "").trim() }))
+        .filter((f) => f.question !== "" || f.answer !== "");
+    })(),
   };
 
   return studioSchema.parse(raw);
@@ -169,6 +182,24 @@ async function replaceStudioPricingOptions(
   );
 }
 
+async function replaceStudioFaqs(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  studioId: string,
+  faqs: { question: string; answer: string }[],
+) {
+  await supabase.from("studio_faqs").delete().eq("studio_id", studioId);
+  if (faqs.length === 0) return;
+
+  await supabase.from("studio_faqs").insert(
+    faqs.map((faq, index) => ({
+      studio_id: studioId,
+      question: faq.question,
+      answer: faq.answer,
+      sort_order: index,
+    })),
+  );
+}
+
 export async function createStudio(formData: FormData) {
   const supabase = await createClient();
 
@@ -180,7 +211,7 @@ export async function createStudio(formData: FormData) {
     redirect(`/admin/studios/new?error=${encodeURIComponent(message)}`);
   }
 
-  const { images, pricingOptions, city_name, ...studioValues } = values;
+  const { images, pricingOptions, faqs, city_name, ...studioValues } = values;
 
   const cityId = await resolveLocationGeo(supabase, {
     countryId: studioValues.country_id,
@@ -201,6 +232,7 @@ export async function createStudio(formData: FormData) {
 
   await replaceStudioImages(supabase, data.id, images);
   await replaceStudioPricingOptions(supabase, data.id, pricingOptions);
+  await replaceStudioFaqs(supabase, data.id, faqs);
 
   revalidatePath("/admin/studios");
   redirect("/admin/studios");
@@ -217,7 +249,7 @@ export async function updateStudio(id: string, formData: FormData) {
     redirect(`/admin/studios/${id}/edit?error=${encodeURIComponent(message)}`);
   }
 
-  const { images, pricingOptions, city_name, ...studioValues } = values;
+  const { images, pricingOptions, faqs, city_name, ...studioValues } = values;
 
   const cityId = await resolveLocationGeo(supabase, {
     countryId: studioValues.country_id,
@@ -237,6 +269,7 @@ export async function updateStudio(id: string, formData: FormData) {
 
   await replaceStudioImages(supabase, id, images);
   await replaceStudioPricingOptions(supabase, id, pricingOptions);
+  await replaceStudioFaqs(supabase, id, faqs);
 
   revalidatePath("/admin/studios");
   redirect("/admin/studios");

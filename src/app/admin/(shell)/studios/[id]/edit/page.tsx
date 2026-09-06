@@ -18,7 +18,7 @@ export default async function EditStudioPage({
     supabase
       .from("studios")
       .select(
-        "*, cities(name), studio_images(image_url, sort_order), studio_pricing_options(label, price, sort_order)",
+        "*, cities(name), studio_images(image_url, sort_order), studio_pricing_options(label, price, sort_order), studio_faqs(question, answer, sort_order)",
       )
       .eq("id", id)
       .single(),
@@ -35,6 +35,9 @@ export default async function EditStudioPage({
   const pricingOptions = [...(studio.studio_pricing_options ?? [])]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((o) => ({ label: o.label, price: o.price }));
+  const faqs = [...(studio.studio_faqs ?? [])]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((f) => ({ question: f.question, answer: f.answer }));
 
   const cityRef = Array.isArray(studio.cities) ? studio.cities[0] : studio.cities;
 
@@ -43,7 +46,7 @@ export default async function EditStudioPage({
       <h1 className="mb-6 text-2xl font-semibold">Edit studio</h1>
       <StudioForm
         action={updateStudio.bind(null, id)}
-        studio={{ ...studio, images, pricingOptions, city_name: cityRef?.name }}
+        studio={{ ...studio, images, pricingOptions, faqs, city_name: cityRef?.name }}
         countries={countries ?? []}
         states={states ?? []}
         error={error}

@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import type { Metadata } from "next";
-import { Tag, Navigation } from "lucide-react";
-import { getPublishedStudioBySlug } from "@/lib/public-data";
+import { Tag, Navigation, ChevronDown } from "lucide-react";
+import { getPublishedStudioBySlug, getPublishedStudios } from "@/lib/public-data";
 import { ImageGallery } from "@/components/public/image-gallery";
 import { ShareButton } from "@/components/public/share-button";
+import { StudioCard } from "@/components/public/studio-card";
 import { YouTubeEmbed } from "@/components/public/youtube-embed";
 import { MiniMap } from "@/components/public/mini-map";
 import { DistanceDisplay } from "@/components/public/distance-display";
@@ -12,8 +12,8 @@ import { GoToLocationButton } from "@/components/public/go-to-location-button";
 import { ActionButton } from "@/components/public/action-button";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { ExtraDetailsList, hasExtraDetails } from "@/components/public/extra-details-list";
-import { JsonLd } from "@/components/public/json-ld";
-import { absoluteUrl, buildLocalBusinessJsonLd } from "@/lib/jsonld";
+import { StudioJsonLd } from "@/components/public/studio-json-ld";
+import { absoluteUrl } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -87,9 +87,15 @@ export default async function StudioDetailPage({ params }: Props) {
 
   const imageAlt = studio.city ? `${studio.name} in ${studio.city.name}` : studio.name;
 
+  // Other published studios in the same state — reuses the existing
+  // getPublishedStudios() call already used by the state studios listing
+  // page, no new data-fetching function needed.
+  const stateStudios = studio.state_id ? await getPublishedStudios({ stateId: studio.state_id }) : [];
+  const otherStudios = stateStudios.filter((s) => s.id !== studio.id).slice(0, 4);
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <Breadcrumbs items={breadcrumbItems} />
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <Breadcrumbs items={breadcrumbItems} includeJsonLd={false} />
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h1 className="font-heading text-3xl font-semibold sm:text-4xl">{studio.name}</h1>
@@ -192,19 +198,37 @@ export default async function StudioDetailPage({ params }: Props) {
         </div>
       )}
 
-      {studio.country && studio.state && studio.city && (
-        <div className="mt-10 border-t pt-6">
-          <h2 className="font-heading mb-3 text-xl font-semibold">Explore More Studios</h2>
-          <Link
-            href={`/studios/${studio.country.slug}/${studio.state.slug}/${studio.city.slug}`}
-            className="text-sm font-medium text-pb-brand hover:underline"
-          >
-            All pre-wedding photo studios in {studio.city.name}
-          </Link>
+      {studio.faqs.length > 0 && (
+        <div className="mt-10">
+          <h2 className="font-heading mb-4 text-xl font-semibold">Frequently Asked Questions</h2>
+          <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-white shadow-sm">
+            {studio.faqs.map((faq, index) => (
+              <details key={index} className="group p-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium marker:content-none">
+                  {faq.question}
+                  <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                </summary>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{faq.answer}</p>
+              </details>
+            ))}
+          </div>
         </div>
       )}
 
-      <JsonLd data={buildLocalBusinessJsonLd(studio)} />
+      {otherStudios.length > 0 && (
+        <div className="mt-10 border-t pt-6">
+          <h2 className="font-heading mb-4 text-xl font-semibold">
+            {studio.state ? `More Studios in ${studio.state.name}` : "Explore More Studios"}
+          </h2>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+            {otherStudios.map((s) => (
+              <StudioCard key={s.id} studio={s} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <StudioJsonLd studio={studio} breadcrumbItems={breadcrumbItems} />
     </div>
   );
 }

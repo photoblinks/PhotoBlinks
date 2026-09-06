@@ -9,7 +9,7 @@ import {
 } from "@/lib/r2/upload";
 
 const bodySchema = z.object({
-  kind: z.enum(["locations", "studios", "categories", "countries", "states", "cities", "site"]),
+  kind: z.enum(["locations", "studios", "categories", "countries", "states", "cities", "site", "photographers"]),
   slug: z.string().min(1),
   filename: z.string().min(1),
   contentType: z.enum(ALLOWED_IMAGE_CONTENT_TYPES, {

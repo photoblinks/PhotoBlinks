@@ -39,6 +39,7 @@ export default async function LocationsMapPage({
     city?: string;
     category?: string;
     pricing?: string;
+    drone?: string;
     lat?: string;
     lng?: string;
   }>;
@@ -57,6 +58,10 @@ export default async function LocationsMapPage({
     params.pricing === "free" || params.pricing === "paid" || params.pricing === "unknown"
       ? params.pricing
       : undefined;
+  const droneStatus =
+    params.drone === "allowed" || params.drone === "allowed_with_permission" || params.drone === "not_allowed"
+      ? params.drone
+      : undefined;
   const near =
     params.lat && params.lng
       ? { latitude: Number(params.lat), longitude: Number(params.lng) }
@@ -67,6 +72,7 @@ export default async function LocationsMapPage({
     stateId: selectedState?.id,
     cityId: selectedCity?.id,
     pricingType,
+    droneStatus,
     near,
   });
 
@@ -78,6 +84,7 @@ export default async function LocationsMapPage({
     if (params.city) query.set("city", params.city);
     if (categorySlug) query.set("category", categorySlug);
     if (params.pricing) query.set("pricing", params.pricing);
+    if (params.drone) query.set("drone", params.drone);
     if (params.lat) query.set("lat", params.lat);
     if (params.lng) query.set("lng", params.lng);
     const qs = query.toString();
@@ -86,13 +93,14 @@ export default async function LocationsMapPage({
 
   // /locations is a state-directory page with no filter support at all, so
   // the list-view equivalent of the current map filters is the homepage's
-  // own filtered results view, which reads these same six params.
+  // own filtered results view, which reads these same seven params.
   function listViewHref() {
     const query = new URLSearchParams();
     if (params.state) query.set("state", params.state);
     if (params.city) query.set("city", params.city);
     if (params.category) query.set("category", params.category);
     if (params.pricing) query.set("pricing", params.pricing);
+    if (params.drone) query.set("drone", params.drone);
     if (params.lat) query.set("lat", params.lat);
     if (params.lng) query.set("lng", params.lng);
     const qs = query.toString();
@@ -108,7 +116,7 @@ export default async function LocationsMapPage({
     <div>
       <h1 className="sr-only">Pre-Wedding Photoshoot Locations Map</h1>
 
-      <div className="mx-auto hidden max-w-6xl px-4 py-4 sm:block sm:px-6">
+      <div className="mx-auto hidden max-w-7xl px-4 py-4 sm:block sm:px-6">
         <HomeFilter
           states={states}
           cities={cities}
@@ -119,6 +127,7 @@ export default async function LocationsMapPage({
             city: params.city,
             category: params.category,
             pricing: params.pricing,
+            drone: params.drone,
             lat: params.lat,
             lng: params.lng,
           }}
@@ -143,6 +152,7 @@ export default async function LocationsMapPage({
             city: params.city,
             category: params.category,
             pricing: params.pricing,
+            drone: params.drone,
             lat: params.lat,
             lng: params.lng,
           }}

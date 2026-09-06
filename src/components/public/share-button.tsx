@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,6 +52,7 @@ export function ShareButton({ title, url }: { title: string; url: string }) {
   if (canNativeShare) {
     return (
       <Button type="button" variant="outline" size="sm" onClick={handleClick}>
+        <Share2 className="size-4" />
         Share
       </Button>
     );
@@ -59,6 +61,7 @@ export function ShareButton({ title, url }: { title: string; url: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button type="button" variant="outline" size="sm" />}>
+        <Share2 className="size-4" />
         Share
       </DropdownMenuTrigger>
       <DropdownMenuContent>

@@ -10,9 +10,11 @@ import type { BreadcrumbItem } from "./breadcrumbs";
 export function LocationJsonLd({
   location,
   breadcrumbItems,
+  ratingSummary,
 }: {
   location: PublicLocationDetail;
   breadcrumbItems: BreadcrumbItem[];
+  ratingSummary?: { average: number; count: number };
 }) {
-  return <JsonLd data={buildLocationJsonLd(location, breadcrumbItems)} />;
+  return <JsonLd data={buildLocationJsonLd(location, breadcrumbItems, ratingSummary)} />;
 }

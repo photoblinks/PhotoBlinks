@@ -28,7 +28,7 @@ const manrope = Manrope({
 });
 
 const DEFAULT_TITLE = "PhotoBlinks - Discover Photoshoot Locations";
-const DEFAULT_DESCRIPTION = "Discover beautiful photoshoot locations across Karnataka and Kerala.";
+const DEFAULT_DESCRIPTION = "Discover pre-wedding photoshoot locations across India.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
@@ -49,10 +49,14 @@ export const metadata: Metadata = {
       },
     ],
   },
+  // No title/description here on purpose: Next resolves an unset Twitter
+  // field from the page's own effective `openGraph` value (already proven
+  // for `images`, e.g. a location's real photo correctly flows through to
+  // twitter:image). Hardcoding them to the site defaults here previously
+  // meant every page's Twitter card showed the homepage's title/description
+  // instead of its own — verified via a real build before this fix.
   twitter: {
     card: "summary_large_image",
-    title: DEFAULT_TITLE,
-    description: DEFAULT_DESCRIPTION,
   },
 };
 

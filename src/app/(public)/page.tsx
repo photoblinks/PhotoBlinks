@@ -19,12 +19,12 @@ import { DEFAULT_OG_IMAGE, buildOrganizationJsonLd, buildWebSiteJsonLd } from "@
 export const metadata: Metadata = {
   title: "Pre-Wedding Photoshoot Locations in India",
   description:
-    "Discover pre-wedding photoshoot locations across Karnataka and Kerala — beaches, waterfalls, temples, hills, and more. Browse by state, city, or category.",
+    "Discover pre-wedding photoshoot locations across India — beaches, waterfalls, temples, hills, and more. Browse by state, city, or category.",
   alternates: { canonical: "/" },
   openGraph: {
     title: "PhotoBlinks — Pre-Wedding Photoshoot Locations in India",
     description:
-      "Discover pre-wedding photoshoot locations across Karnataka and Kerala — beaches, waterfalls, temples, hills, and more.",
+      "Discover pre-wedding photoshoot locations across India — beaches, waterfalls, temples, hills, and more.",
     url: "/",
     siteName: "PhotoBlinks",
     type: "website",
@@ -42,6 +42,7 @@ export default async function HomePage({
     city?: string;
     category?: string;
     pricing?: string;
+    drone?: string;
     lat?: string;
     lng?: string;
   }>;
@@ -61,12 +62,20 @@ export default async function HomePage({
     params.pricing === "free" || params.pricing === "paid" || params.pricing === "unknown"
       ? params.pricing
       : undefined;
+  const droneStatus =
+    params.drone === "allowed" ||
+    params.drone === "allowed_with_permission" ||
+    params.drone === "not_allowed"
+      ? params.drone
+      : undefined;
   const near =
     params.lat && params.lng
       ? { latitude: Number(params.lat), longitude: Number(params.lng) }
       : undefined;
 
-  const hasFilters = Boolean(selectedState || selectedCity || selectedCategory || pricingType || near);
+  const hasFilters = Boolean(
+    selectedState || selectedCity || selectedCategory || pricingType || droneStatus || near,
+  );
 
   return (
     <div>
@@ -90,7 +99,7 @@ export default async function HomePage({
         </div>
       </section>
 
-      <div className="relative z-10 mx-auto -mt-8 max-w-6xl px-4 sm:-mt-10 sm:px-6">
+      <div className="relative z-10 mx-auto -mt-8 max-w-7xl px-4 sm:-mt-10 sm:px-6">
         <HomeFilter
           states={states}
           cities={cities}
@@ -100,6 +109,7 @@ export default async function HomePage({
             city: params.city,
             category: params.category,
             pricing: params.pricing,
+            drone: params.drone,
             lat: params.lat,
             lng: params.lng,
           }}
@@ -112,6 +122,7 @@ export default async function HomePage({
           stateId={selectedState?.id}
           cityId={selectedCity?.id}
           pricingType={pricingType}
+          droneStatus={droneStatus}
           near={near}
         />
       ) : (
@@ -129,18 +140,27 @@ async function FilteredResults({
   stateId,
   cityId,
   pricingType,
+  droneStatus,
   near,
 }: {
   categoryId?: string;
   stateId?: string;
   cityId?: string;
   pricingType?: "free" | "paid" | "unknown";
+  droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
   near?: { latitude: number; longitude: number };
 }) {
-  const results = await getPublishedLocations({ categoryId, stateId, cityId, pricingType, near });
+  const results = await getPublishedLocations({
+    categoryId,
+    stateId,
+    cityId,
+    pricingType,
+    droneStatus,
+    near,
+  });
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <h2 className="font-heading mb-6 text-xl font-semibold">
         {results.length} location{results.length === 1 ? "" : "s"} found
         {near && " · sorted by distance"}
@@ -176,7 +196,7 @@ async function BrowseByCategory({
 
   if (sectionsWithLocations.length === 0 && featuredStudios.length === 0) {
     return (
-      <section className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6">
+      <section className="mx-auto max-w-7xl px-4 py-16 text-center sm:px-6">
         <p className="text-muted-foreground">
           No photoshoot locations are published yet — check back soon.
         </p>
@@ -185,7 +205,7 @@ async function BrowseByCategory({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
       {sectionsWithLocations.length > 0 && (
         <p className="mb-1 text-xs font-semibold tracking-[0.2em] text-pb-brand-bright uppercase">
           Popular Destinations
@@ -202,7 +222,7 @@ async function BrowseByCategory({
                 href={`/category/${category.slug}`}
                 className="text-sm font-medium text-pb-brand hover:underline"
               >
-                All {category.name} locations →
+                All {category.name} →
               </Link>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
