@@ -7,6 +7,7 @@ import {
   getActiveSponsoredPhotographerByState,
   getApprovedLocationComments,
   getApprovedLocationCommentCount,
+  getApprovedPhotographerPhotos,
   getLocationRatingSummary,
   getPublishedLocationBySlug,
 } from "@/lib/public-data";
@@ -14,6 +15,7 @@ import { formatPricing } from "@/lib/format";
 import { getCategoryMarkerStyle } from "@/lib/category-style";
 import { ImageGallery } from "@/components/public/image-gallery";
 import { ShareButton } from "@/components/public/share-button";
+import { ReportLocationButton } from "@/components/public/report-location-button";
 import { FavouriteButton } from "@/components/public/favourite-button";
 import { YouTubeEmbed } from "@/components/public/youtube-embed";
 import { MiniMap } from "@/components/public/mini-map";
@@ -26,6 +28,7 @@ import { SponsoredPhotographerCard } from "@/components/public/sponsored-photogr
 import { LocationJsonLd } from "@/components/public/location-json-ld";
 import { ReadMoreText } from "@/components/public/read-more-text";
 import { LocationComments } from "@/components/public/location-comments";
+import { PhotographerPhotoSection } from "@/components/public/photographer-photo-section";
 import { absoluteUrl } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -155,10 +158,11 @@ export default async function LocationDetailPage({ params }: Props) {
     ? await getActiveSponsoredPhotographerByState(location.state_id)
     : null;
 
-  const [initialComments, commentCount, ratingSummary] = await Promise.all([
+  const [initialComments, commentCount, ratingSummary, photographerPhotos] = await Promise.all([
     getApprovedLocationComments(location.id),
     getApprovedLocationCommentCount(location.id),
     getLocationRatingSummary(location.id),
+    getApprovedPhotographerPhotos(location.id),
   ]);
 
   return (
@@ -186,6 +190,7 @@ export default async function LocationDetailPage({ params }: Props) {
         <div className="flex shrink-0 items-center justify-end gap-2">
           <FavouriteButton locationId={location.id} showLabel />
           <ShareButton title={location.name} url={absoluteUrl(`/location/${location.slug}`)} />
+          <ReportLocationButton locationId={location.id} />
         </div>
       </div>
 
@@ -300,6 +305,8 @@ export default async function LocationDetailPage({ params }: Props) {
           </div>
         </div>
       )}
+
+      <PhotographerPhotoSection photos={photographerPhotos} locationName={location.name} />
 
       <div id="comments" className="mt-14 scroll-mt-20">
         <LocationComments

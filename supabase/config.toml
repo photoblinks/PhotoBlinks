@@ -235,6 +235,14 @@ double_confirm_changes = true
 # Phase 19: on, to match the intended production behavior and exercise the
 # real confirmation flow locally via Mailpit (http://127.0.0.1:54324)
 # instead of every signup silently getting an immediate session.
+#
+# Reverted an attempt to turn this off for a "soft confirmation" dashboard
+# banner pattern: in this GoTrue version, disabling it does NOT keep
+# email_confirmed_at null with a session issued anyway — it auto-confirms
+# the account at signup (email_confirmed_at set immediately, no
+# confirmation email even sent). There is no built-in "session now, verify
+# later" toggle here; achieving that needs an app-level mechanism instead
+# of this flag.
 enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false

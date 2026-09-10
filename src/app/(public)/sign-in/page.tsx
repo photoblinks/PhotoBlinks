@@ -60,6 +60,16 @@ export default async function SignInPage({
           Sign up
         </Link>
       </p>
+
+      <div className="mt-8 rounded-lg border bg-muted/20 px-4 py-3 text-center">
+        <p className="text-sm font-medium">Are you a photographer?</p>
+        <Link
+          href="/sign-in/photographer"
+          className="mt-1 inline-block text-sm font-medium text-pb-brand hover:underline"
+        >
+          Sign in or create a photographer account
+        </Link>
+      </div>
     </div>
   );
 }

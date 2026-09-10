@@ -27,6 +27,16 @@ export async function createClient() {
           }
         },
       },
+      global: {
+        // Next.js patches the global fetch() to memoize identical requests
+        // within a single render pass. Without this, two sequential reads
+        // of the same row in one request — e.g. read, write, re-read to
+        // confirm the write landed — can silently return the first
+        // (pre-write) cached response instead of querying Postgres again.
+        // Every request this client makes is either a mutation or needs
+        // the current committed state, never something safe to memoize.
+        fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+      },
     },
   );
 }

@@ -34,6 +34,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // The bare /photographer dashboard route is exempt: it renders its own
+  // email-verification-pending view for an unauthenticated request (right
+  // after signup, before the confirmation link is used — Supabase issues
+  // no session until then) instead of bouncing away, and redirects itself
+  // when there's truly no session and no pending-signup marker. Every
+  // other /photographer/* route (profile, submit-photo, ...) still
+  // requires a real session at the middleware level, unchanged.
+  if (
+    request.nextUrl.pathname.startsWith("/photographer") &&
+    request.nextUrl.pathname !== "/photographer" &&
+    !user
+  ) {
+    return NextResponse.redirect(new URL("/sign-in/photographer", request.url));
+  }
+
   return response;
 }
 

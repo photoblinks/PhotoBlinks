@@ -36,9 +36,9 @@ export async function signUp(formData: FormData) {
     redirect(`/sign-up?error=${encodeURIComponent(message)}&next=${encodeURIComponent(next)}`);
   }
 
-  // With email confirmations required (supabase/config.toml, Phase 19),
-  // signUp succeeds but returns no session yet — the account can't sign in
-  // until the confirmation link (see /auth/confirm) is used.
+  // With email confirmations required (supabase/config.toml), signUp()
+  // succeeds but returns no session yet — the account can't sign in until
+  // the confirmation link (see /auth/confirm) is used.
   if (!data.session) {
     redirect(
       `/sign-in?notice=${encodeURIComponent("Check your email to confirm your account, then sign in.")}&next=${encodeURIComponent(next)}`,
@@ -64,10 +64,58 @@ export async function signIn(formData: FormData) {
       error.code === "email_not_confirmed"
         ? "Please confirm your email before signing in — check your inbox for the confirmation link."
         : "Invalid email or password.";
-    redirect(`/sign-in?error=${encodeURIComponent(message)}&next=${encodeURIComponent(next)}`);
+    // A photographer sign-in attempt (next targets /photographer) stays on
+    // the photographer sign-in flow instead of bouncing to the generic
+    // customer page — same reasoning as /auth/confirm's error path.
+    const signInPath = next.startsWith("/photographer") ? "/sign-in/photographer?mode=login" : "/sign-in";
+    const separator = signInPath.includes("?") ? "&" : "?";
+    redirect(
+      `${signInPath}${separator}error=${encodeURIComponent(message)}&next=${encodeURIComponent(next)}`,
+    );
   }
 
   redirect(next);
+}
+
+/** Resends the signup confirmation email. Prefers the current session's
+ * own address when one exists (can't be spoofed). Supabase issues no
+ * session at all until the confirmation link is used, so the primary case
+ * — a photographer/customer on the post-signup waiting screen — has none
+ * yet; for that case this falls back to the `email` carried through from
+ * the signup form itself (a hidden field, not something typed fresh on
+ * this screen). This is still safe with no session: supabase.auth.resend()
+ * only ever affects a real pending unconfirmed signup for that address and
+ * never reveals whether one exists, so it can't be used to enumerate or
+ * spam an arbitrary account beyond Supabase's own rate limiting
+ * (supabase/config.toml max_frequency). A no-op if already verified or if
+ * there's no email to act on either way. */
+export async function resendConfirmationEmail(formData: FormData) {
+  // Two different destinations: `return_to` is where THIS action sends the
+  // browser back to right now (the waiting screen, so "resent" shows up);
+  // `next` is where a successful confirmation should land, same as it
+  // would have for the original signup email — resending must not change
+  // that. Defaults match signUp()'s own default.
+  const returnTo = safeNextPath(String(formData.get("return_to") ?? ""));
+  const confirmNext = safeNextPath(String(formData.get("next") ?? ""));
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const email = user?.email ?? String(formData.get("email") ?? "").trim();
+  if (!email || user?.email_confirmed_at) {
+    redirect(returnTo);
+  }
+
+  await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: { emailRedirectTo: absoluteUrl(confirmNext) },
+  });
+
+  const separator = returnTo.includes("?") ? "&" : "?";
+  redirect(`${returnTo}${separator}resent=1`);
 }
 
 export async function signOut() {

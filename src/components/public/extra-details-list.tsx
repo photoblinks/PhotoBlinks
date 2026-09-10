@@ -12,6 +12,11 @@ import {
   DoorOpen,
   Users,
   Lock,
+  Car,
+  Route,
+  Waves,
+  Bath,
+  CloudSun,
   type LucideIcon,
 } from "lucide-react";
 import type { ExtraDetails } from "@/lib/public-data";
@@ -21,6 +26,12 @@ const DRONE_LABELS: Record<string, string> = {
   allowed_with_permission: "🟢 Allowed with Permission",
   restricted: "🟡 Restricted",
   prohibited: "🔴 Prohibited",
+};
+
+const PRE_WEDDING_SHOOT_LABELS: Record<string, string> = {
+  allowed: "✅ Allowed",
+  conditional: "⚠️ Conditional",
+  prohibited: "❌ Prohibited",
 };
 
 const AVAILABILITY_LABELS: Record<string, string> = {
@@ -38,22 +49,32 @@ function buildGroups(details: ExtraDetails): { title: string; rows: Row[] }[] {
         details.pre_wedding_shoot && {
           icon: Heart,
           label: "Pre-Wedding Shoot",
-          value: details.pre_wedding_shoot,
+          value: PRE_WEDDING_SHOOT_LABELS[details.pre_wedding_shoot] ?? details.pre_wedding_shoot,
+        },
+        details.pre_wedding_shoot_condition && {
+          icon: Heart,
+          label: "Pre-Wedding Shoot Condition",
+          value: details.pre_wedding_shoot_condition,
         },
         details.prior_booking && {
           icon: CalendarCheck,
           label: "Prior Booking",
           value: details.prior_booking,
         },
-        details.camera_charges && {
-          icon: Camera,
-          label: "Camera Charges",
-          value: details.camera_charges,
-        },
         details.drone_status && {
           icon: Drone,
           label: "Drone Status",
           value: DRONE_LABELS[details.drone_status] ?? details.drone_status,
+        },
+        details.drone_permission && {
+          icon: Drone,
+          label: "Drone Permission",
+          value: details.drone_permission,
+        },
+        details.recommended_outfits && {
+          icon: Shirt,
+          label: "Recommended Outfits",
+          value: details.recommended_outfits,
         },
       ].filter(Boolean) as Row[],
     },
@@ -61,32 +82,58 @@ function buildGroups(details: ExtraDetails): { title: string; rows: Row[] }[] {
       title: "Pricing & Timing",
       rows: [
         details.entry_fee && { icon: Ticket, label: "Entry Fee", value: details.entry_fee },
+        details.shoot_permit_fee && {
+          icon: Camera,
+          label: "Shoot/Permit Fee",
+          value: details.shoot_permit_fee,
+        },
+        details.vehicle_parking_fee && {
+          icon: Car,
+          label: "Vehicle Parking",
+          value: details.vehicle_parking_fee,
+        },
         details.best_season && { icon: Sun, label: "Best Season", value: details.best_season },
-        details.best_time && { icon: Clock, label: "Best Time", value: details.best_time },
+        details.best_time && { icon: Clock, label: "Best Time of Day", value: details.best_time },
       ].filter(Boolean) as Row[],
     },
     {
       title: "Amenities",
       rows: [
-        details.changing_rooms && {
-          icon: Shirt,
-          label: "Changing Rooms",
-          value: AVAILABILITY_LABELS[details.changing_rooms] ?? details.changing_rooms,
+        details.road_accessibility && {
+          icon: Route,
+          label: "Road Accessibility",
+          value: details.road_accessibility,
         },
         details.parking_facility && {
           icon: SquareParking,
-          label: "Parking Facility",
+          label: "Vehicle Parking Availability",
           value: AVAILABILITY_LABELS[details.parking_facility] ?? details.parking_facility,
         },
+        details.boating_available && {
+          icon: Waves,
+          label: "Boating Available for Shoot",
+          value: details.boating_available,
+        },
+        details.changing_rooms && {
+          icon: Shirt,
+          label: "Changing Facilities",
+          value: AVAILABILITY_LABELS[details.changing_rooms] ?? details.changing_rooms,
+        },
+        details.restrooms && { icon: Bath, label: "Restrooms", value: details.restrooms },
         details.facilities && { icon: Sofa, label: "Facilities", value: details.facilities },
       ].filter(Boolean) as Row[],
     },
     {
       title: "Environment",
       rows: [
-        details.access && { icon: DoorOpen, label: "Access", value: details.access },
-        details.crowd && { icon: Users, label: "Crowd", value: details.crowd },
-        details.privacy && { icon: Lock, label: "Privacy", value: details.privacy },
+        details.access && { icon: DoorOpen, label: "Access Level", value: details.access },
+        details.crowd && { icon: Users, label: "Crowd Level", value: details.crowd },
+        details.privacy && { icon: Lock, label: "Privacy Score", value: details.privacy },
+        details.weather_lighting && {
+          icon: CloudSun,
+          label: "Weather & Lighting Considerations",
+          value: details.weather_lighting,
+        },
       ].filter(Boolean) as Row[],
     },
   ];

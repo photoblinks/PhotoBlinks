@@ -493,26 +493,34 @@ export type AvailabilityStatus = "available" | "not_available";
  * Details, Pricing & Timing, Amenities, and Environment. */
 export type ExtraDetails = {
   // Shoot Details
-  pre_wedding_shoot: string | null;
+  pre_wedding_shoot: "allowed" | "conditional" | "prohibited" | null;
+  pre_wedding_shoot_condition: string | null;
   prior_booking: string | null;
-  camera_charges: string | null;
   drone_status: "allowed" | "allowed_with_permission" | "restricted" | "prohibited" | null;
+  drone_permission: string | null;
+  recommended_outfits: string | null;
   // Pricing & Timing
   entry_fee: string | null;
+  shoot_permit_fee: string | null;
+  vehicle_parking_fee: string | null;
   best_season: string | null;
   best_time: string | null;
   // Amenities
-  changing_rooms: AvailabilityStatus | null;
+  road_accessibility: string | null;
   parking_facility: AvailabilityStatus | null;
+  boating_available: string | null;
+  changing_rooms: AvailabilityStatus | null;
+  restrooms: string | null;
   facilities: string | null;
   // Environment
   access: string | null;
   crowd: string | null;
   privacy: string | null;
+  weather_lighting: string | null;
 };
 
 const EXTRA_DETAIL_COLUMNS =
-  "pre_wedding_shoot, prior_booking, camera_charges, drone_status, entry_fee, best_season, best_time, changing_rooms, parking_facility, facilities, access, crowd, privacy";
+  "pre_wedding_shoot, pre_wedding_shoot_condition, prior_booking, drone_status, drone_permission, recommended_outfits, entry_fee, shoot_permit_fee, vehicle_parking_fee, best_season, best_time, road_accessibility, parking_facility, boating_available, changing_rooms, restrooms, facilities, access, crowd, privacy, weather_lighting";
 
 export type PublicLocationDetail = ExtraDetails & {
   id: string;
@@ -576,18 +584,26 @@ export const getPublishedLocationBySlug = cache(
     longitude: data.longitude,
     youtube_url: data.youtube_url,
     pre_wedding_shoot: data.pre_wedding_shoot,
+    pre_wedding_shoot_condition: data.pre_wedding_shoot_condition,
     prior_booking: data.prior_booking,
-    camera_charges: data.camera_charges,
     drone_status: data.drone_status,
+    drone_permission: data.drone_permission,
+    recommended_outfits: data.recommended_outfits,
     entry_fee: data.entry_fee,
+    shoot_permit_fee: data.shoot_permit_fee,
+    vehicle_parking_fee: data.vehicle_parking_fee,
     best_season: data.best_season,
     best_time: data.best_time,
-    changing_rooms: data.changing_rooms,
+    road_accessibility: data.road_accessibility,
     parking_facility: data.parking_facility,
+    boating_available: data.boating_available,
+    changing_rooms: data.changing_rooms,
+    restrooms: data.restrooms,
     facilities: data.facilities,
     access: data.access,
     crowd: data.crowd,
     privacy: data.privacy,
+    weather_lighting: data.weather_lighting,
     category: Array.isArray(data.categories) ? (data.categories[0] ?? null) : data.categories,
     country: Array.isArray(data.countries) ? (data.countries[0] ?? null) : data.countries,
     state: Array.isArray(data.states) ? (data.states[0] ?? null) : data.states,
@@ -693,18 +709,26 @@ export const getPublishedStudioBySlug = cache(
     longitude: data.longitude,
     youtube_url: data.youtube_url,
     pre_wedding_shoot: data.pre_wedding_shoot,
+    pre_wedding_shoot_condition: data.pre_wedding_shoot_condition,
     prior_booking: data.prior_booking,
-    camera_charges: data.camera_charges,
     drone_status: data.drone_status,
+    drone_permission: data.drone_permission,
+    recommended_outfits: data.recommended_outfits,
     entry_fee: data.entry_fee,
+    shoot_permit_fee: data.shoot_permit_fee,
+    vehicle_parking_fee: data.vehicle_parking_fee,
     best_season: data.best_season,
     best_time: data.best_time,
-    changing_rooms: data.changing_rooms,
+    road_accessibility: data.road_accessibility,
     parking_facility: data.parking_facility,
+    boating_available: data.boating_available,
+    changing_rooms: data.changing_rooms,
+    restrooms: data.restrooms,
     facilities: data.facilities,
     access: data.access,
     crowd: data.crowd,
     privacy: data.privacy,
+    weather_lighting: data.weather_lighting,
     country: Array.isArray(data.countries) ? (data.countries[0] ?? null) : data.countries,
     state: Array.isArray(data.states) ? (data.states[0] ?? null) : data.states,
     state_id: data.state_id,
@@ -721,6 +745,37 @@ export const getPublishedStudioBySlug = cache(
   };
     },
     ["getPublishedStudioBySlug"],
+    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  ),
+);
+
+/** Approved photographer photo visible on a public location page.
+ * Only the fields returned by get_approved_photographer_photos() — all other
+ * submission columns (photographer_id, storage_key, reviewed_by, etc.) are
+ * intentionally excluded from this public type. */
+export type PublicPhotographerPhoto = {
+  id: string;
+  image_url: string;
+  title: string;
+  description: string | null;
+  phone_number: string;
+};
+
+/** Approved photographer-submitted photos for a published location.
+ * Fetched via the get_approved_photographer_photos() security-definer RPC
+ * so the public (anon) client never touches the submissions table directly —
+ * the function enforces status='approved' and location is_published=true
+ * and returns only the public-safe field subset. */
+export const getApprovedPhotographerPhotos = cache(
+  unstable_cache(
+    async (locationId: string): Promise<PublicPhotographerPhoto[]> => {
+      const supabase = createPublicClient();
+      const { data } = await supabase.rpc("get_approved_photographer_photos", {
+        p_location_id: locationId,
+      });
+      return (data as PublicPhotographerPhoto[]) ?? [];
+    },
+    ["getApprovedPhotographerPhotos"],
     { revalidate: PUBLIC_REVALIDATE_SECONDS },
   ),
 );

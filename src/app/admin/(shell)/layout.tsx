@@ -11,6 +11,8 @@ const NAV_LINKS = [
   { href: "/admin/studios", label: "Studios" },
   { href: "/admin/photographers", label: "Sponsored Photographers" },
   { href: "/admin/comments", label: "Comments" },
+  { href: "/admin/photographer-photos", label: "Photographer Photos" },
+  { href: "/admin/location-reports", label: "Location Reports" },
   { href: "/admin/country-pages", label: "Country Pages" },
   { href: "/admin/state-pages", label: "State Pages" },
   { href: "/admin/city-pages", label: "City Pages" },

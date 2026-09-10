@@ -64,6 +64,12 @@ const DRONE_STATUS_SCHEMA_LABELS: Record<NonNullable<ExtraDetails["drone_status"
   prohibited: "Prohibited",
 };
 
+const PRE_WEDDING_SHOOT_SCHEMA_LABELS: Record<NonNullable<ExtraDetails["pre_wedding_shoot"]>, string> = {
+  allowed: "Allowed",
+  conditional: "Conditional",
+  prohibited: "Prohibited",
+};
+
 const AVAILABILITY_BOOLEAN: Record<NonNullable<ExtraDetails["changing_rooms"]>, boolean> = {
   available: true,
   not_available: false,
@@ -86,19 +92,30 @@ function buildAmenityFeatures(details: ExtraDetails): LocationFeature[] {
     if (value !== null && value !== "") features.push({ "@type": "LocationFeatureSpecification", name, value });
   };
 
-  add("Pre-Wedding Shoot", details.pre_wedding_shoot);
+  add(
+    "Pre-Wedding Shoot",
+    details.pre_wedding_shoot ? PRE_WEDDING_SHOOT_SCHEMA_LABELS[details.pre_wedding_shoot] : null,
+  );
+  add("Pre-Wedding Shoot Condition", details.pre_wedding_shoot_condition);
   add("Prior Booking", details.prior_booking);
-  add("Camera Charges", details.camera_charges);
   add("Drone Status", details.drone_status ? DRONE_STATUS_SCHEMA_LABELS[details.drone_status] : null);
+  add("Drone Permission", details.drone_permission);
+  add("Recommended Outfits", details.recommended_outfits);
   add("Entry Fee", details.entry_fee);
+  add("Shoot/Permit Fee", details.shoot_permit_fee);
+  add("Vehicle Parking", details.vehicle_parking_fee);
   add("Best Season", details.best_season);
-  add("Best Time", details.best_time);
-  add("Changing Rooms", details.changing_rooms ? AVAILABILITY_BOOLEAN[details.changing_rooms] : null);
-  add("Parking Facility", details.parking_facility ? AVAILABILITY_BOOLEAN[details.parking_facility] : null);
+  add("Best Time of Day", details.best_time);
+  add("Road Accessibility", details.road_accessibility);
+  add("Vehicle Parking Availability", details.parking_facility ? AVAILABILITY_BOOLEAN[details.parking_facility] : null);
+  add("Boating Available for Shoot", details.boating_available);
+  add("Changing Facilities", details.changing_rooms ? AVAILABILITY_BOOLEAN[details.changing_rooms] : null);
+  add("Restrooms", details.restrooms);
   add("Facilities", details.facilities);
-  add("Access", details.access);
-  add("Crowd", details.crowd);
-  add("Privacy", details.privacy);
+  add("Access Level", details.access);
+  add("Crowd Level", details.crowd);
+  add("Privacy Score", details.privacy);
+  add("Weather & Lighting Considerations", details.weather_lighting);
 
   return features;
 }
