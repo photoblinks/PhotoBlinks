@@ -4,6 +4,8 @@ import {
   getActiveCategories,
   getActiveCities,
   getActiveStates,
+  getFeaturedLocationImageUrl,
+  getPublishedLocationCount,
   getPublishedLocations,
   getPublishedStudios,
   getSiteSettings,
@@ -13,6 +15,7 @@ import { HomeFilter } from "@/components/public/home-filter";
 import { HeroBannerSlider } from "@/components/public/hero-banner-slider";
 import { LocationCard } from "@/components/public/location-card";
 import { StudioCard } from "@/components/public/studio-card";
+import { AboutSection } from "@/components/public/about-section";
 import { JsonLd } from "@/components/public/json-ld";
 import { DEFAULT_OG_IMAGE, buildOrganizationJsonLd, buildWebSiteJsonLd } from "@/lib/jsonld";
 
@@ -48,12 +51,15 @@ export default async function HomePage({
   }>;
 }) {
   const params = await searchParams;
-  const [states, cities, categories, siteSettings] = await Promise.all([
-    getActiveStates(),
-    getActiveCities(),
-    getActiveCategories(),
-    getSiteSettings(),
-  ]);
+  const [states, cities, categories, siteSettings, locationCount, featuredImageUrl] =
+    await Promise.all([
+      getActiveStates(),
+      getActiveCities(),
+      getActiveCategories(),
+      getSiteSettings(),
+      getPublishedLocationCount(),
+      getFeaturedLocationImageUrl(),
+    ]);
 
   const selectedState = states.find((s) => s.slug === params.state);
   const selectedCity = cities.find((c) => c.slug === params.city);
@@ -128,6 +134,12 @@ export default async function HomePage({
       ) : (
         <BrowseByCategory categories={categories} />
       )}
+
+      <AboutSection
+        locationCount={locationCount}
+        categoryNames={categories.map((c) => c.name)}
+        imageUrl={siteSettings.bannerImages[0] ?? featuredImageUrl}
+      />
 
       <JsonLd data={buildWebSiteJsonLd()} />
       <JsonLd data={buildOrganizationJsonLd()} />

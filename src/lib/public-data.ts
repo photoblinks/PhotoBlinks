@@ -328,6 +328,43 @@ export const getPublishedLocations = unstable_cache(
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 );
 
+/** Count of currently published locations — used for the homepage's
+ * SEO/GEO "about" copy so the active-location figure stays accurate
+ * without fetching every location row. */
+export const getPublishedLocationCount = unstable_cache(
+  async (): Promise<number> => {
+    const supabase = createPublicClient();
+    const { count } = await supabase
+      .from("locations")
+      .select("id", { count: "exact", head: true })
+      .eq("is_published", true);
+    return count ?? 0;
+  },
+  ["getPublishedLocationCount"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
+/** First image of the most recently published location — fallback art for
+ * the homepage's SEO/GEO about section when no site banner image is set. */
+export const getFeaturedLocationImageUrl = unstable_cache(
+  async (): Promise<string | null> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("locations")
+      .select("location_images(image_url, sort_order)")
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return (
+      [...(data?.location_images ?? [])].sort((a, b) => a.sort_order - b.sort_order)[0]
+        ?.image_url ?? null
+    );
+  },
+  ["getFeaturedLocationImageUrl"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
 /** Resolves a share token to the ids of that owner's currently-published
  * favourited locations, via the get_shared_favourite_location_ids()
  * SECURITY DEFINER function (see 20260904020000_favourites.sql) — the only
