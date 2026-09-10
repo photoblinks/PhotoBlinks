@@ -18,9 +18,9 @@ export function AboutSection({
 
   return (
     <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
-      <div className="flex flex-col gap-5 rounded-[20px] border border-border bg-muted p-5 sm:flex-row sm:items-center sm:gap-8 sm:p-6 lg:rounded-[22px]">
+      <div className="flex flex-col gap-5 rounded-[20px] border border-border bg-muted p-5 sm:h-[230px] sm:flex-row sm:items-center sm:gap-8 sm:p-6 lg:rounded-[22px]">
         {imageUrl && (
-          <div className="relative aspect-16/9 w-full shrink-0 overflow-hidden rounded-2xl sm:aspect-square sm:h-full sm:w-[38%]">
+          <div className="relative aspect-16/9 w-full shrink-0 overflow-hidden rounded-2xl sm:aspect-auto sm:h-full sm:w-[38%]">
             <Image
               src={imageUrl}
               alt="A pre-wedding couple at a Photoblinks shoot location"
@@ -30,14 +30,14 @@ export function AboutSection({
             />
           </div>
         )}
-        <div className="flex flex-col gap-2 sm:py-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <p className="text-xs font-semibold tracking-[0.2em] text-pb-brand-bright uppercase">
             Locations · Stories · Memories
           </p>
-          <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-3xl">
+          <h2 className="font-heading text-xl font-semibold text-foreground sm:text-2xl">
             India&rsquo;s Biggest Pre-Wedding Location Finder
           </h2>
-          <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+          <p className="line-clamp-4 text-sm leading-relaxed text-muted-foreground">
             Photoblinks is a dedicated pre-wedding location-finding website, designed specifically
             for couples looking for beautiful places to create their special memories. With{" "}
             {locationCount.toLocaleString("en-IN")}+ active locations across the country, discover
