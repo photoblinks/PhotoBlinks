@@ -26,9 +26,10 @@ function pricingLine(location: PublicLocationCard) {
 }
 
 function locationEntry(location: PublicLocationCard) {
+  const url = absoluteUrl(`/location/${location.slug}`);
   const lines = [
     `### ${location.cardName || location.name}`,
-    `- URL: ${absoluteUrl(`/location/${location.slug}`)}`,
+    `- URL: [${url}](${url})`,
     `- Category: ${location.category?.name ?? "Uncategorized"}`,
     `- Location: ${[location.city?.name, location.state?.name, location.country?.name]
       .filter(Boolean)
@@ -43,9 +44,10 @@ function locationEntry(location: PublicLocationCard) {
 }
 
 function studioEntry(studio: PublicStudioCard) {
+  const url = absoluteUrl(`/studio/${studio.slug}`);
   const lines = [
     `### ${studio.cardName || studio.name}`,
-    `- URL: ${absoluteUrl(`/studio/${studio.slug}`)}`,
+    `- URL: [${url}](${url})`,
     `- Location: ${[studio.city?.name, studio.state?.name, studio.country?.name].filter(Boolean).join(", ")}`,
   ];
   if (studio.fromPrice != null) lines.push(`- Starting price: ₹${studio.fromPrice}`);
@@ -54,7 +56,8 @@ function studioEntry(studio: PublicStudioCard) {
 }
 
 function aggregationEntry(group: SeoGeoGroup, basePath: string) {
-  return `### ${group.names.join(", ")}\n- URL: ${absoluteUrl(`${basePath}/${group.path}`)}\n- Published locations: ${group.count}\n- Last updated: ${group.lastModified}`;
+  const url = absoluteUrl(`${basePath}/${group.path}`);
+  return `### ${group.names.join(", ")}\n- URL: [${url}](${url})\n- Published locations: ${group.count}\n- Last updated: ${group.lastModified}`;
 }
 
 export async function GET() {
@@ -73,6 +76,8 @@ export async function GET() {
 
   sections.push(
     `# PhotoBlinks — Full Public Dataset
+
+> Curated, machine-readable dataset of every published PhotoBlinks location, studio, and article — no admin, moderation, or private-user data.
 
 Curated, machine-readable representation of PhotoBlinks' public content. Only published/approved data intentionally shown on the public site is included — no admin, moderation, submission, or private-user data. Regenerated automatically (cache window: ${PUBLIC_REVALIDATE_SECONDS}s) as content is published or unpublished; no manual maintenance.
 
@@ -131,14 +136,14 @@ The 5-published-location threshold below applies ONLY to geographic/category AGG
 
   sections.push(
     `## Guides / Blog (${blogPosts.length})\n\n${blogPosts
-      .map(
-        (post) =>
-          `### ${post.title}\n- URL: ${absoluteUrl(`/blog/${post.slug}`)}\n- Summary: ${
-            post.excerpt ?? "(no summary)"
-          }\n- Category: ${post.category?.name ?? "Uncategorized"}\n- Published: ${
-            post.publishedAt
-          }\n- Updated: ${post.updatedAt}`,
-      )
+      .map((post) => {
+        const url = absoluteUrl(`/blog/${post.slug}`);
+        return `### ${post.title}\n- URL: [${url}](${url})\n- Summary: ${
+          post.excerpt ?? "(no summary)"
+        }\n- Category: ${post.category?.name ?? "Uncategorized"}\n- Published: ${
+          post.publishedAt
+        }\n- Updated: ${post.updatedAt}`;
+      })
       .join("\n\n")}`,
   );
 

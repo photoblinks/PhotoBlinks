@@ -12,7 +12,9 @@ const SLIDE_INTERVAL_MS = 5000;
  * gated behind client JS) so each banner image is a real, crawlable <img>
  * in the page's HTML. Only slide 0 — the LCP candidate — loads eagerly with
  * `priority`; the rest use next/image's default lazy loading and a low
- * fetch priority hint, plus a much smaller `sizes` (see below).
+ * fetch priority hint. All slides share `sizes="100vw"` since every slide
+ * is rendered at full viewport width (see the note above the `sizes` prop
+ * below for why a smaller value for slides 1-5 was tried and reverted).
  *
  * Known limitation: `loading="lazy"` on slides 1+ does not actually stop
  * the browser from fetching them on initial load. Native lazy-loading
@@ -61,35 +63,14 @@ export function HeroBannerSlider({ images }: { images: string[] }) {
             fill
             priority={i === 0}
             fetchPriority={i === 0 ? "high" : "low"}
-            // next/image's srcSet always spans every configured width
-            // (640-3840px, see next.config.ts) whenever `sizes` contains a
-            // "vw" token — the srcSet stays fully responsive either way;
-            // `sizes` only changes which candidate the BROWSER picks for
-            // the current viewport (see next/image's getWidths(), which
-            // parses "vw" out of `sizes` to build that list — a plain
-            // pixel token like "360px" is ignored for that purpose).
-            //
-            // Slide 0 (the LCP candidate): with the old `sizes="100vw"`,
-            // a ~360-412px mobile viewport at a real device pixel ratio
-            // made the browser select the 750px candidate (viewport × DPR
-            // lands past the 640 breakpoint). Below the md breakpoint this
-            // now tells the browser the image occupies 360 CSS px instead
-            // of the true full-bleed width — a deliberate, slightly-softer-
-            // on-very-high-DPR trade-off for this one above-the-fold image
-            // (the same technique web.dev recommends for full-bleed
-            // hero/background photos), enough headroom to land on the 640
-            // candidate at typical mobile DPRs. Desktop (`100vw` past
-            // 767px) is unaffected.
-            //
-            // Slides 1-5: never the LCP image and, per the note above,
-            // still get fetched despite being lazy/low-priority — so make
-            // whatever does get fetched far smaller. A fixed 384px (no
-            // "vw") is a real, non-viewport-relative slot size: it fetches
-            // ~384px at 1x DPR and scales up modestly on higher-DPR
-            // screens, always well below slide 0's candidate at the same
-            // DPR (e.g. ~1200px vs slide 0's ~1920-3840px at 3x on
-            // desktop-width viewports).
-            sizes={i === 0 ? "(max-width: 767px) 360px, 100vw" : "384px"}
+            // Every slide is `absolute inset-0` on a full-bleed 100vw hero,
+            // so the rendered width really is the viewport width for every
+            // slide, not just slide 0. A smaller `sizes` for slides 1-5
+            // (tried in an earlier pass) made the browser fetch an
+            // undersized image and upscale it to fill the viewport,
+            // producing visible blur once that slide rotated into view —
+            // reverted back to the honest, correct value for all slides.
+            sizes="100vw"
             className="object-cover"
           />
         </div>

@@ -254,7 +254,7 @@ export function HomeFilter({
         <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
           <MapPin className="size-4 shrink-0 text-pb-brand" />
           <Select value={stateId} onValueChange={(value) => handleStateChange(value ?? ALL)}>
-            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+            <SelectTrigger className={FIELD_TRIGGER_CLASS} aria-label="State">
               <FilterFieldText
                 label="State"
                 mobilePlaceholder="State"
@@ -282,7 +282,7 @@ export function HomeFilter({
             onValueChange={(value) => setCityId(value ?? ALL)}
             disabled={stateId === ALL}
           >
-            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+            <SelectTrigger className={FIELD_TRIGGER_CLASS} aria-label="City">
               <FilterFieldText
                 label="City"
                 mobilePlaceholder="City"
@@ -306,7 +306,7 @@ export function HomeFilter({
         <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
           <LayoutGrid className="size-4 shrink-0 text-pb-brand" />
           <Select value={categorySlug} onValueChange={(value) => setCategorySlug(value ?? ALL)}>
-            <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+            <SelectTrigger className={FIELD_TRIGGER_CLASS} aria-label="Category">
               <FilterFieldText
                 label="Category"
                 mobilePlaceholder="Category"
@@ -329,7 +329,7 @@ export function HomeFilter({
       <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
         <Tag className="size-4 shrink-0 text-pb-brand" />
         <Select value={pricing} onValueChange={(value) => setPricing(value ?? ALL)}>
-          <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+          <SelectTrigger className={FIELD_TRIGGER_CLASS} aria-label="Pricing">
             <FilterFieldText
               label="Pricing"
               mobilePlaceholder="Pricing"
@@ -349,7 +349,7 @@ export function HomeFilter({
       <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
         <Drone className="size-4 shrink-0 text-pb-brand" />
         <Select value={droneStatus} onValueChange={(value) => setDroneStatus(value ?? ALL)}>
-          <SelectTrigger className={FIELD_TRIGGER_CLASS}>
+          <SelectTrigger className={FIELD_TRIGGER_CLASS} aria-label="Drone">
             <FilterFieldText
               label="Drone"
               mobilePlaceholder="Drone"

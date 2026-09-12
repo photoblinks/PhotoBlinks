@@ -20,7 +20,7 @@ function listEligible(groups: SeoGeoGroup[], basePath: string) {
   return groups
     .filter((g) => g.eligible)
     .sort((a, b) => a.path.localeCompare(b.path))
-    .map((g) => `- ${g.names[g.names.length - 1]}: ${absoluteUrl(`${basePath}/${g.path}`)} (${g.count} locations)`)
+    .map((g) => `- [${g.names[g.names.length - 1]}](${absoluteUrl(`${basePath}/${g.path}`)}) (${g.count} locations)`)
     .join("\n");
 }
 
@@ -40,13 +40,15 @@ export async function GET() {
   const sections = [
     `# PhotoBlinks
 
+> Discovery platform for pre-wedding photoshoot locations and studios across India, with verified shoot details (pricing, drone policy, accessibility) on every individually published page.
+
 PhotoBlinks is a discovery platform for pre-wedding photoshoot locations and studios across India (launching in Karnataka and Kerala, expanding nationwide). Every listing is a publicly verified, individually published page — beaches, temples, waterfalls, hills and more — with practical shoot details such as pricing, drone policy, best time to visit, and accessibility. Locations and studios are separate concepts: locations are natural/outdoor shoot spots organized by category, studios are preset indoor venues.`,
 
     `## Pre-Wedding Shoot Locations
 
-- Browse all locations: ${absoluteUrl("/locations")}
-- Browse all studios: ${absoluteUrl("/studios")}
-- Interactive map: ${absoluteUrl("/locations/map")}
+- [Browse all locations](${absoluteUrl("/locations")})
+- [Browse all studios](${absoluteUrl("/studios")})
+- [Interactive map](${absoluteUrl("/locations/map")})
 - ${locationCount} individually published locations. Every published location has its own indexable page at /location/{slug} — this is never restricted by aggregation-page thresholds below. See /llms-full.txt for the complete list with details.`,
 
     `## Geographic Discovery
@@ -67,7 +69,7 @@ ${
   eligibleCategories.length > 0
     ? eligibleCategories
         .sort((a, b) => a.path.localeCompare(b.path))
-        .map((g) => `- ${g.names[0]}: ${absoluteUrl(`/category/${g.path}`)} (${g.count} locations)`)
+        .map((g) => `- [${g.names[0]}](${absoluteUrl(`/category/${g.path}`)}) (${g.count} locations)`)
         .join("\n")
     : "(none yet)"
 }
@@ -84,13 +86,13 @@ Verified photographer contact details appear directly on eligible location pages
 
     `## Guides / Blog
 
-- All articles: ${absoluteUrl("/blog")}
+- [All articles](${absoluteUrl("/blog")})
 - ${blogPosts.length} published articles. See /llms-full.txt for titles, summaries, and dates.`,
 
     `## Machine-Readable Data
 
-- Full curated public dataset: ${absoluteUrl("/llms-full.txt")}
-- XML sitemap: ${absoluteUrl("/sitemap.xml")}`,
+- [Full curated public dataset](${absoluteUrl("/llms-full.txt")})
+- [XML sitemap](${absoluteUrl("/sitemap.xml")})`,
   ];
 
   return new Response(sections.join("\n\n"), {
