@@ -136,23 +136,31 @@ export default async function LocationDetailPage({ params }: Props) {
   // Quick-nav category cards at the bottom of the page — categories other
   // than this location's own (more useful for exploring something
   // different), capped at 4 for a clean small-card row.
-  const allCategories = await getActiveCategories();
-  const exploreCategories = allCategories
-    .filter((c) => c.slug !== location.category?.slug)
-    .slice(0, 4);
-
+  //
   // Commercial/sponsored placement — Photographer -> State, never assigned
   // per-location. Deliberately excluded from LocationJsonLd/SEO schema below.
-  const sponsoredPhotographer = location.state_id
-    ? await getActiveSponsoredPhotographerByState(location.state_id)
-    : null;
-
-  const [initialComments, commentCount, ratingSummary, photographerPhotos] = await Promise.all([
+  //
+  // All independent of each other and of location.id, so they run alongside
+  // the comment/rating/photo fetches below instead of before them.
+  const [
+    allCategories,
+    sponsoredPhotographer,
+    initialComments,
+    commentCount,
+    ratingSummary,
+    photographerPhotos,
+  ] = await Promise.all([
+    getActiveCategories(),
+    location.state_id ? getActiveSponsoredPhotographerByState(location.state_id) : Promise.resolve(null),
     getApprovedLocationComments(location.id),
     getApprovedLocationCommentCount(location.id),
     getLocationRatingSummary(location.id),
     getApprovedPhotographerPhotos(location.id),
   ]);
+
+  const exploreCategories = allCategories
+    .filter((c) => c.slug !== location.category?.slug)
+    .slice(0, 4);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
