@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Geist, Geist_Mono, Roboto, Manrope } from "next/font/google";
+import { Geist, Roboto, Manrope } from "next/font/google";
 import "./globals.css";
 import { SITE_URL } from "@/lib/site-url";
 
@@ -8,11 +8,6 @@ const GA_MEASUREMENT_ID = "G-GJEBVWSMWF";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -65,7 +60,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en-IN"
-      className={`${geistSans.variable} ${geistMono.variable} ${roboto.variable} ${manrope.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${roboto.variable} ${manrope.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
       <Script
