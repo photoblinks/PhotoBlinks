@@ -169,32 +169,6 @@ export function ImageGallery({
         )}
       </div>
 
-      {extra.length > 0 && (
-        <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-          {extra.map((src, i) => {
-            const index = 5 + i;
-            return (
-              <button
-                key={src}
-                type="button"
-                onClick={() => openLightbox(index)}
-                aria-label={`View ${alt} photo ${index + 1}`}
-                className="relative aspect-4/3 overflow-hidden rounded-xl bg-muted"
-              >
-                <Image
-                  src={src}
-                  alt={captionAt(index)}
-                  fill
-                  loading="lazy"
-                  sizes="(min-width: 768px) 16vw, (min-width: 640px) 25vw, 33vw"
-                  className="object-cover"
-                />
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
         <DialogContent
           showCloseButton={false}
