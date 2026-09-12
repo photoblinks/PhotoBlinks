@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { uploadFileToR2 } from "@/lib/r2/upload-client";
 
 type ImageUploaderProps = {
-  kind: "categories" | "locations" | "studios" | "countries" | "states" | "cities" | "site" | "photographers";
+  kind: "categories" | "locations" | "studios" | "countries" | "states" | "cities" | "site" | "photographers" | "blog";
   slug: string;
   name: string;
   defaultValue?: string | null;

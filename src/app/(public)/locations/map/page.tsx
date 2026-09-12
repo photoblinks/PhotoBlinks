@@ -35,6 +35,7 @@ export default async function LocationsMapPage({
   searchParams,
 }: {
   searchParams: Promise<{
+    q?: string;
     state?: string;
     city?: string;
     category?: string;
@@ -67,6 +68,7 @@ export default async function LocationsMapPage({
       ? { latitude: Number(params.lat), longitude: Number(params.lng) }
       : undefined;
 
+  const search = params.q?.trim() || undefined;
   const locations = await getPublishedLocations({
     categoryId: selectedCategory?.id,
     stateId: selectedState?.id,
@@ -74,12 +76,14 @@ export default async function LocationsMapPage({
     pricingType,
     droneStatus,
     near,
+    search,
   });
 
   const mappableCount = locations.filter((l) => l.latitude != null && l.longitude != null).length;
 
   function pillHref(categorySlug?: string) {
     const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
     if (params.state) query.set("state", params.state);
     if (params.city) query.set("city", params.city);
     if (categorySlug) query.set("category", categorySlug);
@@ -96,6 +100,7 @@ export default async function LocationsMapPage({
   // own filtered results view, which reads these same seven params.
   function listViewHref() {
     const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
     if (params.state) query.set("state", params.state);
     if (params.city) query.set("city", params.city);
     if (params.category) query.set("category", params.category);
@@ -123,6 +128,7 @@ export default async function LocationsMapPage({
           categories={categories}
           basePath="/locations/map"
           initial={{
+            q: params.q,
             state: params.state,
             city: params.city,
             category: params.category,
@@ -148,6 +154,7 @@ export default async function LocationsMapPage({
           cities={cities}
           categories={categories}
           initial={{
+            q: params.q,
             state: params.state,
             city: params.city,
             category: params.category,

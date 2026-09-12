@@ -1,24 +1,39 @@
 import type { MetadataRoute } from "next";
-import { getActiveCategories, getPublishedLocations, getPublishedStudios } from "@/lib/public-data";
-import { isSeoEligible } from "@/lib/seo-eligibility";
+import {
+  getActiveCategories,
+  getPublishedLocations,
+  getPublishedStudios,
+  getPublishedBlogPostsForSitemap,
+} from "@/lib/public-data";
+import { buildLocationGeoGroups } from "@/lib/seo-eligibility";
+import { SITE_URL } from "@/lib/site-url";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+// The audit-flagged fix: without this, sitemap.ts is generated once at
+// build time and never refreshed, so publishing/unpublishing a location
+// (or a geo/category combination crossing the 5-location threshold) has no
+// effect on the sitemap until the next deploy. Must be a literal here —
+// Next statically analyzes this segment config export at build time, so it
+// can't be an imported reference. Kept in sync with public-data.ts's
+// PUBLIC_REVALIDATE_SECONDS by hand (same 60s window everything else uses).
+export const revalidate = 60;
 
 function latest(dates: string[]) {
   return dates.reduce((max, d) => (d > max ? d : max), dates[0]);
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [locations, studios, categories] = await Promise.all([
+  const [locations, studios, categories, blogPosts] = await Promise.all([
     getPublishedLocations(),
     getPublishedStudios(),
     getActiveCategories(),
+    getPublishedBlogPostsForSitemap(),
   ]);
 
   const entries: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "daily", priority: 1 },
     { url: `${SITE_URL}/locations`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/studios`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/blog`, changeFrequency: "daily", priority: 0.7 },
     { url: `${SITE_URL}/locations/map`, changeFrequency: "daily", priority: 0.7 },
     // Static trust/transparency pages — not location/category SEO landing
     // pages, so they're unconditional and don't use isSeoEligible.
@@ -31,34 +46,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/terms`, changeFrequency: "yearly", priority: 0.2 },
   ];
 
-  // Dedicated per-category landing pages — only once the category clears
-  // the same SEO eligibility threshold as City + Category / State +
-  // Category. Counted from the same `locations` array already fetched
-  // above, grouped in memory — no extra query.
-  const categoryLocationCounts = new Map<string, number>();
-  for (const location of locations) {
-    if (!location.category) continue;
-    categoryLocationCounts.set(
-      location.category.slug,
-      (categoryLocationCounts.get(location.category.slug) ?? 0) + 1,
-    );
-  }
-  for (const category of categories) {
-    if (!isSeoEligible(categoryLocationCounts.get(category.slug) ?? 0)) continue;
-    entries.push({
-      url: `${SITE_URL}/category/${category.slug}`,
-      changeFrequency: "weekly",
-      priority: 0.7,
-    });
-  }
-
-  // Location detail pages
+  // Individual location detail pages — NEVER gated by the 5-location
+  // aggregation threshold. A published location is always sitemap-eligible
+  // regardless of how many sibling locations exist in its city/state/
+  // country/category (see seo-eligibility.ts's module docstring).
   for (const location of locations) {
     entries.push({
       url: `${SITE_URL}/location/${location.slug}`,
       lastModified: location.updatedAt,
       changeFrequency: "weekly",
       priority: 0.7,
+    });
+  }
+
+  // Blog post detail pages — published only (getPublishedBlogPostsForSitemap
+  // never returns a draft).
+  for (const post of blogPosts) {
+    entries.push({
+      url: `${SITE_URL}/blog/${post.slug}`,
+      lastModified: post.updatedAt,
+      changeFrequency: "weekly",
+      priority: 0.6,
     });
   }
 
@@ -72,100 +80,76 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  // Location SEO tree: country, country/state, country/state/city,
-  // country/state/city/category — only combinations that actually have
-  // published content.
-  const countryGroups = new Map<string, { path: string; dates: string[] }>();
-  const stateGroups = new Map<string, { path: string; dates: string[] }>();
-  const cityGroups = new Map<string, { path: string; dates: string[] }>();
-  const categoryGroups = new Map<string, { path: string; dates: string[] }>();
-  const stateCategoryGroups = new Map<string, { path: string; dates: string[] }>();
+  // Location SEO tree: category, country, country/state, country/state/city,
+  // country/state/city/category, country/state/category — every
+  // aggregation/landing page below is gated on the same 5-published-location
+  // threshold (SEO_ELIGIBLE_LOCATION_THRESHOLD), computed once by
+  // buildLocationGeoGroups so this file, the geo pages' own noindex logic,
+  // and /llms.txt + /llms-full.txt never disagree.
+  const geoGroups = buildLocationGeoGroups(locations);
 
-  for (const location of locations) {
-    if (!location.country || !location.state) continue;
-    const countryKey = location.country.slug;
-    if (!countryGroups.has(countryKey)) {
-      countryGroups.set(countryKey, { path: countryKey, dates: [] });
-    }
-    countryGroups.get(countryKey)!.dates.push(location.updatedAt);
-
-    const stateKey = `${countryKey}/${location.state.slug}`;
-    if (!stateGroups.has(stateKey)) stateGroups.set(stateKey, { path: stateKey, dates: [] });
-    stateGroups.get(stateKey)!.dates.push(location.updatedAt);
-
-    if (location.category) {
-      const stateCategoryKey = `${stateKey}/${location.category.slug}`;
-      if (!stateCategoryGroups.has(stateCategoryKey)) {
-        stateCategoryGroups.set(stateCategoryKey, { path: stateCategoryKey, dates: [] });
-      }
-      stateCategoryGroups.get(stateCategoryKey)!.dates.push(location.updatedAt);
-    }
-
-    if (location.city) {
-      const cityKey = `${stateKey}/${location.city.slug}`;
-      if (!cityGroups.has(cityKey)) cityGroups.set(cityKey, { path: cityKey, dates: [] });
-      cityGroups.get(cityKey)!.dates.push(location.updatedAt);
-
-      if (location.category) {
-        const categoryKey = `${cityKey}/${location.category.slug}`;
-        if (!categoryGroups.has(categoryKey)) {
-          categoryGroups.set(categoryKey, { path: categoryKey, dates: [] });
-        }
-        categoryGroups.get(categoryKey)!.dates.push(location.updatedAt);
-      }
-    }
+  // Dedicated per-category landing pages (/category/[slug]).
+  for (const category of categories) {
+    const group = geoGroups.categories.find((g) => g.path === category.slug);
+    if (!group?.eligible) continue;
+    entries.push({
+      url: `${SITE_URL}/category/${category.slug}`,
+      lastModified: group.lastModified,
+      changeFrequency: "weekly",
+      priority: 0.7,
+    });
   }
 
-  for (const group of countryGroups.values()) {
+  for (const group of geoGroups.countries) {
+    if (!group.eligible) continue;
     entries.push({
       url: `${SITE_URL}/locations/${group.path}`,
-      lastModified: latest(group.dates),
+      lastModified: group.lastModified,
       changeFrequency: "weekly",
       priority: 0.6,
     });
   }
-  for (const group of stateGroups.values()) {
+  for (const group of geoGroups.states) {
+    if (!group.eligible) continue;
     entries.push({
       url: `${SITE_URL}/locations/${group.path}`,
-      lastModified: latest(group.dates),
+      lastModified: group.lastModified,
       changeFrequency: "weekly",
       priority: 0.6,
     });
   }
-  for (const group of cityGroups.values()) {
+  for (const group of geoGroups.cities) {
+    if (!group.eligible) continue;
     entries.push({
       url: `${SITE_URL}/locations/${group.path}`,
-      lastModified: latest(group.dates),
+      lastModified: group.lastModified,
       changeFrequency: "weekly",
       priority: 0.6,
     });
   }
-  // State + category pages only earn a sitemap entry once they clear the
-  // same SEO eligibility threshold as City + category, below.
-  for (const group of stateCategoryGroups.values()) {
-    if (!isSeoEligible(group.dates.length)) continue;
+  for (const group of geoGroups.stateCategories) {
+    if (!group.eligible) continue;
     entries.push({
       url: `${SITE_URL}/locations/${group.path}`,
-      lastModified: latest(group.dates),
+      lastModified: group.lastModified,
       changeFrequency: "weekly",
       priority: 0.55,
     });
   }
-  // City + category pages only earn a sitemap entry once they clear the
-  // SEO eligibility threshold (dates.length === published location count
-  // for that combination) — same rule the page itself uses for noindex.
-  for (const group of categoryGroups.values()) {
-    if (!isSeoEligible(group.dates.length)) continue;
+  for (const group of geoGroups.cityCategories) {
+    if (!group.eligible) continue;
     entries.push({
       url: `${SITE_URL}/locations/${group.path}`,
-      lastModified: latest(group.dates),
+      lastModified: group.lastModified,
       changeFrequency: "weekly",
       priority: 0.5,
     });
   }
 
   // Studios SEO tree: country, country/state, country/state/city (no
-  // category level for studios).
+  // category level for studios). Studio aggregation pages have no
+  // published-count threshold today (no city+category/state+category
+  // equivalent exists for studios) — unchanged from prior behavior.
   const studioCountryGroups = new Map<string, { path: string; dates: string[] }>();
   const studioStateGroups = new Map<string, { path: string; dates: string[] }>();
   const studioCityGroups = new Map<string, { path: string; dates: string[] }>();

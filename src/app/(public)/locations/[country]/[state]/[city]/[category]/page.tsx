@@ -28,7 +28,7 @@ type Props = {
   // page's `?category=` filter). Reading searchParams makes this route
   // dynamic instead of ISR — same tradeoff already accepted on the City
   // page and homepage for the same reason.
-  searchParams: Promise<{ city?: string; category?: string; pricing?: string; drone?: string }>;
+  searchParams: Promise<{ q?: string; city?: string; category?: string; pricing?: string; drone?: string }>;
 };
 
 const loadCategoryPage = cache(
@@ -111,11 +111,13 @@ export default async function CategoryLocationsPage({ params, searchParams }: Pr
     query.drone === "allowed" || query.drone === "allowed_with_permission" || query.drone === "not_allowed"
       ? query.drone
       : undefined;
+  const search = query.q?.trim() || undefined;
   const hasFilters = Boolean(
     (query.city && overrideCity.id !== city.id) ||
       (query.category && overrideCategory.id !== category.id) ||
       pricingType ||
-      droneStatus,
+      droneStatus ||
+      search,
   );
 
   const heading = `${category.name} Pre-Wedding Photoshoot Locations in ${city.name}`;
@@ -140,6 +142,7 @@ export default async function CategoryLocationsPage({ params, searchParams }: Pr
           hideState
           basePath={`/locations/${countrySlug}/${state.slug}/${city.slug}/${category.slug}`}
           initial={{
+            q: query.q,
             state: state.slug,
             city: overrideCity.slug,
             category: overrideCategory.slug,
@@ -175,6 +178,7 @@ export default async function CategoryLocationsPage({ params, searchParams }: Pr
             categoryName={overrideCategory.name}
             pricingType={pricingType}
             droneStatus={droneStatus}
+            search={search}
           />
         ) : (
           <>
@@ -242,6 +246,7 @@ async function FilteredResults({
   categoryName,
   pricingType,
   droneStatus,
+  search,
 }: {
   stateId: string;
   cityId: string;
@@ -250,8 +255,16 @@ async function FilteredResults({
   categoryName: string;
   pricingType?: "free" | "paid" | "unknown";
   droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
+  search?: string;
 }) {
-  const results = await getPublishedLocations({ stateId, cityId, categoryId, pricingType, droneStatus });
+  const results = await getPublishedLocations({
+    stateId,
+    cityId,
+    categoryId,
+    pricingType,
+    droneStatus,
+    search,
+  });
 
   return (
     <>

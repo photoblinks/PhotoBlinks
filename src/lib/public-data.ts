@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/public";
 import { haversineDistanceKm } from "@/lib/geo";
+import { blogBlockSchema, type BlogBlock } from "@/lib/blog/content-blocks";
 
 // This module is the ONLY place public pages read data from — it never
 // imports the cookie-based admin client (src/lib/supabase/server.ts), so
@@ -12,7 +13,7 @@ import { haversineDistanceKm } from "@/lib/geo";
 // in the admin panel becomes visible on the public site within this
 // window (or immediately, on routes that can't be statically cached at
 // all because they read searchParams, e.g. the homepage and map filters).
-const PUBLIC_REVALIDATE_SECONDS = 60;
+export const PUBLIC_REVALIDATE_SECONDS = 60;
 
 export type PricingType = "free" | "paid" | "unknown";
 
@@ -263,6 +264,8 @@ export const getPublishedLocations = unstable_cache(
     cityId?: string;
     pricingType?: PricingType;
     droneStatus?: DroneFilterOption;
+    /** Free-text search against the location name. */
+    search?: string;
     near?: { latitude: number; longitude: number };
     /** Fetch exactly these published locations (favourites/shared-collection
      * card lookups) instead of filtering by geography/category. */
@@ -284,6 +287,7 @@ export const getPublishedLocations = unstable_cache(
     if (filters?.cityId) query = query.eq("city_id", filters.cityId);
     if (filters?.pricingType) query = query.eq("pricing_type", filters.pricingType);
     if (filters?.droneStatus) query = query.eq("drone_status", droneFilterToStatus(filters.droneStatus));
+    if (filters?.search) query = query.ilike("name", `%${filters.search}%`);
     if (filters?.locationIds) query = query.in("id", filters.locationIds);
 
     const { data } = await query;
@@ -582,6 +586,9 @@ export type PublicLocationDetail = ExtraDetails & {
   state_id: string | null;
   city: GeoRef | null;
   images: string[];
+  /** Admin-provided per-image alt text, same order/length as `images`.
+   * `null` where an image has no caption of its own. */
+  imageCaptions: (string | null)[];
   faqs: { question: string; answer: string }[];
 };
 
@@ -595,7 +602,7 @@ export const getPublishedLocationBySlug = cache(
   const { data } = await supabase
     .from("locations")
     .select(
-      `id, name, card_name, slug, description, pricing_type, price, price_note, action_type, action_value, meta_title, meta_description, map_url, latitude, longitude, youtube_url, state_id, ${EXTRA_DETAIL_COLUMNS}, categories(name, slug), countries(name, slug), states(name, slug), cities(name, slug), location_images(image_url, sort_order), location_faqs(question, answer, sort_order)`,
+      `id, name, card_name, slug, description, pricing_type, price, price_note, action_type, action_value, meta_title, meta_description, map_url, latitude, longitude, youtube_url, state_id, ${EXTRA_DETAIL_COLUMNS}, categories(name, slug), countries(name, slug), states(name, slug), cities(name, slug), location_images(image_url, alt_text, sort_order), location_faqs(question, answer, sort_order)`,
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -649,6 +656,9 @@ export const getPublishedLocationBySlug = cache(
     images: [...(data.location_images ?? [])]
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((img) => img.image_url),
+    imageCaptions: [...(data.location_images ?? [])]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((img) => img.alt_text?.trim() || null),
     faqs: [...(data.location_faqs ?? [])]
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((faq) => ({ question: faq.question, answer: faq.answer })),
@@ -693,6 +703,36 @@ export const getActiveSponsoredPhotographerByState = cache(
   ),
 );
 
+/** Every currently-active sponsored photographer, with the state they're
+ * assigned to — for the /llms-full.txt dump only (a single small bulk read,
+ * unlike the per-state getActiveSponsoredPhotographerByState above, which
+ * stays scoped to the location detail page it was built for). Same public
+ * fields already rendered on SponsoredPhotographerCard — nothing new is
+ * exposed. RLS already restricts the public-read policy to
+ * `expiry_date >= current_date`. */
+export const getActiveSponsoredPhotographers = unstable_cache(
+  async (): Promise<(PublicSponsoredPhotographer & { state: GeoRef | null })[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("sponsored_photographers")
+      .select(
+        "id, photography_name, image_url, title, description, phone_number, whatsapp_number, states(name, slug)",
+      );
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      photography_name: row.photography_name,
+      image_url: row.image_url,
+      title: row.title,
+      description: row.description,
+      phone_number: row.phone_number,
+      whatsapp_number: row.whatsapp_number,
+      state: Array.isArray(row.states) ? (row.states[0] ?? null) : row.states,
+    }));
+  },
+  ["getActiveSponsoredPhotographers"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
 export type PublicStudioDetail = ExtraDetails & {
   id: string;
   name: string;
@@ -711,6 +751,9 @@ export type PublicStudioDetail = ExtraDetails & {
   state_id: string | null;
   city: GeoRef | null;
   images: string[];
+  /** Admin-provided per-image alt text, same order/length as `images`.
+   * `null` where an image has no caption of its own. */
+  imageCaptions: (string | null)[];
   pricingOptions: { label: string; price: number }[];
   faqs: { question: string; answer: string }[];
 };
@@ -724,7 +767,7 @@ export const getPublishedStudioBySlug = cache(
   const { data } = await supabase
     .from("studios")
     .select(
-      `id, name, slug, description, action_type, action_value, meta_title, meta_description, map_url, latitude, longitude, youtube_url, state_id, ${EXTRA_DETAIL_COLUMNS}, countries(name, slug), states(name, slug), cities(name, slug), studio_images(image_url, sort_order), studio_pricing_options(label, price, sort_order), studio_faqs(question, answer, sort_order)`,
+      `id, name, slug, description, action_type, action_value, meta_title, meta_description, map_url, latitude, longitude, youtube_url, state_id, ${EXTRA_DETAIL_COLUMNS}, countries(name, slug), states(name, slug), cities(name, slug), studio_images(image_url, alt_text, sort_order), studio_pricing_options(label, price, sort_order), studio_faqs(question, answer, sort_order)`,
     )
     .eq("slug", slug)
     .eq("is_published", true)
@@ -773,6 +816,9 @@ export const getPublishedStudioBySlug = cache(
     images: [...(data.studio_images ?? [])]
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((img) => img.image_url),
+    imageCaptions: [...(data.studio_images ?? [])]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((img) => img.alt_text?.trim() || null),
     pricingOptions: [...(data.studio_pricing_options ?? [])]
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((o) => ({ label: o.label, price: o.price })),
@@ -815,4 +861,497 @@ export const getApprovedPhotographerPhotos = cache(
     ["getApprovedPhotographerPhotos"],
     { revalidate: PUBLIC_REVALIDATE_SECONDS },
   ),
+);
+
+// ---------------------------------------------------------------------------
+// Blog (Phase 3 — public read layer)
+// ---------------------------------------------------------------------------
+//
+// Every function below reads only published rows: blog_posts.status =
+// 'published' is always an explicit filter here even though RLS already
+// enforces it too — belt and suspenders, and it keeps the intent readable at
+// the call site. blog_faqs / blog_post_tags / blog_post_locations have no
+// status column of their own; their own RLS policies (see
+// 20260911000000_blog_system.sql / _fixes.sql) already restrict anon/public
+// reads to rows whose parent post (and, for blog_post_locations, whose
+// referenced location) is published, so a plain nested select here can't
+// leak a draft's FAQs/tags/locations or a link to an unpublished location.
+
+const BLOG_POST_CARD_COLUMNS =
+  "id, slug, title, excerpt, featured_image_url, featured_image_alt, is_featured, published_at, blog_categories(name, slug)";
+
+export type PublicBlogPostCard = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  featuredImageUrl: string | null;
+  featuredImageAlt: string | null;
+  isFeatured: boolean;
+  publishedAt: string;
+  category: { name: string; slug: string } | null;
+};
+
+type BlogPostCardRow = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  featured_image_url: string | null;
+  featured_image_alt: string | null;
+  is_featured: boolean;
+  published_at: string | null;
+  blog_categories: { name: string; slug: string } | { name: string; slug: string }[] | null;
+};
+
+function toBlogPostCard(row: BlogPostCardRow): PublicBlogPostCard {
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    excerpt: row.excerpt,
+    featuredImageUrl: row.featured_image_url,
+    featuredImageAlt: row.featured_image_alt,
+    isFeatured: row.is_featured,
+    // Never null for a published row (the publish trigger guarantees it),
+    // but fall back defensively rather than pass null through the public type.
+    publishedAt: row.published_at ?? new Date(0).toISOString(),
+    category: Array.isArray(row.blog_categories) ? (row.blog_categories[0] ?? null) : row.blog_categories,
+  };
+}
+
+export const BLOG_LIST_PAGE_SIZE = 12;
+
+/** One page of published posts, newest first, plus the total published
+ * count for pagination — a bounded, offset-based listing rather than
+ * fetching every post, since the blog can grow past a single page. */
+export const getPublishedBlogPostsPage = unstable_cache(
+  async (page: number): Promise<{ posts: PublicBlogPostCard[]; total: number }> => {
+    const supabase = createPublicClient();
+    const from = Math.max(0, page - 1) * BLOG_LIST_PAGE_SIZE;
+    const to = from + BLOG_LIST_PAGE_SIZE - 1;
+
+    const { data, count } = await supabase
+      .from("blog_posts")
+      .select(BLOG_POST_CARD_COLUMNS, { count: "exact" })
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .range(from, to);
+
+    return { posts: (data ?? []).map(toBlogPostCard), total: count ?? 0 };
+  },
+  ["getPublishedBlogPostsPage"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
+/** Featured published posts for the /blog hero rail. Bounded to `limit`. */
+export const getFeaturedBlogPosts = unstable_cache(
+  async (limit = 3): Promise<PublicBlogPostCard[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("blog_posts")
+      .select(BLOG_POST_CARD_COLUMNS)
+      .eq("status", "published")
+      .eq("is_featured", true)
+      .order("published_at", { ascending: false })
+      .limit(limit);
+    return (data ?? []).map(toBlogPostCard);
+  },
+  ["getFeaturedBlogPosts"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
+/** Active blog categories for /blog's category navigation. */
+export const getActiveBlogCategories = unstable_cache(
+  async (): Promise<{ id: string; name: string; slug: string }[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("blog_categories")
+      .select("id, name, slug")
+      .eq("is_active", true)
+      .order("sort_order");
+    return data ?? [];
+  },
+  ["getActiveBlogCategories"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
+/** Published posts in one category, newest first. Returns an empty array
+ * (not an error) for an unknown/inactive category slug. */
+export const getBlogPostsByCategorySlug = unstable_cache(
+  async (categorySlug: string, limit = BLOG_LIST_PAGE_SIZE): Promise<PublicBlogPostCard[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("blog_posts")
+      .select(`${BLOG_POST_CARD_COLUMNS}, blog_categories!inner(name, slug)`)
+      .eq("status", "published")
+      .eq("blog_categories.slug", categorySlug)
+      .order("published_at", { ascending: false })
+      .limit(limit);
+    return (data ?? []).map(toBlogPostCard);
+  },
+  ["getBlogPostsByCategorySlug"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
+/** Published posts carrying one tag, newest first. Returns an empty array
+ * for an unknown/inactive tag slug. */
+export const getBlogPostsByTagSlug = unstable_cache(
+  async (tagSlug: string, limit = BLOG_LIST_PAGE_SIZE): Promise<PublicBlogPostCard[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("blog_posts")
+      .select(`${BLOG_POST_CARD_COLUMNS}, blog_post_tags!inner(blog_tags!inner(slug))`)
+      .eq("status", "published")
+      .eq("blog_post_tags.blog_tags.slug", tagSlug)
+      .order("published_at", { ascending: false })
+      .limit(limit);
+    return (data ?? []).map(toBlogPostCard);
+  },
+  ["getBlogPostsByTagSlug"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
+/** Published posts linked to a given location (blog_post_locations), newest
+ * first — used on the location detail page to surface related articles. */
+export const getBlogPostsForLocation = cache(
+  unstable_cache(
+    async (locationId: string, limit = 6): Promise<PublicBlogPostCard[]> => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("blog_posts")
+        .select(`${BLOG_POST_CARD_COLUMNS}, blog_post_locations!inner(location_id)`)
+        .eq("status", "published")
+        .eq("blog_post_locations.location_id", locationId)
+        .order("published_at", { ascending: false })
+        .limit(limit);
+      return (data ?? []).map(toBlogPostCard);
+    },
+    ["getBlogPostsForLocation"],
+    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  ),
+);
+
+/** Every published post's slug + updated_at, for the sitemap only — the
+ * one caller allowed to want the full published set rather than a bounded
+ * page (mirrors getPublishedLocations/getPublishedStudios, which are the
+ * same kind of unbounded sitemap source). Never includes drafts. */
+export const getPublishedBlogPostsForSitemap = unstable_cache(
+  async (): Promise<{ slug: string; updatedAt: string }[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("blog_posts")
+      .select("slug, updated_at")
+      .eq("status", "published")
+      .order("published_at", { ascending: false });
+    return (data ?? []).map((row) => ({ slug: row.slug, updatedAt: row.updated_at }));
+  },
+  ["getPublishedBlogPostsForSitemap"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
+export type PublicBlogPostForLlms = {
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  publishedAt: string;
+  updatedAt: string;
+  category: { name: string; slug: string } | null;
+};
+
+/** Every published post's title/excerpt/dates, for the /llms-full.txt
+ * machine-readable dump — the unbounded sibling of getPublishedBlogPostsPage
+ * (which is deliberately paginated for the /blog UI). Never includes drafts. */
+export const getPublishedBlogPostsForLlms = unstable_cache(
+  async (): Promise<PublicBlogPostForLlms[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("blog_posts")
+      .select("slug, title, excerpt, published_at, updated_at, blog_categories(name, slug)")
+      .eq("status", "published")
+      .order("published_at", { ascending: false });
+    return (data ?? []).map((row) => ({
+      slug: row.slug,
+      title: row.title,
+      excerpt: row.excerpt,
+      publishedAt: row.published_at ?? new Date(0).toISOString(),
+      updatedAt: row.updated_at,
+      category: Array.isArray(row.blog_categories) ? (row.blog_categories[0] ?? null) : row.blog_categories,
+    }));
+  },
+  ["getPublishedBlogPostsForLlms"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
+export type PublicBlogPostDetail = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  content: BlogBlock[];
+  authorName: string;
+  featuredImageUrl: string | null;
+  featuredImageAlt: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  isFeatured: boolean;
+  categoryId: string | null;
+  category: { name: string; slug: string } | null;
+  publishedAt: string;
+  updatedAt: string;
+  faqs: { question: string; answer: string }[];
+  tagIds: string[];
+  tags: { id: string; name: string; slug: string }[];
+  locationIds: string[];
+  locations: { id: string; name: string; slug: string }[];
+};
+
+/** Per-block fail-closed validation for blog_posts.content. The array is
+ * never trusted as a whole: each block is validated individually against
+ * blogBlockSchema, valid blocks are kept in their original order, and only
+ * invalid blocks are dropped. A non-array (or entirely invalid) content
+ * value yields an empty array — the renderer only ever receives BlogBlock[]
+ * and never renders unvalidated data. The 200-block cap mirrors
+ * blogContentSchema's bound so a single post can't be turned into an
+ * unbounded render payload. */
+function parsePublicBlogContent(value: unknown): BlogBlock[] {
+  if (!Array.isArray(value)) return [];
+  const blocks: BlogBlock[] = [];
+  for (const block of value) {
+    if (blocks.length >= 200) break;
+    const parsed = blogBlockSchema.safeParse(block);
+    if (parsed.success) blocks.push(parsed.data);
+  }
+  return blocks;
+}
+
+/** A single published post by slug, with everything the article page and
+ * its JSON-LD need, or null if it doesn't exist / isn't published (RLS
+ * already hides drafts from the anon read policy — this adds the same
+ * `status = 'published'` filter explicitly rather than relying on RLS
+ * alone). `content` is re-validated here per block with blogBlockSchema —
+ * the CMS already validates on write, but the renderer must never trust a
+ * JSONB blob it didn't just write itself. Valid blocks are kept in order;
+ * each invalid block is dropped individually (fail closed per block), so
+ * one corrupted block can never erase its valid neighbors. A non-array
+ * content value renders as an empty content array rather than crashing the
+ * page. */
+export const getPublishedBlogPostBySlug = cache(
+  unstable_cache(
+    async (slug: string): Promise<PublicBlogPostDetail | null> => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("blog_posts")
+        .select(
+          "id, slug, title, excerpt, content, author_name, featured_image_url, featured_image_alt, meta_title, meta_description, is_featured, category_id, published_at, updated_at, blog_categories(name, slug), blog_faqs(question, answer, sort_order), blog_post_tags(tag_id, blog_tags(id, name, slug)), blog_post_locations(location_id, locations(id, name, slug))",
+        )
+        .eq("slug", slug)
+        .eq("status", "published")
+        .maybeSingle();
+
+      if (!data) return null;
+
+      const tagRows = data.blog_post_tags ?? [];
+      const locationRows = data.blog_post_locations ?? [];
+
+      return {
+        id: data.id,
+        slug: data.slug,
+        title: data.title,
+        excerpt: data.excerpt,
+        content: parsePublicBlogContent(data.content),
+        authorName: data.author_name,
+        featuredImageUrl: data.featured_image_url,
+        featuredImageAlt: data.featured_image_alt,
+        metaTitle: data.meta_title,
+        metaDescription: data.meta_description,
+        isFeatured: data.is_featured,
+        categoryId: data.category_id,
+        category: Array.isArray(data.blog_categories) ? (data.blog_categories[0] ?? null) : data.blog_categories,
+        publishedAt: data.published_at ?? new Date(0).toISOString(),
+        updatedAt: data.updated_at,
+        faqs: [...(data.blog_faqs ?? [])]
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((f) => ({ question: f.question, answer: f.answer })),
+        tagIds: tagRows.map((t) => t.tag_id),
+        tags: tagRows
+          .map((t) => (Array.isArray(t.blog_tags) ? (t.blog_tags[0] ?? null) : t.blog_tags))
+          .filter((t): t is { id: string; name: string; slug: string } => t != null),
+        locationIds: locationRows.map((l) => l.location_id),
+        // A location row is only present here at all when it passed
+        // blog_post_locations' own RLS (parent post published AND the
+        // location itself published) — see the module comment above.
+        locations: locationRows
+          .map((l) => (Array.isArray(l.locations) ? (l.locations[0] ?? null) : l.locations))
+          .filter((l): l is { id: string; name: string; slug: string } => l != null),
+      };
+    },
+    ["getPublishedBlogPostBySlug"],
+    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  ),
+);
+
+/** Lightweight related-post strategy: published posts (excluding the post
+ * itself) that share the same category, or at least one tag, or at least
+ * one linked location — ranked by number of overlapping signals, capped to
+ * `limit`. Three bounded queries (one per signal, each already limited and
+ * filtered to `status = 'published'`), never an unbounded scan or a
+ * cross-post similarity computation — this is a relationship lookup, not a
+ * recommendation engine. */
+export const getRelatedBlogPosts = cache(
+  unstable_cache(
+    async (params: {
+      postId: string;
+      categorySlug: string | null;
+      tagSlugs: string[];
+      locationIds: string[];
+      limit?: number;
+    }): Promise<PublicBlogPostCard[]> => {
+      const { postId, categorySlug, tagSlugs, locationIds, limit = 4 } = params;
+      const supabase = createPublicClient();
+      const CANDIDATE_CAP = 12;
+
+      const scored = new Map<string, { row: BlogPostCardRow; score: number }>();
+      const addRows = (rows: BlogPostCardRow[] | null | undefined) => {
+        for (const row of rows ?? []) {
+          if (row.id === postId) continue;
+          const existing = scored.get(row.id);
+          if (existing) existing.score += 1;
+          else scored.set(row.id, { row, score: 1 });
+        }
+      };
+
+      const queries: Promise<void>[] = [];
+
+      if (categorySlug) {
+        queries.push(
+          (async () => {
+            const { data } = await supabase
+              .from("blog_posts")
+              .select(`${BLOG_POST_CARD_COLUMNS}, blog_categories!inner(slug)`)
+              .eq("status", "published")
+              .eq("blog_categories.slug", categorySlug)
+              .neq("id", postId)
+              .order("published_at", { ascending: false })
+              .limit(CANDIDATE_CAP);
+            addRows(data);
+          })(),
+        );
+      }
+
+      if (tagSlugs.length > 0) {
+        queries.push(
+          (async () => {
+            const { data } = await supabase
+              .from("blog_posts")
+              .select(`${BLOG_POST_CARD_COLUMNS}, blog_post_tags!inner(blog_tags!inner(slug))`)
+              .eq("status", "published")
+              .in("blog_post_tags.blog_tags.slug", tagSlugs)
+              .neq("id", postId)
+              .order("published_at", { ascending: false })
+              .limit(CANDIDATE_CAP);
+            addRows(data);
+          })(),
+        );
+      }
+
+      if (locationIds.length > 0) {
+        queries.push(
+          (async () => {
+            const { data } = await supabase
+              .from("blog_posts")
+              .select(`${BLOG_POST_CARD_COLUMNS}, blog_post_locations!inner(location_id)`)
+              .eq("status", "published")
+              .in("blog_post_locations.location_id", locationIds)
+              .neq("id", postId)
+              .order("published_at", { ascending: false })
+              .limit(CANDIDATE_CAP);
+            addRows(data);
+          })(),
+        );
+      }
+
+      await Promise.all(queries);
+
+      return [...scored.values()]
+        .sort((a, b) => b.score - a.score || (b.row.published_at ?? "").localeCompare(a.row.published_at ?? ""))
+        .slice(0, limit)
+        .map(({ row }) => toBlogPostCard(row));
+    },
+    ["getRelatedBlogPosts"],
+    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  ),
+);
+
+/** Resolves locationLink content-block ids to published-only location
+ * cards, in one batched query — never queried one-by-one per block. Ids
+ * that don't exist, or whose location is unpublished, are simply absent
+ * from the result (RLS on `locations` already restricts to `is_published
+ * = true`; the explicit filter here documents that same intent). */
+export const getPublicLocationLinksByIds = cache(
+  unstable_cache(
+    async (ids: string[]): Promise<{ id: string; name: string; slug: string }[]> => {
+      if (ids.length === 0) return [];
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("locations")
+        .select("id, name, slug")
+        .eq("is_published", true)
+        .in("id", ids);
+      return data ?? [];
+    },
+    ["getPublicLocationLinksByIds"],
+    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  ),
+);
+// ---------------------------------------------------------------------------
+// Footer social media links (Admin → Settings → Social Media)
+// ---------------------------------------------------------------------------
+
+/** Fixed allowlist of social platforms the admin can configure. The set is
+ * intentionally closed: the DB only stores these five columns, the Settings
+ * server action accepts exactly these fields, and the footer maps each
+ * platform to a hardcoded icon — arbitrary platform values can never reach
+ * the public UI. */
+export type SocialPlatform = "instagram" | "facebook" | "youtube" | "pinterest" | "linkedin";
+
+export type SocialLink = {
+  platform: SocialPlatform;
+  url: string;
+};
+
+/** Social media profile links configured by the admin (Admin → Settings →
+ * Social Media), for the public site footer. Reads ONLY the five footer
+ * platform columns from the single-row site_settings table through the
+ * anonymous RLS-bound client, drops empty/unset values, and returns a
+ * fixed-order array of non-empty { platform, url } entries — no other
+ * site_settings field is ever read or exposed. Cached like every other
+ * public data accessor (PUBLIC_REVALIDATE_SECONDS), so footer pages stay
+ * eligible for static caching. */
+export const getSocialMediaLinks = unstable_cache(
+  async (): Promise<SocialLink[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("site_settings")
+      .select("instagram_url, facebook_url, youtube_url, pinterest_url, linkedin_url")
+      .eq("id", true)
+      .maybeSingle();
+
+    if (!data) return [];
+
+    const links: SocialLink[] = [];
+    const push = (platform: SocialPlatform, url: unknown) => {
+      if (typeof url === "string" && url.trim().length > 0) {
+        links.push({ platform, url });
+      }
+    };
+    push("instagram", data.instagram_url);
+    push("facebook", data.facebook_url);
+    push("youtube", data.youtube_url);
+    push("pinterest", data.pinterest_url);
+    push("linkedin", data.linkedin_url);
+    return links;
+  },
+  ["getSocialMediaLinks"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
 );

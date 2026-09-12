@@ -1,6 +1,7 @@
-import type { ExtraDetails, PublicLocationDetail, PublicStudioDetail } from "./public-data";
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+import type { ExtraDetails, PublicLocationDetail, PublicStudioDetail, PublicBlogPostDetail } from "./public-data";
+import type { BlogBlock } from "./blog/content-blocks";
+import { getValidatedYouTubeVideo, type ValidatedYouTubeVideo } from "./youtube";
+import { SITE_URL } from "./site-url";
 
 export function absoluteUrl(path: string) {
   return `${SITE_URL}${path}`;
@@ -57,7 +58,7 @@ export function buildBreadcrumbList(items: { name: string; path: string }[]) {
 /** Plain-text (no UI emoji) label for the drone_status enum, for use in
  * structured data — see the emoji-prefixed DRONE_LABELS in
  * extra-details-list.tsx for the visual equivalent. */
-const DRONE_STATUS_SCHEMA_LABELS: Record<NonNullable<ExtraDetails["drone_status"]>, string> = {
+export const DRONE_STATUS_SCHEMA_LABELS: Record<NonNullable<ExtraDetails["drone_status"]>, string> = {
   allowed: "Allowed",
   allowed_with_permission: "Allowed with Permission",
   restricted: "Restricted",
@@ -120,6 +121,36 @@ function buildAmenityFeatures(details: ExtraDetails): LocationFeature[] {
   return features;
 }
 
+const MAX_VIDEO_DESCRIPTION_LENGTH = 200;
+
+/** Trims a genuine description down to a schema-friendly length instead of
+ * copying the whole page description into structured data. Cuts on a word
+ * boundary; never invents content. */
+function toVideoDescription(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= MAX_VIDEO_DESCRIPTION_LENGTH) return trimmed;
+  const cut = trimmed.slice(0, MAX_VIDEO_DESCRIPTION_LENGTH);
+  const lastSpace = cut.lastIndexOf(" ");
+  return `${cut.slice(0, lastSpace > 0 ? lastSpace : MAX_VIDEO_DESCRIPTION_LENGTH)}…`;
+}
+
+/** VideoObject for a validated YouTube video. `embedUrl`/`thumbnailUrl` are
+ * derived from the exact same parsed video id that drives the on-page
+ * iframe (see getValidatedYouTubeVideo) — schema and player can never
+ * reference different videos. `uploadDate`/`duration` are intentionally
+ * omitted: PhotoBlinks doesn't know either for a stored youtube_url, and
+ * fabricating them would violate structured-data guidelines. */
+function buildVideoObject(video: ValidatedYouTubeVideo, canonicalUrl: string, name: string, description: string) {
+  return {
+    "@type": "VideoObject",
+    "@id": `${canonicalUrl}#video`,
+    name,
+    description,
+    thumbnailUrl: [video.thumbnailUrl],
+    embedUrl: video.embedUrl,
+  };
+}
+
 /** Shared by locations and studios — both embed the same city/state/country
  * relations. Omitted entirely (not an empty object) when none are set. */
 function buildAddress(place: {
@@ -152,6 +183,10 @@ export function buildLocationJsonLd(
   const canonicalUrl = absoluteUrl(`/location/${location.slug}`);
   const amenityFeature = buildAmenityFeatures(location);
   const breadcrumbList = buildBreadcrumbList(breadcrumbItems);
+  // Same validated video (or null) that gates the on-page heading/iframe —
+  // an unparseable/missing youtube_url never produces a VideoObject, and
+  // never a `video` reference on the Place either.
+  const video = getValidatedYouTubeVideo(location.youtube_url);
 
   const place = {
     "@type": ["Place", "TouristAttraction"],
@@ -185,6 +220,7 @@ export function buildLocationJsonLd(
             worstRating: 1,
           }
         : undefined,
+    video: video ? { "@id": `${canonicalUrl}#video` } : undefined,
   };
 
   const graph: object[] = [
@@ -195,6 +231,13 @@ export function buildLocationJsonLd(
       itemListElement: breadcrumbList.itemListElement,
     },
   ];
+
+  if (video) {
+    const description = location.description
+      ? toVideoDescription(location.description)
+      : `Video of ${location.name}${location.city ? ` in ${location.city.name}` : ""}, a photoshoot location listed on PhotoBlinks.`;
+    graph.push(buildVideoObject(video, canonicalUrl, `${location.name} Tour & Photoshoot Video`, description));
+  }
 
   // Only ever built from FAQs actually rendered on the page — never
   // fabricated, never present when the location has none.
@@ -228,6 +271,10 @@ export function buildStudioJsonLd(
 ) {
   const canonicalUrl = absoluteUrl(`/studio/${studio.slug}`);
   const breadcrumbList = buildBreadcrumbList(breadcrumbItems);
+  // Same validated video (or null) that gates the on-page heading/iframe —
+  // an unparseable/missing youtube_url never produces a VideoObject, and
+  // never a `video` reference on the LocalBusiness either.
+  const video = getValidatedYouTubeVideo(studio.youtube_url);
 
   const business = {
     "@type": "LocalBusiness",
@@ -245,6 +292,7 @@ export function buildStudioJsonLd(
             longitude: studio.longitude,
           }
         : undefined,
+    video: video ? { "@id": `${canonicalUrl}#video` } : undefined,
   };
 
   const graph: object[] = [
@@ -256,6 +304,13 @@ export function buildStudioJsonLd(
     },
   ];
 
+  if (video) {
+    const description = studio.description
+      ? toVideoDescription(studio.description)
+      : `${studio.name}, a photography studio${studio.city ? ` in ${studio.city.name}` : ""}.`;
+    graph.push(buildVideoObject(video, canonicalUrl, `${studio.name} Video`, description));
+  }
+
   // Only ever built from FAQs actually rendered on the page — never
   // fabricated, never present when the studio has none.
   if (studio.faqs.length > 0) {
@@ -263,6 +318,79 @@ export function buildStudioJsonLd(
       "@type": "FAQPage",
       "@id": `${canonicalUrl}#faq`,
       mainEntity: studio.faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    });
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": graph,
+  };
+}
+
+/** Combined BlogPosting + BreadcrumbList (+ FAQPage when the post has FAQs)
+ * structured data for a published blog article, as one JSON-LD script with
+ * an @graph — mirrors buildLocationJsonLd/buildStudioJsonLd. `post` and
+ * `breadcrumbItems` must be data the page already loaded via
+ * getPublishedBlogPostBySlug; this never queries Supabase itself, and never
+ * runs for a draft (the page 404s before this is ever called). */
+export function buildBlogPostingJsonLd(
+  post: PublicBlogPostDetail,
+  breadcrumbItems: { name: string; path: string }[],
+) {
+  const canonicalUrl = absoluteUrl(`/blog/${post.slug}`);
+  const breadcrumbList = buildBreadcrumbList(breadcrumbItems);
+
+  const posting = {
+    "@type": "BlogPosting",
+    "@id": `${canonicalUrl}#article`,
+    headline: post.title,
+    description: post.excerpt ?? undefined,
+    image: post.featuredImageUrl ? [post.featuredImageUrl] : undefined,
+    datePublished: post.publishedAt,
+    dateModified: post.updatedAt,
+    author: { "@type": "Person", name: post.authorName },
+    publisher: { "@type": "Organization", name: "PhotoBlinks", url: absoluteUrl("/") },
+    mainEntityOfPage: canonicalUrl,
+    url: canonicalUrl,
+  };
+
+  const graph: object[] = [
+    posting,
+    {
+      "@type": "BreadcrumbList",
+      "@id": `${canonicalUrl}#breadcrumb`,
+      itemListElement: breadcrumbList.itemListElement,
+    },
+  ];
+
+  // Single consistent FAQPage source: merge the post's inline faq content
+  // blocks (already validated by getPublishedBlogPostBySlug, in document
+  // order) with its blog_faqs rows (already ordered by sort_order there).
+  // Exact-question duplicates are dropped with the first occurrence winning,
+  // keeping the output deterministic regardless of which source a question
+  // came from. Only ever built from FAQs actually rendered on the page —
+  // never fabricated, never present when the post has none.
+  const faqBlocks = post.content
+    .filter((block): block is Extract<BlogBlock, { type: "faq" }> => block.type === "faq")
+    .map((block) => ({ question: block.question, answer: block.answer }));
+
+  const mergedFaqs: { question: string; answer: string }[] = [];
+  const seenQuestions = new Set<string>();
+  for (const faq of [...faqBlocks, ...post.faqs]) {
+    if (seenQuestions.has(faq.question)) continue;
+    seenQuestions.add(faq.question);
+    mergedFaqs.push(faq);
+  }
+
+  if (mergedFaqs.length > 0) {
+    graph.push({
+      "@type": "FAQPage",
+      "@id": `${canonicalUrl}#faq`,
+      mainEntity: mergedFaqs.map((faq) => ({
         "@type": "Question",
         name: faq.question,
         acceptedAnswer: { "@type": "Answer", text: faq.answer },

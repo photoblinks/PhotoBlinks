@@ -15,10 +15,12 @@ import { HomeFilter } from "@/components/public/home-filter";
 import { LocationCard } from "@/components/public/location-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
+import { isSeoEligible } from "@/lib/seo-eligibility";
 
 type Props = {
   params: Promise<{ country: string }>;
   searchParams: Promise<{
+    q?: string;
     state?: string;
     city?: string;
     category?: string;
@@ -60,6 +62,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       images: [data.country.image_url ?? DEFAULT_OG_IMAGE],
     },
+    // Below the SEO eligibility threshold the page still renders for
+    // product/UX purposes but shouldn't be indexed — see seo-eligibility.ts.
+    // Never affects the country's individual location pages, which are
+    // always indexable when published.
+    ...(isSeoEligible(data.locations.length) ? {} : { robots: { index: false, follow: true } }),
   };
 }
 
@@ -90,8 +97,9 @@ export default async function CountryLocationsPage({ params, searchParams }: Pro
     query.drone === "allowed" || query.drone === "allowed_with_permission" || query.drone === "not_allowed"
       ? query.drone
       : undefined;
+  const search = query.q?.trim() || undefined;
   const hasFilters = Boolean(
-    selectedState || selectedCity || selectedCategory || pricingType || droneStatus,
+    selectedState || selectedCity || selectedCategory || pricingType || droneStatus || search,
   );
 
   const heading = country.h1_title || `Pre-Wedding Photoshoot Locations in ${country.name}`;
@@ -129,6 +137,7 @@ export default async function CountryLocationsPage({ params, searchParams }: Pro
           categories={categories}
           basePath={`/locations/${country.slug}`}
           initial={{
+            q: query.q,
             state: query.state,
             city: query.city,
             category: query.category,
@@ -155,6 +164,7 @@ export default async function CountryLocationsPage({ params, searchParams }: Pro
             categoryId={selectedCategory?.id}
             pricingType={pricingType}
             droneStatus={droneStatus}
+            search={search}
           />
         ) : (
           <BrowseByState country={country} locations={locations} />
@@ -171,6 +181,7 @@ async function FilteredResults({
   categoryId,
   pricingType,
   droneStatus,
+  search,
 }: {
   countryId: string;
   stateId?: string;
@@ -178,6 +189,7 @@ async function FilteredResults({
   categoryId?: string;
   pricingType?: "free" | "paid" | "unknown";
   droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
+  search?: string;
 }) {
   const results = await getPublishedLocations({
     countryId,
@@ -186,6 +198,7 @@ async function FilteredResults({
     categoryId,
     pricingType,
     droneStatus,
+    search,
   });
 
   return (

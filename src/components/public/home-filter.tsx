@@ -2,8 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Building2, LayoutGrid, Tag, Drone } from "lucide-react";
+import { MapPin, Building2, LayoutGrid, Tag, Drone, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -75,6 +76,7 @@ export function HomeFilter({
   cities: City[];
   categories: Option[];
   initial: {
+    q?: string;
     state?: string;
     city?: string;
     category?: string;
@@ -101,6 +103,7 @@ export function HomeFilter({
   const initialState = states.find((s) => s.slug === initial.state);
   const initialCity = cities.find((c) => c.slug === initial.city);
 
+  const [search, setSearch] = useState(initial.q ?? "");
   const [stateId, setStateId] = useState(initialState?.id ?? ALL);
   const [cityId, setCityId] = useState(initialCity?.id ?? ALL);
   const [categorySlug, setCategorySlug] = useState(initial.category ?? ALL);
@@ -127,6 +130,7 @@ export function HomeFilter({
   const selectedDroneName = droneStatus !== ALL ? DRONE_LABELS[droneStatus] : undefined;
 
   const isFiltered =
+    search.trim() !== "" ||
     (!hideState && stateId !== ALL) ||
     (!hideCity && cityId !== ALL) ||
     (!hideCategory && categorySlug !== ALL) ||
@@ -138,6 +142,7 @@ export function HomeFilter({
     locationRequestIdRef.current += 1;
     // Fixed geography (hidden fields) stays put — only the fields the user
     // can actually see and adjust get cleared.
+    setSearch("");
     if (!hideState) setStateId(ALL);
     if (!hideCity) setCityId(ALL);
     if (!hideCategory) setCategorySlug(ALL);
@@ -157,6 +162,7 @@ export function HomeFilter({
 
   function buildParams(overrideCoords?: { lat: string; lng: string } | null) {
     const params = new URLSearchParams();
+    if (search.trim()) params.set("q", search.trim());
     const stateSlug = states.find((s) => s.id === stateId)?.slug;
     const citySlug = cities.find((c) => c.id === cityId)?.slug;
     if (!hideState && stateSlug) params.set("state", stateSlug);
@@ -228,6 +234,22 @@ export function HomeFilter({
         className,
       )}
     >
+      <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
+        <Search className="size-4 shrink-0 text-pb-brand" />
+        <span className="flex flex-1 flex-col gap-0.5 overflow-hidden text-left">
+          <span className="hidden text-[0.7rem] font-semibold text-muted-foreground sm:block">
+            Search
+          </span>
+          <Input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by name…"
+            className="h-auto w-full border-0 bg-transparent p-0 text-sm font-medium shadow-none focus-visible:ring-0"
+          />
+        </span>
+      </div>
+
       {!hideState && (
         <div className="flex flex-1 items-center gap-2.5 py-1.5 sm:px-4 sm:py-4">
           <MapPin className="size-4 shrink-0 text-pb-brand" />

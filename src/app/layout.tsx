@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Geist, Geist_Mono, Roboto, Manrope } from "next/font/google";
 import "./globals.css";
+import { SITE_URL } from "@/lib/site-url";
 
 const GA_MEASUREMENT_ID = "G-GJEBVWSMWF";
 
@@ -31,7 +32,7 @@ const DEFAULT_TITLE = "PhotoBlinks - Discover Photoshoot Locations";
 const DEFAULT_DESCRIPTION = "Discover pre-wedding photoshoot locations across India.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: DEFAULT_TITLE,
     template: "%s | PhotoBlinks",

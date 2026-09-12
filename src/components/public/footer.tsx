@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { Aperture } from "lucide-react";
-import { getActiveCategories } from "@/lib/public-data";
+import { getActiveCategories, getSocialMediaLinks } from "@/lib/public-data";
+import { SOCIAL_PLATFORM_ICONS, SOCIAL_PLATFORM_LABELS } from "./social-platform-icons";
 
 const EXPLORE_LINKS = [
   { href: "/", label: "Home" },
   { href: "/locations", label: "Locations" },
   { href: "/studios", label: "Studios" },
   { href: "/locations/map", label: "Map" },
+  { href: "/blog", label: "Blog" },
 ];
 
 const TRUST_LINKS = [
@@ -21,6 +23,7 @@ const TRUST_LINKS = [
 
 export async function Footer() {
   const categories = await getActiveCategories();
+  const socialLinks = await getSocialMediaLinks();
   const linkedCategories = categories.slice(0, 6);
 
   return (
@@ -34,6 +37,35 @@ export async function Footer() {
           <p className="max-w-xs text-sm text-white/70">
             Discover the best pre-wedding shoot locations across India.
           </p>
+
+          {socialLinks.length > 0 && (
+            <div>
+              <h3 className="mb-3 text-sm font-semibold tracking-wide text-white/90 uppercase">
+                Follow us
+              </h3>
+              <ul className="flex flex-wrap gap-2">
+                {socialLinks.map(({ platform, url }) => {
+                  // Fixed, allowlisted platform → icon mapping (see
+                  // social-platform-icons.tsx) — never data-driven.
+                  const Icon = SOCIAL_PLATFORM_ICONS[platform];
+                  if (!Icon) return null;
+                  return (
+                    <li key={platform}>
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`PhotoBlinks on ${SOCIAL_PLATFORM_LABELS[platform]}`}
+                        className="flex size-9 items-center justify-center rounded-full border border-white/15 text-white/70 transition-colors hover:border-white/30 hover:text-white"
+                      >
+                        <Icon className="size-5" />
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div>

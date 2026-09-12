@@ -41,6 +41,7 @@ export default async function HomePage({
   searchParams,
 }: {
   searchParams: Promise<{
+    q?: string;
     state?: string;
     city?: string;
     category?: string;
@@ -79,8 +80,9 @@ export default async function HomePage({
       ? { latitude: Number(params.lat), longitude: Number(params.lng) }
       : undefined;
 
+  const search = params.q?.trim() || undefined;
   const hasFilters = Boolean(
-    selectedState || selectedCity || selectedCategory || pricingType || droneStatus || near,
+    selectedState || selectedCity || selectedCategory || pricingType || droneStatus || near || search,
   );
 
   return (
@@ -111,6 +113,7 @@ export default async function HomePage({
           cities={cities}
           categories={categories}
           initial={{
+            q: params.q,
             state: params.state,
             city: params.city,
             category: params.category,
@@ -130,6 +133,7 @@ export default async function HomePage({
           pricingType={pricingType}
           droneStatus={droneStatus}
           near={near}
+          search={search}
         />
       ) : (
         <BrowseByCategory categories={categories} />
@@ -154,6 +158,7 @@ async function FilteredResults({
   pricingType,
   droneStatus,
   near,
+  search,
 }: {
   categoryId?: string;
   stateId?: string;
@@ -161,6 +166,7 @@ async function FilteredResults({
   pricingType?: "free" | "paid" | "unknown";
   droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
   near?: { latitude: number; longitude: number };
+  search?: string;
 }) {
   const results = await getPublishedLocations({
     categoryId,
@@ -169,6 +175,7 @@ async function FilteredResults({
     pricingType,
     droneStatus,
     near,
+    search,
   });
 
   return (

@@ -4,19 +4,15 @@ import type { Metadata } from "next";
 import { getActiveCities, getActiveStates, getPublishedStudios } from "@/lib/public-data";
 import { StudioCard } from "@/components/public/studio-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { StudioSearch } from "@/components/public/studio-search";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
-type Props = { params: Promise<{ country: string; state: string; city: string }> };
-
-// No searchParams/cookies here, so this route is eligible for ISR — the
-// same 60s window as the underlying cached data queries (public-data.ts).
-// generateStaticParams is required (even empty) for a dynamic segment to
-// use ISR at all — see the matching comment in location/[slug]/page.tsx.
-export const revalidate = 60;
-
-export async function generateStaticParams() {
-  return [];
-}
+type Props = {
+  params: Promise<{ country: string; state: string; city: string }>;
+  // Reading searchParams makes this route dynamic instead of ISR — the same
+  // tradeoff already accepted on the location directory pages.
+  searchParams: Promise<{ q?: string }>;
+};
 
 const loadCityPage = cache(async (countrySlug: string, stateSlug: string, citySlug: string) => {
   const states = await getActiveStates();
@@ -57,12 +53,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function CityStudiosPage({ params }: Props) {
+export default async function CityStudiosPage({ params, searchParams }: Props) {
   const { country: countrySlug, state: stateSlug, city: citySlug } = await params;
   const data = await loadCityPage(countrySlug, stateSlug, citySlug);
   if (!data) notFound();
 
-  const { state, city, studios } = data;
+  const { state, city, studios: allStudios } = data;
+  const { q } = await searchParams;
+  const search = q?.trim().toLowerCase();
+  const studios = search
+    ? allStudios.filter((s) => s.name.toLowerCase().includes(search))
+    : allStudios;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -82,11 +83,19 @@ export default async function CityStudiosPage({ params }: Props) {
         Browse pre-wedding photo studios in {city.name}, {state.name} for indoor and preset photoshoots.
       </p>
 
-      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {studios.map((studio) => (
-          <StudioCard key={studio.id} studio={studio} />
-        ))}
-      </div>
+      <StudioSearch basePath={`/studios/${countrySlug}/${state.slug}/${city.slug}`} q={q} />
+
+      {studios.length === 0 ? (
+        <p className="mt-8 text-muted-foreground">
+          No published studios match &ldquo;{q}&rdquo;. Try a different search.
+        </p>
+      ) : (
+        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {studios.map((studio) => (
+            <StudioCard key={studio.id} studio={studio} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

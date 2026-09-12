@@ -5,7 +5,20 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight, Images, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
-export function ImageGallery({ images, alt }: { images: string[]; alt: string }) {
+export function ImageGallery({
+  images,
+  alt,
+  imageCaptions,
+}: {
+  images: string[];
+  /** Base context description, e.g. "{name} in {city}". Used for the cover
+   * image and as the basis for the fallback description on every other
+   * image that has no caption of its own. */
+  alt: string;
+  /** Admin-provided per-image alt text, same order/length as `images`.
+   * Falls back to a contextual description (never numbering) when absent. */
+  imageCaptions?: (string | null)[];
+}) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -39,7 +52,15 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
 
   const [primary, ...rest] = images;
   const supporting = rest.slice(0, 4);
-  const remaining = rest.length - supporting.length;
+  const extra = rest.slice(4);
+  const remaining = extra.length;
+
+  // Per-image alt text: an admin-provided caption when one exists, otherwise
+  // a contextual description built from `alt` — never a meaningless "photo N".
+  function captionAt(index: number) {
+    const caption = imageCaptions?.[index]?.trim();
+    return caption || `${alt} — photography location`;
+  }
 
   function openLightbox(index: number) {
     setActiveIndex(index);
@@ -60,7 +81,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
         >
           <Image
             src={primary}
-            alt={alt}
+            alt={captionAt(0)}
             fill
             priority
             sizes="(min-width: 640px) 55vw, 100vw"
@@ -79,7 +100,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
               >
                 <Image
                   src={supporting[0]}
-                  alt={`${alt} — photo 2`}
+                  alt={captionAt(1)}
                   fill
                   sizes="(min-width: 640px) 45vw, 50vw"
                   className="object-cover"
@@ -95,7 +116,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
               >
                 <Image
                   src={supporting[1]}
-                  alt={`${alt} — photo 3`}
+                  alt={captionAt(2)}
                   fill
                   sizes="(min-width: 640px) 45vw, 50vw"
                   className="object-cover"
@@ -113,7 +134,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
                   >
                     <Image
                       src={supporting[2]}
-                      alt={`${alt} — photo 4`}
+                      alt={captionAt(3)}
                       fill
                       sizes="(min-width: 640px) 22vw, 50vw"
                       className="object-cover"
@@ -129,7 +150,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
                   >
                     <Image
                       src={supporting[3]}
-                      alt={`${alt} — photo 5`}
+                      alt={captionAt(4)}
                       fill
                       sizes="(min-width: 640px) 22vw, 50vw"
                       className="object-cover"
@@ -147,6 +168,32 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
           </div>
         )}
       </div>
+
+      {extra.length > 0 && (
+        <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+          {extra.map((src, i) => {
+            const index = 5 + i;
+            return (
+              <button
+                key={src}
+                type="button"
+                onClick={() => openLightbox(index)}
+                aria-label={`View ${alt} photo ${index + 1}`}
+                className="relative aspect-4/3 overflow-hidden rounded-xl bg-muted"
+              >
+                <Image
+                  src={src}
+                  alt={captionAt(index)}
+                  fill
+                  loading="lazy"
+                  sizes="(min-width: 768px) 16vw, (min-width: 640px) 25vw, 33vw"
+                  className="object-cover"
+                />
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
         <DialogContent
@@ -173,7 +220,7 @@ export function ImageGallery({ images, alt }: { images: string[]; alt: string })
           <div className="relative flex h-full w-full items-center justify-center p-4 sm:p-16">
             <Image
               src={images[activeIndex]}
-              alt={`${alt} — photo ${activeIndex + 1}`}
+              alt={captionAt(activeIndex)}
               fill
               sizes="100vw"
               className="object-contain"

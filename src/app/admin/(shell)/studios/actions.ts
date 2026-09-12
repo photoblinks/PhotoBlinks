@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { resolveLocationGeo } from "@/lib/admin-geo";
 import { slugify } from "@/lib/slug";
+import { isValidYouTubeUrl } from "@/lib/youtube";
 
 // Matches the "Not specified" sentinel item in the Drone Status/Amenities
 // dropdowns (see extra-detail-fields.tsx) — picking it clears the field.
@@ -24,6 +25,17 @@ function optionalField(formData: FormData, key: string) {
 const optionalUrl = z.preprocess(
   (v) => (v === "" || v == null ? undefined : v),
   z.string().trim().url("Must be a valid URL.").optional(),
+);
+
+const optionalYoutubeUrl = z.preprocess(
+  (v) => (v === "" || v == null ? undefined : v),
+  z
+    .string()
+    .trim()
+    .refine((v) => isValidYouTubeUrl(v), {
+      message: "Must be a valid YouTube video URL (watch, youtu.be, embed, or shorts link).",
+    })
+    .optional(),
 );
 
 const optionalCoord = (min: number, max: number) =>
@@ -54,7 +66,7 @@ const studioSchema = z
     map_url: optionalUrl,
     latitude: optionalCoord(-90, 90),
     longitude: optionalCoord(-180, 180),
-    youtube_url: optionalUrl,
+    youtube_url: optionalYoutubeUrl,
     meta_title: z.string().trim().optional(),
     meta_description: z.string().trim().optional(),
     action_type: z.enum(["book_now", "website", "call_now"]).nullable().optional(),

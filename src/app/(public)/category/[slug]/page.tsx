@@ -18,7 +18,7 @@ import { isSeoEligible } from "@/lib/seo-eligibility";
 
 type Props = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ state?: string; city?: string; pricing?: string; drone?: string }>;
+  searchParams: Promise<{ q?: string; state?: string; city?: string; pricing?: string; drone?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -74,7 +74,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     query.drone === "allowed" || query.drone === "allowed_with_permission" || query.drone === "not_allowed"
       ? query.drone
       : undefined;
-  const hasFilters = Boolean(selectedState || selectedCity || pricingType || droneStatus);
+  const search = query.q?.trim() || undefined;
+  const hasFilters = Boolean(selectedState || selectedCity || pricingType || droneStatus || search);
 
   const locations = await getPublishedLocations({
     categoryId: category.id,
@@ -82,6 +83,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     cityId: selectedCity?.id,
     pricingType,
     droneStatus,
+    search,
   });
 
   const heading = category.h1_title || `${category.name} Pre-Wedding Photoshoot Locations`;
@@ -119,7 +121,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           categories={[]}
           hideCategory
           basePath={`/category/${category.slug}`}
-          initial={{ state: query.state, city: query.city, pricing: query.pricing, drone: query.drone }}
+          initial={{
+            q: query.q,
+            state: query.state,
+            city: query.city,
+            pricing: query.pricing,
+            drone: query.drone,
+          }}
         />
       </div>
 

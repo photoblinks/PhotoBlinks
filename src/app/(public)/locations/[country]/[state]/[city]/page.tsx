@@ -34,7 +34,7 @@ type Props = {
   // this position to share one dynamic segment name, so State + Category
   // could not live in a sibling [category] folder alongside [city]; the two
   // page types are resolved from the same segment here instead.
-  searchParams: Promise<{ city?: string; category?: string; pricing?: string; drone?: string }>;
+  searchParams: Promise<{ q?: string; city?: string; category?: string; pricing?: string; drone?: string }>;
 };
 
 // Cities are checked first: they're the larger, free-form namespace and
@@ -91,6 +91,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         type: "website",
         images: [data.city.image_url ?? DEFAULT_OG_IMAGE],
       },
+      // Below the SEO eligibility threshold the page still renders for
+      // product/UX purposes but shouldn't be indexed — see
+      // seo-eligibility.ts. Never affects the city's individual location
+      // pages, which are always indexable when published.
+      ...(isSeoEligible(data.locations.length) ? {} : { robots: { index: false, follow: true } }),
     };
   }
 
@@ -138,7 +143,8 @@ export default async function LocationsCityOrStateCategoryPage({ params, searchP
       query.drone === "allowed" || query.drone === "allowed_with_permission" || query.drone === "not_allowed"
         ? query.drone
         : undefined;
-    const hasFilters = Boolean(selectedCategory || pricingType || droneStatus);
+    const search = query.q?.trim() || undefined;
+    const hasFilters = Boolean(selectedCategory || pricingType || droneStatus || search);
 
     const heading = city.h1_title || `Pre-Wedding Photoshoot Locations in ${city.name}`;
 
@@ -171,6 +177,7 @@ export default async function LocationsCityOrStateCategoryPage({ params, searchP
             hideCity
             basePath={`/locations/${countrySlug}/${state.slug}/${city.slug}`}
             initial={{
+              q: query.q,
               state: state.slug,
               city: city.slug,
               category: query.category,
@@ -198,6 +205,7 @@ export default async function LocationsCityOrStateCategoryPage({ params, searchP
               categoryId={selectedCategory?.id}
               pricingType={pricingType}
               droneStatus={droneStatus}
+              search={search}
             />
           ) : (
             <BrowseCity countrySlug={countrySlug} state={state} city={city} locations={locations} />
@@ -222,11 +230,13 @@ export default async function LocationsCityOrStateCategoryPage({ params, searchP
     query.drone === "allowed" || query.drone === "allowed_with_permission" || query.drone === "not_allowed"
       ? query.drone
       : undefined;
+  const search = query.q?.trim() || undefined;
   const hasFilters = Boolean(
     overrideCity ||
       (query.category && overrideCategory.id !== category.id) ||
       pricingType ||
-      droneStatus,
+      droneStatus ||
+      search,
   );
 
   const heading = buildStateCategoryDefaultTitle(category.name, state.name);
@@ -251,6 +261,7 @@ export default async function LocationsCityOrStateCategoryPage({ params, searchP
           hideState
           basePath={`/locations/${countrySlug}/${state.slug}/${category.slug}`}
           initial={{
+            q: query.q,
             state: state.slug,
             city: overrideCity?.slug,
             category: overrideCategory.slug,
@@ -282,6 +293,7 @@ export default async function LocationsCityOrStateCategoryPage({ params, searchP
             categoryName={overrideCategory.name}
             pricingType={pricingType}
             droneStatus={droneStatus}
+            search={search}
           />
         ) : (
           <>
@@ -346,14 +358,23 @@ async function FilteredResults({
   categoryId,
   pricingType,
   droneStatus,
+  search,
 }: {
   stateId: string;
   cityId: string;
   categoryId?: string;
   pricingType?: "free" | "paid" | "unknown";
   droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
+  search?: string;
 }) {
-  const results = await getPublishedLocations({ stateId, cityId, categoryId, pricingType, droneStatus });
+  const results = await getPublishedLocations({
+    stateId,
+    cityId,
+    categoryId,
+    pricingType,
+    droneStatus,
+    search,
+  });
 
   return (
     <>
@@ -435,6 +456,7 @@ async function StateCategoryFilteredResults({
   categoryName,
   pricingType,
   droneStatus,
+  search,
 }: {
   stateId: string;
   cityId?: string;
@@ -443,8 +465,16 @@ async function StateCategoryFilteredResults({
   categoryName: string;
   pricingType?: "free" | "paid" | "unknown";
   droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
+  search?: string;
 }) {
-  const results = await getPublishedLocations({ stateId, cityId, categoryId, pricingType, droneStatus });
+  const results = await getPublishedLocations({
+    stateId,
+    cityId,
+    categoryId,
+    pricingType,
+    droneStatus,
+    search,
+  });
 
   return (
     <>

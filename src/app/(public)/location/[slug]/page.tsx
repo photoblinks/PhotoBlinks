@@ -18,6 +18,7 @@ import { ShareButton } from "@/components/public/share-button";
 import { ReportLocationButton } from "@/components/public/report-location-button";
 import { FavouriteButton } from "@/components/public/favourite-button";
 import { YouTubeEmbed } from "@/components/public/youtube-embed";
+import { getValidatedYouTubeVideo } from "@/lib/youtube";
 import { MiniMap } from "@/components/public/mini-map";
 import { DistanceDisplay } from "@/components/public/distance-display";
 import { GoToLocationButton } from "@/components/public/go-to-location-button";
@@ -63,6 +64,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? `${location.name}, a ${location.category.name.toLowerCase()} pre-wedding photoshoot location in ${place}.`
       : `${location.name}, a pre-wedding photoshoot location in ${place}.`);
 
+  const video = getValidatedYouTubeVideo(location.youtube_url);
+
   return {
     title,
     description,
@@ -74,6 +77,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: "PhotoBlinks",
       type: "website",
       images: location.images[0] ? [location.images[0]] : undefined,
+      videos: video
+        ? [{ url: video.embedUrl, width: 640, height: 360, type: "text/html" }]
+        : undefined,
     },
   };
 }
@@ -194,7 +200,7 @@ export default async function LocationDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <ImageGallery images={location.images} alt={imageAlt} />
+      <ImageGallery images={location.images} alt={imageAlt} imageCaptions={location.imageCaptions} />
 
       <h2 className="font-heading mt-14 mb-4 text-xl font-semibold">
         {displayName} Photoshoot Details &amp; Pricing
@@ -237,14 +243,30 @@ export default async function LocationDetailPage({ params }: Props) {
         </div>
       )}
 
-      {location.youtube_url && (
-        <div className="mt-12">
-          <h2 className="font-heading mb-3 text-xl font-semibold">
-            {displayName} Tour &amp; Photoshoot Video
-          </h2>
-          <YouTubeEmbed url={location.youtube_url} title={location.name} />
-        </div>
-      )}
+      {(() => {
+        const video = getValidatedYouTubeVideo(location.youtube_url);
+        if (!video) return null;
+        return (
+          <div className="mt-12">
+            <h2 className="font-heading mb-3 text-xl font-semibold">
+              {displayName} Tour &amp; Photoshoot Video
+            </h2>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Watch a video of {location.name}
+              {location.city ? ` in ${location.city.name}` : ""}.
+            </p>
+            <YouTubeEmbed url={location.youtube_url!} title={location.name} />
+            <a
+              href={video.watchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-sm text-pb-brand hover:underline"
+            >
+              Watch on YouTube
+            </a>
+          </div>
+        );
+      })()}
 
       {(hasCoords || location.map_url) && (
         <div className="mt-14">

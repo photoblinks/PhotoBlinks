@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/locations", label: "Locations" },
   { href: "/admin/studios", label: "Studios" },
+  { href: "/admin/blog", label: "Blog" },
   { href: "/admin/photographers", label: "Sponsored Photographers" },
   { href: "/admin/comments", label: "Comments" },
   { href: "/admin/photographer-photos", label: "Photographer Photos" },

@@ -9,7 +9,7 @@ import {
 } from "@/lib/r2/upload";
 
 const bodySchema = z.object({
-  kind: z.enum(["locations", "studios", "categories", "countries", "states", "cities", "site", "photographers"]),
+  kind: z.enum(["locations", "studios", "categories", "countries", "states", "cities", "site", "photographers", "blog"]),
   slug: z.string().min(1),
   filename: z.string().min(1),
   contentType: z.enum(ALLOWED_IMAGE_CONTENT_TYPES, {
@@ -21,6 +21,31 @@ const bodySchema = z.object({
     .positive()
     .max(MAX_UPLOAD_BYTES, { message: "File is too large. Maximum size is 10MB." }),
 });
+
+// Blog-only hardening (other kinds keep their existing validation
+// unchanged). The blog slug becomes a path segment of the R2 key and the
+// original filename becomes part of the key itself —
+// blog/{slug}/{epoch-ms}-{filename} — so both must match the strict,
+// code-fixed blog key shape (see BLOG_IMAGE_KEY_PATTERN / the blog orphan
+// sweep) or the upload would create a key the sweep can never recognize,
+// or worse, one that escapes the blog/{slug}/ prefix entirely.
+const blogSlugSchema = z
+  .string()
+  .min(1)
+  .regex(/^[a-z0-9-]+$/, "Invalid blog slug — use lowercase letters, numbers, and hyphens only.");
+
+const blogFilenameSchema = z
+  .string()
+  .min(1)
+  .max(255)
+  .refine(
+    (name) => !name.includes("/") && !name.includes("\\") && !name.includes(".."),
+    "Filename must be a plain file name (no paths).",
+  )
+  .refine(
+    (name) => /\.(jpg|jpeg|png|webp)$/i.test(name),
+    "Filename must end in .jpg, .jpeg, .png, or .webp.",
+  );
 
 export async function POST(request: Request) {
   const admin = await getAuthorizedAdminUser();
@@ -37,6 +62,20 @@ export async function POST(request: Request) {
   }
 
   const { kind, slug, filename, contentType, fileSize } = parsed.data;
+
+  // Blog uploads only: apply the stricter, kind-specific slug/filename
+  // checks (the shared minimum-length checks above don't protect the R2 key
+  // shape). All other upload kinds continue exactly as before.
+  if (kind === "blog") {
+    const blogInputs = z.object({ slug: blogSlugSchema, filename: blogFilenameSchema }).safeParse({ slug, filename });
+    if (!blogInputs.success) {
+      return NextResponse.json(
+        { error: blogInputs.error.issues[0]?.message ?? "Invalid request." },
+        { status: 400 },
+      );
+    }
+  }
+
   const key = buildImageKey(kind, slug, `${Date.now()}-${filename}`);
   const { uploadUrl, publicUrl } = await createPresignedUploadUrl(key, contentType, fileSize);
 

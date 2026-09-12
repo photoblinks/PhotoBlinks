@@ -45,13 +45,61 @@ export async function createPresignedUploadUrl(
   return { uploadUrl, publicUrl };
 }
 
-/** locations/{slug}/{filename}, studios/{slug}/{filename}, categories/{slug}/{filename}, countries/{slug}/{filename}, states/{slug}/{filename}, cities/{slug}/{filename}, site/{slug}/{filename}, or photographers/{slug}/{filename}. */
+/** locations/{slug}/{filename}, studios/{slug}/{filename}, categories/{slug}/{filename}, countries/{slug}/{filename}, states/{slug}/{filename}, cities/{slug}/{filename}, site/{slug}/{filename}, photographers/{slug}/{filename}, or blog/{slug}/{filename}. */
 export function buildImageKey(
-  kind: "locations" | "studios" | "categories" | "countries" | "states" | "cities" | "site" | "photographers",
+  kind:
+    | "locations"
+    | "studios"
+    | "categories"
+    | "countries"
+    | "states"
+    | "cities"
+    | "site"
+    | "photographers"
+    | "blog",
   slug: string,
   filename: string,
 ) {
   return `${kind}/${slug}/${filename}`;
+}
+
+/** True only for an https URL whose host matches the configured R2 public
+ * host. Used to keep externally-supplied image URLs (blog content blocks,
+ * featured_image_url) confined to this account's own R2 bucket instead of
+ * accepting an arbitrary third-party image URL. */
+export function isAllowedR2ImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const allowed = new URL(process.env.R2_PUBLIC_URL!);
+    return parsed.protocol === "https:" && parsed.host === allowed.host;
+  } catch {
+    return false;
+  }
+}
+
+/** Key shape written by the admin r2-presign route for blog images:
+ * blog/{slug}/{epoch-millis}-{original-filename}. Mirrors the strictness of
+ * PHOTOGRAPHER_KEY_PATTERN in orphan-sweep.ts — anything outside this exact
+ * shape is left alone. */
+const BLOG_IMAGE_KEY_PATTERN = /^blog\/[a-z0-9-]+\/\d+-[^/]+\.(jpg|jpeg|png|webp)$/i;
+
+/**
+ * Deletes exactly one blog-post image object. Callers must pass only a
+ * storageKey already known to be unreferenced (see blog-orphan-sweep.ts) —
+ * this function's only defense is re-validating the key shape and bucket,
+ * it does not itself check ownership.
+ */
+export async function deleteBlogImageObject(storageKey: string): Promise<DeleteResult> {
+  if (!BLOG_IMAGE_KEY_PATTERN.test(storageKey) || storageKey.includes("..") || storageKey.includes("\\")) {
+    return { ok: false, reason: "invalid_key" };
+  }
+
+  try {
+    await r2Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey }));
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: "delete_failed" };
+  }
 }
 
 export type DeleteResult = { ok: true } | { ok: false; reason: "bucket_mismatch" | "invalid_key" | "delete_failed" };

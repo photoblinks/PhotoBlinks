@@ -25,6 +25,7 @@ export function MapFiltersDrawer({
   cities: City[];
   categories: Option[];
   initial: {
+    q?: string;
     state?: string;
     city?: string;
     category?: string;

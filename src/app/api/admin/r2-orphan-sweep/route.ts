@@ -2,8 +2,51 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
 import { sweepOrphanedPhotographerUploads } from "@/lib/r2/orphan-sweep";
+import { sweepOrphanedBlogImages } from "@/lib/r2/blog-orphan-sweep";
 
 const bodySchema = z.object({ dryRun: z.boolean().optional() });
+
+/** Runs both sweeps concurrently and returns a response that always carries
+ * a per-sweep outcome. Uses Promise.allSettled (not Promise.all) so a
+ * failure in one sweep never hides a successful result from the other: the
+ * response body always contains each sweep's own entry — the full
+ * SweepResult for a fulfilled sweep, an `{ error: "Sweep failed." }` marker
+ * for a rejected one. The HTTP status is 500 only when at least one sweep
+ * failed (preserving the existing "Sweep failed." 500 semantics for a fully
+ * failing run) while a partial failure still reports the successful sweep's
+ * result in the body. */
+async function buildSweepResponse(dryRun: boolean) {
+  const settled = await Promise.allSettled([
+    sweepOrphanedPhotographerUploads({ dryRun }),
+    sweepOrphanedBlogImages({ dryRun }),
+  ]);
+
+  const [photographersResult, blogResult] = settled;
+
+  if (photographersResult.status === "rejected") {
+    const reason = photographersResult.reason;
+    console.error(
+      "[r2-orphan-sweep] photographer sweep failed:",
+      reason instanceof Error ? reason.message : "unknown error",
+    );
+  }
+  if (blogResult.status === "rejected") {
+    const reason = blogResult.reason;
+    console.error(
+      "[r2-orphan-sweep] blog sweep failed:",
+      reason instanceof Error ? reason.message : "unknown error",
+    );
+  }
+
+  return NextResponse.json(
+    {
+      photographers:
+        photographersResult.status === "fulfilled" ? photographersResult.value : { error: "Sweep failed." },
+      blog: blogResult.status === "fulfilled" ? blogResult.value : { error: "Sweep failed." },
+    },
+    { status: settled.some((result) => result.status === "rejected") ? 500 : 200 },
+  );
+}
 
 /** True only when the request carries `Authorization: Bearer <CRON_SECRET>`
  * matching the server-only CRON_SECRET env var exactly. If CRON_SECRET is
@@ -47,12 +90,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  try {
-    const result = await sweepOrphanedPhotographerUploads({ dryRun: parsed.data.dryRun ?? true });
-    return NextResponse.json(result);
-  } catch {
-    return NextResponse.json({ error: "Sweep failed." }, { status: 500 });
-  }
+  const dryRun = parsed.data.dryRun ?? true;
+  return buildSweepResponse(dryRun);
 }
 
 /**
@@ -73,10 +112,5 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    const result = await sweepOrphanedPhotographerUploads({ dryRun: false });
-    return NextResponse.json(result);
-  } catch {
-    return NextResponse.json({ error: "Sweep failed." }, { status: 500 });
-  }
+  return buildSweepResponse(false);
 }

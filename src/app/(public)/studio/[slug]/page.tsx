@@ -6,6 +6,7 @@ import { ImageGallery } from "@/components/public/image-gallery";
 import { ShareButton } from "@/components/public/share-button";
 import { StudioCard } from "@/components/public/studio-card";
 import { YouTubeEmbed } from "@/components/public/youtube-embed";
+import { getValidatedYouTubeVideo } from "@/lib/youtube";
 import { MiniMap } from "@/components/public/mini-map";
 import { DistanceDisplay } from "@/components/public/distance-display";
 import { GoToLocationButton } from "@/components/public/go-to-location-button";
@@ -40,6 +41,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     studio.description ||
     `${studio.name}, a pre-wedding photo studio in ${place}.`;
 
+  const video = getValidatedYouTubeVideo(studio.youtube_url);
+
   return {
     title,
     description,
@@ -51,6 +54,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: "PhotoBlinks",
       type: "website",
       images: studio.images[0] ? [studio.images[0]] : undefined,
+      videos: video
+        ? [{ url: video.embedUrl, width: 640, height: 360, type: "text/html" }]
+        : undefined,
     },
   };
 }
@@ -104,7 +110,7 @@ export default async function StudioDetailPage({ params }: Props) {
         <ShareButton title={studio.name} url={absoluteUrl(`/studio/${studio.slug}`)} />
       </div>
 
-      <ImageGallery images={studio.images} alt={imageAlt} />
+      <ImageGallery images={studio.images} alt={imageAlt} imageCaptions={studio.imageCaptions} />
 
       <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
@@ -152,12 +158,28 @@ export default async function StudioDetailPage({ params }: Props) {
         </div>
       )}
 
-      {studio.youtube_url && (
-        <div className="mt-8">
-          <h2 className="font-heading mb-3 text-xl font-semibold">Studio Video</h2>
-          <YouTubeEmbed url={studio.youtube_url} title={studio.name} />
-        </div>
-      )}
+      {(() => {
+        const video = getValidatedYouTubeVideo(studio.youtube_url);
+        if (!video) return null;
+        return (
+          <div className="mt-8">
+            <h2 className="font-heading mb-3 text-xl font-semibold">Studio Video</h2>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Watch a video of {studio.name}
+              {studio.city ? ` in ${studio.city.name}` : ""}.
+            </p>
+            <YouTubeEmbed url={studio.youtube_url!} title={studio.name} />
+            <a
+              href={video.watchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-sm text-pb-brand hover:underline"
+            >
+              Watch on YouTube
+            </a>
+          </div>
+        );
+      })()}
 
       {(hasCoords || studio.map_url) && (
         <div className="mt-10">
