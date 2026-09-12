@@ -128,7 +128,7 @@ export function ReportLocationButton({ locationId }: { locationId: string }) {
               </Select>
             </Field>
             <Field>
-              <FieldLabel htmlFor="report-message">What's wrong?</FieldLabel>
+              <FieldLabel htmlFor="report-message">What&apos;s wrong?</FieldLabel>
               <Textarea
                 id="report-message"
                 value={message}

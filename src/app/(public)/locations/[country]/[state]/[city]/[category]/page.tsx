@@ -93,7 +93,7 @@ export default async function CategoryLocationsPage({ params, searchParams }: Pr
   const data = await loadCategoryPage(countrySlug, stateSlug, citySlug, categorySlug);
   if (!data) notFound();
 
-  const { states, cities, categories, state, city, category, locations } = data;
+  const { cities, categories, state, city, category, locations } = data;
   const query = await searchParams;
 
   // The discovery filter can preview a different city (within the same

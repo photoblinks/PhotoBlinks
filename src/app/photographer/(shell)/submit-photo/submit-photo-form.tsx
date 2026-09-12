@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useActionState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { submitPhoto, type SubmitPhotoState } from "./actions";
+import { submitPhoto } from "./actions";
 import { uploadPhotographerFileToR2 } from "@/lib/r2/upload-client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +36,7 @@ export function SubmitPhotoForm({ locations, defaultPhone }: Props) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [photoRequiredError, setPhotoRequiredError] = useState<string | null>(null);
+  const router = useRouter();
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -114,7 +116,7 @@ export function SubmitPhotoForm({ locations, defaultPhone }: Props) {
             setImageUrl("");
             setUploadError(null);
             setPhotoRequiredError(null);
-            window.location.href = "/photographer/submit-photo";
+            router.push("/photographer/submit-photo");
           }}
         >
           Submit another photo

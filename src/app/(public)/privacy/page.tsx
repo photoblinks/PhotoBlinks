@@ -29,16 +29,16 @@ export default function PrivacyPage() {
 
       <div className="mt-8 flex flex-col gap-6 leading-relaxed text-foreground/90">
         <p>
-          This policy describes how PhotoBlinks ("we", "us") handles data when you use this website.
-          It covers what the site actually does today — it does not describe features that aren't
+          This policy describes how PhotoBlinks (&quot;we&quot;, &quot;us&quot;) handles data when you use this website.
+          It covers what the site actually does today — it does not describe features that aren&apos;t
           available yet.
         </p>
 
         <section>
           <h2 className="font-heading mb-3 text-xl font-semibold">Information We Collect</h2>
           <p>
-            Browsing PhotoBlinks doesn't require creating an account or providing any personal
-            information. We don't currently offer sign-in, user accounts, reviews, or any way to
+            Browsing PhotoBlinks doesn&apos;t require creating an account or providing any personal
+            information. We don&apos;t currently offer sign-in, user accounts, reviews, or any way to
             submit personal data through the site.
           </p>
           <p className="mt-3">The site does process a small amount of information automatically:</p>
@@ -50,9 +50,9 @@ export default function PrivacyPage() {
             </li>
             <li>
               <span className="font-medium">Location, only if you choose to share it</span> — some
-              pages offer a "My Location" option to sort results by distance. This uses your
-              browser's own location permission prompt; we only receive your coordinates if you
-              actively enable it, and we don't store them.
+              pages offer a &quot;My Location&quot; option to sort results by distance. This uses your
+              browser&apos;s own location permission prompt; we only receive your coordinates if you
+              actively enable it, and we don&apos;t store them.
             </li>
           </ul>
         </section>
@@ -68,7 +68,7 @@ export default function PrivacyPage() {
               rel="noopener noreferrer"
               className="text-pb-brand hover:underline"
             >
-              Google's Privacy Policy
+              Google&apos;s Privacy Policy
             </a>
             .
           </p>
@@ -86,7 +86,7 @@ export default function PrivacyPage() {
                 rel="noopener noreferrer"
                 className="text-pb-brand hover:underline"
               >
-                Mapbox's Privacy Policy
+                Mapbox&apos;s Privacy Policy
               </a>
               .
             </li>
@@ -99,14 +99,14 @@ export default function PrivacyPage() {
                 rel="noopener noreferrer"
                 className="text-pb-brand hover:underline"
               >
-                Google's Privacy Policy
+                Google&apos;s Privacy Policy
               </a>
               .
             </li>
             <li>
-              <span className="font-medium">Google Maps</span> — the "Go to Location" button links
-              out to Google Maps for directions. This opens Google's own site and is covered by
-              Google's Privacy Policy, not this one.
+              <span className="font-medium">Google Maps</span> — the &quot;Go to Location&quot; button links
+              out to Google Maps for directions. This opens Google&apos;s own site and is covered by
+              Google&apos;s Privacy Policy, not this one.
             </li>
           </ul>
           <p className="mt-3">
@@ -116,11 +116,11 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="font-heading mb-3 text-xl font-semibold">What We Don't Currently Collect</h2>
+          <h2 className="font-heading mb-3 text-xl font-semibold">What We Don&apos;t Currently Collect</h2>
           <p>
-            We don't currently offer Google Sign-In or any other sign-in method, user accounts,
+            We don&apos;t currently offer Google Sign-In or any other sign-in method, user accounts,
             reviews or ratings, or payment processing — so no data related to any of these is
-            collected, because these features don't exist on the site yet. If that changes, this
+            collected, because these features don&apos;t exist on the site yet. If that changes, this
             policy will be updated to reflect it.
           </p>
         </section>
@@ -129,14 +129,14 @@ export default function PrivacyPage() {
           <h2 className="font-heading mb-3 text-xl font-semibold">Admin Access</h2>
           <p>
             PhotoBlinks has a private admin area used by our team to manage location listings, which
-            requires a sign-in. This is not available to the public and doesn't involve visitor data.
+            requires a sign-in. This is not available to the public and doesn&apos;t involve visitor data.
           </p>
         </section>
 
         <section>
           <h2 className="font-heading mb-3 text-xl font-semibold">Changes to This Policy</h2>
           <p>
-            We may update this policy as the site changes. We'll update the "Last updated" date above
+            We may update this policy as the site changes. We&apos;ll update the &quot;Last updated&quot; date above
             when we do.
           </p>
         </section>

@@ -94,6 +94,7 @@ export function makeBlock(type: BlockType): Block {
 }
 
 export function toSubmittable(block: Block): BlogBlockInput {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- client-generated id is dropped from the payload
   const { id: _id, ...rest } = block;
   return rest;
 }

@@ -58,7 +58,7 @@ export default function HowItWorksPage() {
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">How PhotoBlinks Works</h1>
       <p className="mt-4 leading-relaxed text-foreground/90">
         PhotoBlinks is a discovery and information platform — we help you find and research
-        pre-wedding photoshoot locations. We don't handle bookings, payments, or reservations; the
+        pre-wedding photoshoot locations. We don&apos;t handle bookings, payments, or reservations; the
         steps below are how people typically use the site.
       </p>
 

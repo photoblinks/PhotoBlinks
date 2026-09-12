@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { isPhotographerUser, isValidCountryState } from "@/lib/supabase/require-photographer";
+import { isValidCountryState } from "@/lib/supabase/require-photographer";
 import { safeNextPath } from "@/lib/safe-redirect";
 
 // Same permissive rule as src/app/admin/(shell)/photographers/actions.ts.

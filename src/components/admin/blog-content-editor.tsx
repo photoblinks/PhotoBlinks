@@ -58,7 +58,11 @@ export function BlogContentEditor({
       const saved = localStorage.getItem(draftKey);
       if (!saved) return;
       const parsed = JSON.parse(saved) as Block[];
-      if (JSON.stringify(parsed) !== JSON.stringify(blocks)) setRestoreDraft(parsed);
+      if (JSON.stringify(parsed) !== JSON.stringify(blocks)) {
+        // Deferred so this isn't a synchronous setState inside the effect body
+        // (react-hooks/set-state-in-effect) — rendered result is unchanged.
+        queueMicrotask(() => setRestoreDraft(parsed));
+      }
     } catch {
       // Corrupt/unavailable localStorage entry — ignore, editor still works.
     }

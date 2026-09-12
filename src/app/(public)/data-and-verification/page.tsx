@@ -47,12 +47,12 @@ export default function DataAndVerificationPage() {
         </section>
 
         <section>
-          <h2 className="font-heading mb-3 text-xl font-semibold">What "Published" Means</h2>
+          <h2 className="font-heading mb-3 text-xl font-semibold">What &quot;Published&quot; Means</h2>
           <p className="leading-relaxed text-foreground/90">
             A listing being visible on PhotoBlinks means our team has reviewed and chosen to publish
             it. It does not mean every fact on the page has been independently verified with the
             location or a governing authority. We aim for listings to be accurate and useful at the
-            time they're published, but we don't claim a formal verification process beyond our own
+            time they&apos;re published, but we don&apos;t claim a formal verification process beyond our own
             internal review.
           </p>
         </section>

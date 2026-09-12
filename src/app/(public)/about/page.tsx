@@ -56,7 +56,7 @@ export default function AboutPage() {
         <section>
           <h2 className="font-heading mb-3 text-xl font-semibold">Our Approach</h2>
           <p>
-            We'd rather show you a handful of genuinely useful, specific details about a location
+            We&apos;d rather show you a handful of genuinely useful, specific details about a location
             than pad a page with generic description. See{" "}
             <Link href="/how-it-works" className="text-pb-brand hover:underline">
               How It Works

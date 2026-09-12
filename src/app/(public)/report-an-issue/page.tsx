@@ -37,7 +37,7 @@ export default function ReportAnIssuePage() {
 
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Report an Issue</h1>
       <p className="mt-4 leading-relaxed text-foreground/90">
-        See something on a location page that's wrong or out of date? As explained in{" "}
+        See something on a location page that&apos;s wrong or out of date? As explained in{" "}
         <Link href="/data-and-verification" className="text-pb-brand hover:underline">
           Our Data &amp; Verification
         </Link>
@@ -56,11 +56,11 @@ export default function ReportAnIssuePage() {
 
       <div className="mt-8 rounded-xl border bg-muted/40 p-5">
         <p className="leading-relaxed text-foreground/90">
-          We don't yet have a dedicated report form on the site. For now, please reach out through{" "}
+          We don&apos;t yet have a dedicated report form on the site. For now, please reach out through{" "}
           <Link href="/contact" className="font-medium text-pb-brand hover:underline">
             Contact Us
           </Link>{" "}
-          and mention the location name and what looks wrong — that's enough for us to look into it.
+          and mention the location name and what looks wrong — that&apos;s enough for us to look into it.
         </p>
       </div>
     </div>
