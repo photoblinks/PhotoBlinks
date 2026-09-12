@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
 import { Heart } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -21,9 +20,7 @@ export function FavouriteButton({
   className?: string;
   showLabel?: boolean;
 }) {
-  const { ready, favouriteIds, toggle } = useFavourites();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { ready, favouriteIds, toggle, requireAuth } = useFavourites();
   const [pending, setPending] = useState(false);
   const favourited = favouriteIds.has(locationId);
 
@@ -38,13 +35,16 @@ export function FavouriteButton({
     if (pending) return;
 
     setPending(true);
+
+    const authed = await requireAuth();
+    if (!authed) {
+      setPending(false);
+      return;
+    }
+
     const result = await toggle(locationId);
     setPending(false);
 
-    if (result === "sign_in_required") {
-      router.push(`/sign-in?next=${encodeURIComponent(pathname)}`);
-      return;
-    }
     if (result === "error") {
       toast.error("Couldn't update your favourite. Please try again.");
     }

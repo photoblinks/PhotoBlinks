@@ -230,7 +230,7 @@ export function ExtraDetailFields({
       )}
 
       <Field>
-        <FieldLabel htmlFor="shoot_permit_fee">Shoot/Permit Fee</FieldLabel>
+        <FieldLabel htmlFor="shoot_permit_fee">Shoot/Permit Info</FieldLabel>
         <Input
           id="shoot_permit_fee"
           name="shoot_permit_fee"

@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { toggleFavourite as toggleFavouriteAction } from "@/app/(public)/favourites/actions";
+import { AuthDialog } from "./auth-dialog";
 
 type ToggleResult = "favourited" | "unfavourited" | "sign_in_required" | "error";
 
@@ -14,6 +15,13 @@ type FavouritesContextValue = {
   signedIn: boolean;
   favouriteIds: Set<string>;
   toggle: (locationId: string) => Promise<ToggleResult>;
+  /** Resolves `true` immediately if already signed in. Otherwise opens the
+   * in-page sign-in/sign-up dialog and resolves once the visitor actually
+   * signs in (the dialog closes itself via the auth-state listener below,
+   * so this always resolves after `signedIn` is already true — no race
+   * against the caller retrying its action) or `false` if they close the
+   * dialog without signing in. */
+  requireAuth: () => Promise<boolean>;
 };
 
 const FavouritesContext = createContext<FavouritesContextValue | null>(null);
@@ -31,6 +39,8 @@ export function FavouritesProvider({ children }: { children: React.ReactNode }) 
   const [ready, setReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [favouriteIds, setFavouriteIds] = useState<Set<string>>(new Set());
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const authResolverRef = useRef<((signedIn: boolean) => void) | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -59,6 +69,13 @@ export function FavouritesProvider({ children }: { children: React.ReactNode }) 
       setSignedIn(!!session?.user);
       if (session?.user) {
         loadFavourites(session.user.id);
+        // A real sign-in just happened — close the dialog (if open) and
+        // tell whoever called requireAuth() they can now proceed. This
+        // fires after setSignedIn(true) above, so by the time the caller's
+        // promise resolves, signedIn is already true for its next render.
+        setAuthDialogOpen(false);
+        authResolverRef.current?.(true);
+        authResolverRef.current = null;
       } else {
         setFavouriteIds(new Set());
       }
@@ -98,9 +115,30 @@ export function FavouritesProvider({ children }: { children: React.ReactNode }) 
     return result.favourited ? "favourited" : "unfavourited";
   }, [signedIn, favouriteIds]);
 
+  const requireAuth = useCallback((): Promise<boolean> => {
+    if (signedIn) return Promise.resolve(true);
+    return new Promise<boolean>((resolve) => {
+      authResolverRef.current = resolve;
+      setAuthDialogOpen(true);
+    });
+  }, [signedIn]);
+
+  function handleAuthDialogOpenChange(open: boolean) {
+    setAuthDialogOpen(open);
+    if (!open) {
+      // Closed without signing in (X button, overlay click, Escape) — the
+      // auth-state listener above already resolved `true` and cleared the
+      // ref for the success case, so a ref still present here means the
+      // visitor backed out.
+      authResolverRef.current?.(false);
+      authResolverRef.current = null;
+    }
+  }
+
   return (
-    <FavouritesContext.Provider value={{ ready, signedIn, favouriteIds, toggle }}>
+    <FavouritesContext.Provider value={{ ready, signedIn, favouriteIds, toggle, requireAuth }}>
       {children}
+      <AuthDialog open={authDialogOpen} onOpenChange={handleAuthDialogOpenChange} />
     </FavouritesContext.Provider>
   );
 }

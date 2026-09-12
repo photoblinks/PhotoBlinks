@@ -84,7 +84,7 @@ function buildGroups(details: ExtraDetails): { title: string; rows: Row[] }[] {
         details.entry_fee && { icon: Ticket, label: "Entry Fee", value: details.entry_fee },
         details.shoot_permit_fee && {
           icon: Camera,
-          label: "Shoot/Permit Fee",
+          label: "Shoot/Permit Info",
           value: details.shoot_permit_fee,
         },
         details.vehicle_parking_fee && {

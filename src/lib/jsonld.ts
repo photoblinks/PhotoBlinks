@@ -103,7 +103,7 @@ function buildAmenityFeatures(details: ExtraDetails): LocationFeature[] {
   add("Drone Permission", details.drone_permission);
   add("Recommended Outfits", details.recommended_outfits);
   add("Entry Fee", details.entry_fee);
-  add("Shoot/Permit Fee", details.shoot_permit_fee);
+  add("Shoot/Permit Info", details.shoot_permit_fee);
   add("Vehicle Parking", details.vehicle_parking_fee);
   add("Best Season", details.best_season);
   add("Best Time of Day", details.best_time);

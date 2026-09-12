@@ -197,10 +197,14 @@ export default async function LocationDetailPage({ params }: Props) {
               <span className="flex size-7 items-center justify-center rounded-full bg-pb-brand/10">
                 <Camera className="size-3.5 text-pb-brand" />
               </span>
-              Shoot/Permit Fee
+              Shoot/Permit Info
             </h3>
-            <p className="font-heading text-3xl font-semibold">{location.shoot_permit_fee || "FREE"}</p>
-            {location.price_note && <p className="text-sm text-muted-foreground">{location.price_note}</p>}
+            <p className="font-heading text-xl leading-snug font-semibold">
+              {location.shoot_permit_fee || "FREE"}
+            </p>
+            {location.price_note && (
+              <p className="mt-1.5 text-sm text-muted-foreground">{location.price_note}</p>
+            )}
             <ActionButton
               actionType={location.action_type}
               actionValue={location.action_value}

@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,8 +25,11 @@ function formatCommentDate(iso: string) {
 /** Comments + ratings section on a location detail page — public read
  * (approved only), sign-in-gated write. A rating (1-5) is required on
  * every submission; the written comment is optional, so a visitor can
- * leave just a rating. Reuses FavouritesProvider's client-side signed-in
- * state (see that file) rather than adding a second auth-check effect. */
+ * leave just a rating. The form is visible to everyone, signed in or not —
+ * a signed-out visitor can type a rating/comment freely, and submitting
+ * pops the in-page sign-in/sign-up dialog (see FavouritesProvider's
+ * requireAuth) rather than navigating away; once signed in, the same
+ * submit continues with whatever they already typed. */
 export function LocationComments({
   locationId,
   initialComments,
@@ -40,9 +41,7 @@ export function LocationComments({
   initialCount: number;
   ratingSummary: LocationRatingSummary;
 }) {
-  const { ready, signedIn } = useFavourites();
-  const pathname = usePathname();
-  const router = useRouter();
+  const { requireAuth } = useFavourites();
 
   const [comments, setComments] = useState(initialComments);
   const [hasMore, setHasMore] = useState(initialComments.length === LOCATION_COMMENTS_PAGE_SIZE);
@@ -68,6 +67,13 @@ export function LocationComments({
 
     setSubmitting(true);
     setFormError(null);
+
+    const authed = await requireAuth();
+    if (!authed) {
+      setSubmitting(false);
+      return;
+    }
+
     const formData = new FormData();
     formData.set("rating", String(rating));
     formData.set("comment", trimmed);
@@ -75,16 +81,14 @@ export function LocationComments({
     setSubmitting(false);
 
     if ("error" in result) {
-      if (result.error === "sign_in_required") {
-        router.push(`/sign-in?next=${encodeURIComponent(pathname)}`);
-        return;
-      }
       setFormError(
         result.error === "too_long"
           ? `Comments must be ${MAX_COMMENT_LENGTH} characters or fewer.`
           : result.error === "invalid_rating"
             ? "Please choose a star rating."
-            : "Couldn't submit your rating. Please try again.",
+            : result.error === "sign_in_required"
+              ? "Please try submitting again."
+              : "Couldn't submit your rating. Please try again.",
       );
       return;
     }
@@ -105,7 +109,9 @@ export function LocationComments({
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h2 className="font-heading text-xl font-semibold">Comments ({initialCount})</h2>
+        <h2 className="font-heading text-xl font-semibold">
+          Comments{initialCount > 0 ? ` (${initialCount})` : ""}
+        </h2>
         {ratingSummary.count > 0 && (
           <span className="flex items-center gap-1 text-sm text-muted-foreground">
             <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
@@ -124,41 +130,29 @@ export function LocationComments({
       )}
 
       <div className="mb-6">
-        {!ready ? null : !signedIn ? (
-          <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium">Want to share your experience?</p>
-            <Link
-              href={`/sign-in?next=${encodeURIComponent(pathname)}`}
-              className="mt-2 inline-block text-sm font-medium text-pb-brand hover:underline"
-            >
-              Sign in to comment
-            </Link>
+        <form onSubmit={handleSubmit} className="rounded-xl border bg-white p-4 shadow-sm">
+          <Field>
+            <FieldLabel>Your rating</FieldLabel>
+            <StarRatingInput value={rating} onChange={setRating} />
+          </Field>
+          <Field className="mt-4">
+            <FieldLabel htmlFor="location-comment">Comment (optional)</FieldLabel>
+            <Textarea
+              id="location-comment"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={4}
+              maxLength={MAX_COMMENT_LENGTH}
+              placeholder="Share your experience visiting this location…"
+            />
+            {formError && <FieldError>{formError}</FieldError>}
+          </Field>
+          <div className="mt-3">
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Submitting…" : "Submit"}
+            </Button>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="rounded-xl border bg-white p-4 shadow-sm">
-            <Field>
-              <FieldLabel>Your rating</FieldLabel>
-              <StarRatingInput value={rating} onChange={setRating} />
-            </Field>
-            <Field className="mt-4">
-              <FieldLabel htmlFor="location-comment">Comment (optional)</FieldLabel>
-              <Textarea
-                id="location-comment"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                rows={4}
-                maxLength={MAX_COMMENT_LENGTH}
-                placeholder="Share your experience visiting this location…"
-              />
-              {formError && <FieldError>{formError}</FieldError>}
-            </Field>
-            <div className="mt-3">
-              <Button type="submit" disabled={submitting}>
-                {submitting ? "Submitting…" : "Submit"}
-              </Button>
-            </div>
-          </form>
-        )}
+        </form>
       </div>
 
       {comments.length === 0 ? (
