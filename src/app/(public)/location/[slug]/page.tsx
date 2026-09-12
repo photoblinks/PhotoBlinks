@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Tag, Navigation, ChevronDown, Star } from "lucide-react";
+import { Camera, Navigation, ChevronDown, Star } from "lucide-react";
 import {
   getActiveCategories,
   getActiveSponsoredPhotographerByState,
@@ -11,7 +11,6 @@ import {
   getLocationRatingSummary,
   getPublishedLocationBySlug,
 } from "@/lib/public-data";
-import { formatPricing } from "@/lib/format";
 import { getCategoryMarkerStyle } from "@/lib/category-style";
 import { ImageGallery } from "@/components/public/image-gallery";
 import { ShareButton } from "@/components/public/share-button";
@@ -127,22 +126,6 @@ export default async function LocationDetailPage({ params }: Props) {
     .filter(Boolean)
     .join(" - ");
 
-  // The headline price always reflects pricing_type/price — the photoshoot
-  // price PhotoBlinks itself charges. entry_fee is a distinct, separately
-  // labeled fact (e.g. a venue's own admission ticket) shown in the details
-  // table below; it must never stand in for the photoshoot price here.
-  const priceDisplay = formatPricing(location.pricing_type, location.price);
-
-  // The admin-entered caption takes priority over the pricing-type defaults;
-  // falls back to the old hardcoded text for locations that haven't set it.
-  const priceCaption =
-    location.price_note ||
-    (location.pricing_type === "paid"
-      ? "Photoshoot Price"
-      : location.pricing_type === "free"
-        ? "Free Photoshoot Location"
-        : undefined);
-
   const imageAlt = location.city ? `${location.name} in ${location.city.name}` : location.name;
 
   // The composed section headings below ("{name} Photoshoot Overview" etc.)
@@ -212,12 +195,11 @@ export default async function LocationDetailPage({ params }: Props) {
           <div className="rounded-xl border bg-white p-4 shadow-sm">
             <h3 className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
               <span className="flex size-7 items-center justify-center rounded-full bg-pb-brand/10">
-                <Tag className="size-3.5 text-pb-brand" />
+                <Camera className="size-3.5 text-pb-brand" />
               </span>
-              Photography Pricing
+              Shoot/Permit Fee
             </h3>
-            <p className="font-heading text-3xl font-semibold">{priceDisplay}</p>
-            {priceCaption && <p className="text-sm text-muted-foreground">{priceCaption}</p>}
+            <p className="font-heading text-3xl font-semibold">{location.shoot_permit_fee || "FREE"}</p>
             <ActionButton
               actionType={location.action_type}
               actionValue={location.action_value}
