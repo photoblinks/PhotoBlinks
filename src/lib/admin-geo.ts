@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -9,15 +8,15 @@ import { createClient } from "@/lib/supabase/server";
  * find_or_create_city). Shared by the location and studio admin forms,
  * which both need the same Country → State → City validation.
  *
- * Redirects with a clear error on any failure — a location/studio is
- * never silently saved with an inconsistent country/state/city
- * relationship.
+ * Throws on any failure — a location/studio is never silently saved with
+ * an inconsistent country/state/city relationship. Callers surface the
+ * error message to the form the same way as any other validation error.
  */
 export async function resolveLocationGeo(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  params: { countryId: string; stateId: string; cityName: string; errorRedirectPath: string },
+  params: { countryId: string; stateId: string; cityName: string },
 ): Promise<string> {
-  const { countryId, stateId, cityName, errorRedirectPath } = params;
+  const { countryId, stateId, cityName } = params;
 
   const { data: state, error: stateError } = await supabase
     .from("states")
@@ -26,12 +25,10 @@ export async function resolveLocationGeo(
     .single();
 
   if (stateError || !state) {
-    redirect(`${errorRedirectPath}?error=${encodeURIComponent("Selected state could not be found.")}`);
+    throw new Error("Selected state could not be found.");
   }
   if (state.country_id !== countryId) {
-    redirect(
-      `${errorRedirectPath}?error=${encodeURIComponent("Selected state does not belong to the selected country.")}`,
-    );
+    throw new Error("Selected state does not belong to the selected country.");
   }
 
   const { data: city, error: cityError } = (await supabase
@@ -39,9 +36,7 @@ export async function resolveLocationGeo(
     .single()) as { data: { city_id: string } | null; error: { message: string } | null };
 
   if (cityError || !city) {
-    redirect(
-      `${errorRedirectPath}?error=${encodeURIComponent(cityError?.message ?? "Could not resolve the city.")}`,
-    );
+    throw new Error(cityError?.message ?? "Could not resolve the city.");
   }
 
   return city.city_id;

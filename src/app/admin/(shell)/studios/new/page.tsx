@@ -2,12 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { StudioForm } from "../studio-form";
 import { createStudio } from "../actions";
 
-export default async function NewStudioPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const { error } = await searchParams;
+export default async function NewStudioPage() {
   const supabase = await createClient();
 
   const [{ data: countries }, { data: states }] = await Promise.all([
@@ -22,7 +17,6 @@ export default async function NewStudioPage({
         action={createStudio}
         countries={countries ?? []}
         states={states ?? []}
-        error={error}
       />
     </div>
   );

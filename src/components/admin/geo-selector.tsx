@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel, FieldRequiredMark } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -54,7 +54,10 @@ export function GeoSelector({
   return (
     <>
       <Field>
-        <FieldLabel htmlFor="country_id">Country</FieldLabel>
+        <FieldLabel htmlFor="country_id">
+          Country
+          <FieldRequiredMark />
+        </FieldLabel>
         <Select
           name="country_id"
           items={countries.map((country) => ({ value: country.id, label: country.name }))}
@@ -76,7 +79,10 @@ export function GeoSelector({
       </Field>
 
       <Field>
-        <FieldLabel htmlFor="state_id">State</FieldLabel>
+        <FieldLabel htmlFor="state_id">
+          State
+          <FieldRequiredMark />
+        </FieldLabel>
         <Select
           name="state_id"
           items={statesForCountry.map((state) => ({ value: state.id, label: state.name }))}
@@ -99,7 +105,10 @@ export function GeoSelector({
       </Field>
 
       <Field>
-        <FieldLabel htmlFor="city_name">City</FieldLabel>
+        <FieldLabel htmlFor="city_name">
+          City
+          <FieldRequiredMark />
+        </FieldLabel>
         <Input
           id="city_name"
           name="city_name"

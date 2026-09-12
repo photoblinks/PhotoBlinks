@@ -186,7 +186,12 @@ async function replaceLocationFaqs(
   );
 }
 
-export async function createLocation(formData: FormData) {
+export type LocationFormState = { error: string } | undefined;
+
+export async function createLocation(
+  _prevState: LocationFormState,
+  formData: FormData,
+): Promise<LocationFormState> {
   const supabase = await createClient();
 
   let values: ReturnType<typeof parseLocationForm>;
@@ -194,17 +199,21 @@ export async function createLocation(formData: FormData) {
     values = parseLocationForm(formData);
   } catch (err) {
     const message = err instanceof z.ZodError ? err.issues[0].message : "Invalid form data.";
-    redirect(`/admin/locations/new?error=${encodeURIComponent(message)}`);
+    return { error: message };
   }
 
   const { images, faqs, city_name, ...locationValues } = values;
 
-  const cityId = await resolveLocationGeo(supabase, {
-    countryId: locationValues.country_id,
-    stateId: locationValues.state_id,
-    cityName: city_name,
-    errorRedirectPath: "/admin/locations/new",
-  });
+  let cityId: string;
+  try {
+    cityId = await resolveLocationGeo(supabase, {
+      countryId: locationValues.country_id,
+      stateId: locationValues.state_id,
+      cityName: city_name,
+    });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not resolve the city." };
+  }
 
   const { data, error } = await supabase
     .from("locations")
@@ -213,7 +222,7 @@ export async function createLocation(formData: FormData) {
     .single();
 
   if (error) {
-    redirect(`/admin/locations/new?error=${encodeURIComponent(error.message)}`);
+    return { error: error.message };
   }
 
   await replaceLocationImages(supabase, data.id, images);
@@ -223,7 +232,11 @@ export async function createLocation(formData: FormData) {
   redirect("/admin/locations");
 }
 
-export async function updateLocation(id: string, formData: FormData) {
+export async function updateLocation(
+  id: string,
+  _prevState: LocationFormState,
+  formData: FormData,
+): Promise<LocationFormState> {
   const supabase = await createClient();
 
   let values: ReturnType<typeof parseLocationForm>;
@@ -231,17 +244,21 @@ export async function updateLocation(id: string, formData: FormData) {
     values = parseLocationForm(formData);
   } catch (err) {
     const message = err instanceof z.ZodError ? err.issues[0].message : "Invalid form data.";
-    redirect(`/admin/locations/${id}/edit?error=${encodeURIComponent(message)}`);
+    return { error: message };
   }
 
   const { images, faqs, city_name, ...locationValues } = values;
 
-  const cityId = await resolveLocationGeo(supabase, {
-    countryId: locationValues.country_id,
-    stateId: locationValues.state_id,
-    cityName: city_name,
-    errorRedirectPath: `/admin/locations/${id}/edit`,
-  });
+  let cityId: string;
+  try {
+    cityId = await resolveLocationGeo(supabase, {
+      countryId: locationValues.country_id,
+      stateId: locationValues.state_id,
+      cityName: city_name,
+    });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not resolve the city." };
+  }
 
   const { error } = await supabase
     .from("locations")
@@ -249,7 +266,7 @@ export async function updateLocation(id: string, formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    redirect(`/admin/locations/${id}/edit?error=${encodeURIComponent(error.message)}`);
+    return { error: error.message };
   }
 
   await replaceLocationImages(supabase, id, images);

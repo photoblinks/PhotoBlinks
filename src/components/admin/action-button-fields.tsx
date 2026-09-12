@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldLabel, FieldRequiredMark } from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -66,7 +66,10 @@ export function ActionButtonFields({ defaultValue }: { defaultValue?: ActionButt
 
       {valueField && (
         <Field>
-          <FieldLabel htmlFor="action_value">{valueField.label}</FieldLabel>
+          <FieldLabel htmlFor="action_value">
+            {valueField.label}
+            <FieldRequiredMark />
+          </FieldLabel>
           <Input
             key={actionType}
             id="action_value"

@@ -2,12 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { LocationForm } from "../location-form";
 import { createLocation } from "../actions";
 
-export default async function NewLocationPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const { error } = await searchParams;
+export default async function NewLocationPage() {
   const supabase = await createClient();
 
   const [{ data: categories }, { data: countries }, { data: states }] = await Promise.all([
@@ -24,7 +19,6 @@ export default async function NewLocationPage({
         categories={categories ?? []}
         countries={countries ?? []}
         states={states ?? []}
-        error={error}
       />
     </div>
   );

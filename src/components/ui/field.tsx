@@ -115,6 +115,19 @@ function FieldLabel({
   )
 }
 
+function FieldRequiredMark({ className, ...props }: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="field-required-mark"
+      aria-hidden="true"
+      className={cn("text-destructive", className)}
+      {...props}
+    >
+      *
+    </span>
+  )
+}
+
 function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -235,4 +248,5 @@ export {
   FieldSet,
   FieldContent,
   FieldTitle,
+  FieldRequiredMark,
 }

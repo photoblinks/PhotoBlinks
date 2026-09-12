@@ -14,21 +14,43 @@ import {
 import { deleteLocation, toggleLocationPublished } from "./actions";
 import { formatPricing } from "@/lib/format";
 import { isSeoEligible, seoEligibilityLabel } from "@/lib/seo-eligibility";
+import { AdminListFilters } from "@/components/admin/admin-list-filters";
 
-export default async function AdminLocationsPage() {
+export default async function AdminLocationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; country?: string; state?: string; city?: string; category?: string }>;
+}) {
+  const { q, country, state, city, category } = await searchParams;
   const supabase = await createClient();
-  const [{ data: locations }, { data: publishedForSeo }] = await Promise.all([
-    supabase
-      .from("locations")
-      .select(
-        "*, categories(name, slug), states(name), cities(name, slug), location_images(image_url, sort_order)",
-      )
-      .order("created_at", { ascending: false }),
-    // One grouped aggregate — not one query per row — for the City +
-    // Category SEO eligibility count shown alongside each location. Same
-    // rule as the Phase 3 inventory (src/lib/seo-eligibility.ts).
-    supabase.from("locations").select("city_id, category_id").eq("is_published", true),
-  ]);
+
+  let query = supabase
+    .from("locations")
+    .select(
+      "*, categories(name, slug), states(name), cities(name, slug), location_images(image_url, sort_order)",
+    )
+    .order("created_at", { ascending: false });
+
+  if (q) query = query.ilike("name", `%${q}%`);
+  if (country) query = query.eq("country_id", country);
+  if (state) query = query.eq("state_id", state);
+  if (city) query = query.eq("city_id", city);
+  if (category) query = query.eq("category_id", category);
+
+  const [{ data: locations }, { data: publishedForSeo }, { data: countries }, { data: states }, { data: categories }, { data: allLocationsForFilters }] =
+    await Promise.all([
+      query,
+      // One grouped aggregate — not one query per row — for the City +
+      // Category SEO eligibility count shown alongside each location. Same
+      // rule as the Phase 3 inventory (src/lib/seo-eligibility.ts).
+      supabase.from("locations").select("city_id, category_id").eq("is_published", true),
+      supabase.from("countries").select("id, name").order("name"),
+      supabase.from("states").select("id, name, country_id").order("name"),
+      supabase.from("categories").select("id, name").order("sort_order"),
+      // Unfiltered, so the City dropdown always offers every city that has
+      // at least one location, regardless of the currently applied filters.
+      supabase.from("locations").select("cities(id, name, state_id)"),
+    ]);
 
   const seoCounts = new Map<string, number>();
   for (const location of publishedForSeo ?? []) {
@@ -37,12 +59,27 @@ export default async function AdminLocationsPage() {
     seoCounts.set(key, (seoCounts.get(key) ?? 0) + 1);
   }
 
+  const cityOptions = new Map<string, { id: string; name: string; state_id: string }>();
+  for (const location of allLocationsForFilters ?? []) {
+    const cityRef = Array.isArray(location.cities) ? location.cities[0] : location.cities;
+    if (cityRef) cityOptions.set(cityRef.id, cityRef);
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Locations</h1>
         <Button render={<Link href="/admin/locations/new" />}>Add location</Button>
       </div>
+
+      <AdminListFilters
+        basePath="/admin/locations"
+        countries={countries ?? []}
+        states={states ?? []}
+        cities={[...cityOptions.values()]}
+        categories={categories ?? []}
+        initial={{ q, country, state, city, category }}
+      />
 
       <Table>
         <TableHeader>

@@ -229,7 +229,12 @@ async function replaceStudioFaqs(
   );
 }
 
-export async function createStudio(formData: FormData) {
+export type StudioFormState = { error: string } | undefined;
+
+export async function createStudio(
+  _prevState: StudioFormState,
+  formData: FormData,
+): Promise<StudioFormState> {
   const supabase = await createClient();
 
   let values: ReturnType<typeof parseStudioForm>;
@@ -237,17 +242,21 @@ export async function createStudio(formData: FormData) {
     values = parseStudioForm(formData);
   } catch (err) {
     const message = err instanceof z.ZodError ? err.issues[0].message : "Invalid form data.";
-    redirect(`/admin/studios/new?error=${encodeURIComponent(message)}`);
+    return { error: message };
   }
 
   const { images, pricingOptions, faqs, city_name, ...studioValues } = values;
 
-  const cityId = await resolveLocationGeo(supabase, {
-    countryId: studioValues.country_id,
-    stateId: studioValues.state_id,
-    cityName: city_name,
-    errorRedirectPath: "/admin/studios/new",
-  });
+  let cityId: string;
+  try {
+    cityId = await resolveLocationGeo(supabase, {
+      countryId: studioValues.country_id,
+      stateId: studioValues.state_id,
+      cityName: city_name,
+    });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not resolve the city." };
+  }
 
   const { data, error } = await supabase
     .from("studios")
@@ -256,7 +265,7 @@ export async function createStudio(formData: FormData) {
     .single();
 
   if (error) {
-    redirect(`/admin/studios/new?error=${encodeURIComponent(error.message)}`);
+    return { error: error.message };
   }
 
   await replaceStudioImages(supabase, data.id, images);
@@ -267,7 +276,11 @@ export async function createStudio(formData: FormData) {
   redirect("/admin/studios");
 }
 
-export async function updateStudio(id: string, formData: FormData) {
+export async function updateStudio(
+  id: string,
+  _prevState: StudioFormState,
+  formData: FormData,
+): Promise<StudioFormState> {
   const supabase = await createClient();
 
   let values: ReturnType<typeof parseStudioForm>;
@@ -275,17 +288,21 @@ export async function updateStudio(id: string, formData: FormData) {
     values = parseStudioForm(formData);
   } catch (err) {
     const message = err instanceof z.ZodError ? err.issues[0].message : "Invalid form data.";
-    redirect(`/admin/studios/${id}/edit?error=${encodeURIComponent(message)}`);
+    return { error: message };
   }
 
   const { images, pricingOptions, faqs, city_name, ...studioValues } = values;
 
-  const cityId = await resolveLocationGeo(supabase, {
-    countryId: studioValues.country_id,
-    stateId: studioValues.state_id,
-    cityName: city_name,
-    errorRedirectPath: `/admin/studios/${id}/edit`,
-  });
+  let cityId: string;
+  try {
+    cityId = await resolveLocationGeo(supabase, {
+      countryId: studioValues.country_id,
+      stateId: studioValues.state_id,
+      cityName: city_name,
+    });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Could not resolve the city." };
+  }
 
   const { error } = await supabase
     .from("studios")
@@ -293,7 +310,7 @@ export async function updateStudio(id: string, formData: FormData) {
     .eq("id", id);
 
   if (error) {
-    redirect(`/admin/studios/${id}/edit?error=${encodeURIComponent(error.message)}`);
+    return { error: error.message };
   }
 
   await replaceStudioImages(supabase, id, images);

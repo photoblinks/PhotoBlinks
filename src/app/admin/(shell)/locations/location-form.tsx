@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,8 +17,16 @@ import { FaqEditor } from "@/components/admin/faq-editor";
 import { ExtraDetailFields, type ExtraDetailsValue } from "@/components/admin/extra-detail-fields";
 import { ActionButtonFields, type ActionButtonValue } from "@/components/admin/action-button-fields";
 import { GeoSelector } from "@/components/admin/geo-selector";
-import { Field, FieldGroup, FieldLabel, FieldError, FieldSeparator } from "@/components/ui/field";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldError,
+  FieldSeparator,
+  FieldRequiredMark,
+} from "@/components/ui/field";
 import { slugify } from "@/lib/slug";
+import type { LocationFormState } from "./actions";
 
 type Location = ExtraDetailsValue & ActionButtonValue & {
   id: string;
@@ -53,15 +61,14 @@ export function LocationForm({
   categories,
   countries,
   states,
-  error,
 }: {
-  action: (formData: FormData) => void;
+  action: (prevState: LocationFormState, formData: FormData) => Promise<LocationFormState>;
   location?: Location;
   categories: Option[];
   countries: Option[];
   states: State[];
-  error?: string;
 }) {
+  const [state, formAction, isPending] = useActionState(action, undefined);
   const [name, setName] = useState(location?.name ?? "");
   const [cardName, setCardName] = useState(location?.card_name ?? "");
   const [slug, setSlug] = useState(location?.slug ?? "");
@@ -74,12 +81,15 @@ export function LocationForm({
   }
 
   return (
-    <form action={action} className="max-w-2xl">
+    <form action={formAction} className="max-w-2xl">
       <FieldGroup>
-        {error && <FieldError>{error}</FieldError>}
+        {state?.error && <FieldError>{state.error}</FieldError>}
 
         <Field>
-          <FieldLabel htmlFor="name">Name</FieldLabel>
+          <FieldLabel htmlFor="name">
+            Name
+            <FieldRequiredMark />
+          </FieldLabel>
           <Input
             id="name"
             name="name"
@@ -90,7 +100,10 @@ export function LocationForm({
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="card_name">Card Place Name</FieldLabel>
+          <FieldLabel htmlFor="card_name">
+            Card Place Name
+            <FieldRequiredMark />
+          </FieldLabel>
           <Input
             id="card_name"
             name="card_name"
@@ -102,7 +115,10 @@ export function LocationForm({
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="slug">Slug</FieldLabel>
+          <FieldLabel htmlFor="slug">
+            Slug
+            <FieldRequiredMark />
+          </FieldLabel>
           <Input
             id="slug"
             name="slug"
@@ -126,7 +142,10 @@ export function LocationForm({
         </Field>
 
         <Field>
-          <FieldLabel htmlFor="category_id">Category</FieldLabel>
+          <FieldLabel htmlFor="category_id">
+            Category
+            <FieldRequiredMark />
+          </FieldLabel>
           <Select
             name="category_id"
             items={categories.map((category) => ({ value: category.id, label: category.name }))}
@@ -155,7 +174,10 @@ export function LocationForm({
         />
 
         <Field>
-          <FieldLabel htmlFor="pricing_type">Pricing</FieldLabel>
+          <FieldLabel htmlFor="pricing_type">
+            Pricing
+            <FieldRequiredMark />
+          </FieldLabel>
           <Select
             name="pricing_type"
             items={[
@@ -180,7 +202,10 @@ export function LocationForm({
 
         {pricingType === "paid" && (
           <Field>
-            <FieldLabel htmlFor="price">Price (₹)</FieldLabel>
+            <FieldLabel htmlFor="price">
+              Price (₹)
+              <FieldRequiredMark />
+            </FieldLabel>
             <Input
               id="price"
               name="price"
@@ -282,7 +307,9 @@ export function LocationForm({
           />
         </Field>
 
-        <Button type="submit">{location ? "Save changes" : "Create location"}</Button>
+        <Button type="submit" disabled={isPending}>
+          {location ? "Save changes" : "Create location"}
+        </Button>
       </FieldGroup>
     </form>
   );

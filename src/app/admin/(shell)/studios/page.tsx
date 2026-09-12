@@ -12,13 +12,41 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { deleteStudio, toggleStudioPublished } from "./actions";
+import { AdminListFilters } from "@/components/admin/admin-list-filters";
 
-export default async function AdminStudiosPage() {
+export default async function AdminStudiosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; country?: string; state?: string; city?: string }>;
+}) {
+  const { q, country, state, city } = await searchParams;
   const supabase = await createClient();
-  const { data: studios } = await supabase
+
+  let query = supabase
     .from("studios")
     .select("*, states(name), cities(name), studio_images(image_url, sort_order)")
     .order("created_at", { ascending: false });
+
+  if (q) query = query.ilike("name", `%${q}%`);
+  if (country) query = query.eq("country_id", country);
+  if (state) query = query.eq("state_id", state);
+  if (city) query = query.eq("city_id", city);
+
+  const [{ data: studios }, { data: countries }, { data: states }, { data: allStudiosForFilters }] =
+    await Promise.all([
+      query,
+      supabase.from("countries").select("id, name").order("name"),
+      supabase.from("states").select("id, name, country_id").order("name"),
+      // Unfiltered, so the City dropdown always offers every city that has
+      // at least one studio, regardless of the currently applied filters.
+      supabase.from("studios").select("cities(id, name, state_id)"),
+    ]);
+
+  const cityOptions = new Map<string, { id: string; name: string; state_id: string }>();
+  for (const studio of allStudiosForFilters ?? []) {
+    const cityRef = Array.isArray(studio.cities) ? studio.cities[0] : studio.cities;
+    if (cityRef) cityOptions.set(cityRef.id, cityRef);
+  }
 
   return (
     <div>
@@ -26,6 +54,14 @@ export default async function AdminStudiosPage() {
         <h1 className="text-2xl font-semibold">Studios</h1>
         <Button render={<Link href="/admin/studios/new" />}>Add studio</Button>
       </div>
+
+      <AdminListFilters
+        basePath="/admin/studios"
+        countries={countries ?? []}
+        states={states ?? []}
+        cities={[...cityOptions.values()]}
+        initial={{ q, country, state, city }}
+      />
 
       <Table>
         <TableHeader>

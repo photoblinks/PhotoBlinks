@@ -5,13 +5,10 @@ import { updateStudio } from "../../actions";
 
 export default async function EditStudioPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
-  const { error } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: studio }, { data: countries }, { data: states }] = await Promise.all([
@@ -49,7 +46,6 @@ export default async function EditStudioPage({
         studio={{ ...studio, images, pricingOptions, faqs, city_name: cityRef?.name }}
         countries={countries ?? []}
         states={states ?? []}
-        error={error}
       />
     </div>
   );

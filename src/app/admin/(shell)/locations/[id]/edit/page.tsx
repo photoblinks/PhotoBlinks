@@ -5,13 +5,10 @@ import { updateLocation } from "../../actions";
 
 export default async function EditLocationPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
 }) {
   const { id } = await params;
-  const { error } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: location }, { data: categories }, { data: countries }, { data: states }] =
@@ -47,7 +44,6 @@ export default async function EditLocationPage({
         categories={categories ?? []}
         countries={countries ?? []}
         states={states ?? []}
-        error={error}
       />
     </div>
   );

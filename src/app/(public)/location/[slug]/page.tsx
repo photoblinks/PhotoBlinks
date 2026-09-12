@@ -200,6 +200,7 @@ export default async function LocationDetailPage({ params }: Props) {
               Shoot/Permit Fee
             </h3>
             <p className="font-heading text-3xl font-semibold">{location.shoot_permit_fee || "FREE"}</p>
+            {location.price_note && <p className="text-sm text-muted-foreground">{location.price_note}</p>}
             <ActionButton
               actionType={location.action_type}
               actionValue={location.action_value}
