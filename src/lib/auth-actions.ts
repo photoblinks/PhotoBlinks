@@ -108,13 +108,29 @@ export async function resendConfirmationEmail(formData: FormData) {
     redirect(returnTo);
   }
 
-  await supabase.auth.resend({
+  const { error } = await supabase.auth.resend({
     type: "signup",
     email,
     options: { emailRedirectTo: absoluteUrl(confirmNext) },
   });
 
   const separator = returnTo.includes("?") ? "&" : "?";
+
+  if (error) {
+    // Log for diagnosis without leaking Supabase internals to the client —
+    // no message text (could echo back user input), no tokens, just enough
+    // to tell rate-limiting apart from a real provider/config failure.
+    console.error("resendConfirmationEmail: auth.resend failed", {
+      code: error.code,
+      status: error.status,
+    });
+    const message =
+      error.code === "over_email_send_rate_limit"
+        ? "Too many attempts. Please wait a bit before requesting another email."
+        : "Couldn't resend the confirmation email. Please try again in a moment.";
+    redirect(`${returnTo}${separator}error=${encodeURIComponent(message)}`);
+  }
+
   redirect(`${returnTo}${separator}resent=1`);
 }
 

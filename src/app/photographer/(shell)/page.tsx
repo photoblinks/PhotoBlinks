@@ -20,6 +20,7 @@ import { PhotographerProfileSummary } from "@/components/photographer/profile-su
 import { CompleteProfileModal } from "@/components/photographer/complete-profile-modal";
 import { RealtimeRefresh } from "@/components/realtime/realtime-refresh";
 import { AuthSubmitButton } from "@/components/public/auth-submit-button";
+import { FieldError } from "@/components/ui/field";
 import { getActiveCountries, getActiveStates } from "@/lib/public-data";
 import { normalizeRelation, ensurePhotographerProfileFromMetadata } from "@/lib/supabase/require-photographer";
 
@@ -96,16 +97,19 @@ export default async function PhotographerDashboardPage({
               Confirmation email resent.
             </p>
           ) : (
-            <form action={resendConfirmationEmail} className="mt-3">
-              <input type="hidden" name="email" value={pendingEmail} />
-              <input type="hidden" name="next" value="/photographer" />
-              <input
-                type="hidden"
-                name="return_to"
-                value={`/photographer?pending_email=${encodeURIComponent(pendingEmail)}`}
-              />
-              <AuthSubmitButton label="Resend verification email" pendingLabel="Sending…" />
-            </form>
+            <>
+              {error && <FieldError className="mt-3">{error}</FieldError>}
+              <form action={resendConfirmationEmail} className="mt-3">
+                <input type="hidden" name="email" value={pendingEmail} />
+                <input type="hidden" name="next" value="/photographer" />
+                <input
+                  type="hidden"
+                  name="return_to"
+                  value={`/photographer?pending_email=${encodeURIComponent(pendingEmail)}`}
+                />
+                <AuthSubmitButton label="Resend verification email" pendingLabel="Sending…" />
+              </form>
+            </>
           )}
         </div>
 
