@@ -74,7 +74,10 @@ export function AdminListFilters({
     if (stateId !== ALL) params.set("state", stateId);
     if (cityId !== ALL) params.set("city", cityId);
     if (categories !== undefined && categoryId !== ALL) params.set("category", categoryId);
-    router.push(params.size > 0 ? `${basePath}?${params.toString()}` : basePath);
+    // A filter change can leave a previously-valid page past the new,
+    // smaller result set — always land back on page 1.
+    params.set("page", "1");
+    router.push(`${basePath}?${params.toString()}`);
   }
 
   function handleSubmit(event: React.FormEvent) {

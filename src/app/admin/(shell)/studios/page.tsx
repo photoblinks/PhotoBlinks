@@ -13,19 +13,49 @@ import {
 } from "@/components/ui/table";
 import { deleteStudio, toggleStudioPublished } from "./actions";
 import { AdminListFilters } from "@/components/admin/admin-list-filters";
+import { AdminPagination } from "@/components/admin/pagination";
+import { ADMIN_PAGE_SIZE, parsePage, rangeFor } from "@/lib/admin/pagination";
+
+type StudioFilters = { q?: string; country?: string; state?: string; city?: string };
+
+function studioHrefFor(filters: StudioFilters, page: number): string {
+  const params = new URLSearchParams();
+  if (filters.q) params.set("q", filters.q);
+  if (filters.country) params.set("country", filters.country);
+  if (filters.state) params.set("state", filters.state);
+  if (filters.city) params.set("city", filters.city);
+  params.set("page", String(page));
+  return `/admin/studios?${params.toString()}`;
+}
 
 export default async function AdminStudiosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; country?: string; state?: string; city?: string }>;
+  searchParams: Promise<StudioFilters & { page?: string }>;
 }) {
-  const { q, country, state, city } = await searchParams;
+  const { q, country, state, city, page: pageParam } = await searchParams;
+  const filters: StudioFilters = { q, country, state, city };
   const supabase = await createClient();
+
+  // Count first: the data query's range depends on the page clamped to this
+  // total, so it can't run in parallel without risking an out-of-range page
+  // silently returning an empty page — same rule as Phase B1.
+  let countQuery = supabase.from("studios").select("id", { count: "exact", head: true });
+  if (q) countQuery = countQuery.ilike("name", `%${q}%`);
+  if (country) countQuery = countQuery.eq("country_id", country);
+  if (state) countQuery = countQuery.eq("state_id", state);
+  if (city) countQuery = countQuery.eq("city_id", city);
+  const { count } = await countQuery;
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+  const currentPage = parsePage(pageParam, totalPages);
+  const { from, to } = rangeFor(currentPage);
 
   let query = supabase
     .from("studios")
     .select("*, states(name), cities(name), studio_images(image_url, sort_order)")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   if (q) query = query.ilike("name", `%${q}%`);
   if (country) query = query.eq("country_id", country);
@@ -39,6 +69,8 @@ export default async function AdminStudiosPage({
       supabase.from("states").select("id, name, country_id").order("name"),
       // Unfiltered, so the City dropdown always offers every city that has
       // at least one studio, regardless of the currently applied filters.
+      // Not part of the paginated studio list — filter-option metadata for
+      // the whole table, so it isn't scoped to the current page.
       supabase.from("studios").select("cities(id, name, state_id)"),
     ]);
 
@@ -127,6 +159,14 @@ export default async function AdminStudiosPage({
       {studios?.length === 0 && (
         <p className="mt-6 text-sm text-muted-foreground">No studios yet.</p>
       )}
+
+      <AdminPagination
+        hrefFor={(page) => studioHrefFor(filters, page)}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={ADMIN_PAGE_SIZE}
+      />
     </div>
   );
 }

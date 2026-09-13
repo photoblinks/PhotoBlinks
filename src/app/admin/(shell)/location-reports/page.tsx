@@ -10,7 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { LocationReportModerationActions } from "@/components/admin/location-report-moderation-actions";
+import { AdminPagination } from "@/components/admin/pagination";
 import { RealtimeRefresh } from "@/components/realtime/realtime-refresh";
+import { ADMIN_PAGE_SIZE, parsePage, rangeFor } from "@/lib/admin/pagination";
 
 type ReportRow = {
   id: string;
@@ -53,18 +55,39 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
 export default async function AdminLocationReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }) {
-  const { status: statusParam } = await searchParams;
+  const { status: statusParam, page: pageParam } = await searchParams;
   const status: StatusFilter = STATUS_TABS.some((t) => t.value === statusParam)
     ? (statusParam as StatusFilter)
     : "pending";
+  const p_status = status === "all" ? null : status;
 
   const supabase = await createClient();
+
+  // Count first: the list RPC's offset depends on the page clamped to the
+  // total, so this can't run in parallel with the list call without risking
+  // an out-of-range page silently returning an empty page while the header
+  // still claims a smaller, valid page number.
+  const { data: countData } = await supabase.rpc("get_admin_location_reports_count", { p_status });
+  const total = Number(countData ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+  const currentPage = parsePage(pageParam, totalPages);
+  const { from } = rangeFor(currentPage);
+
   const { data } = await supabase.rpc("get_admin_location_reports", {
-    p_status: status === "all" ? null : status,
+    p_status,
+    p_limit: ADMIN_PAGE_SIZE,
+    p_offset: from,
   });
   const reports = (data ?? []) as ReportRow[];
+
+  function hrefFor(page: number) {
+    const params = new URLSearchParams();
+    if (status !== "pending") params.set("status", status);
+    params.set("page", String(page));
+    return `/admin/location-reports?${params.toString()}`;
+  }
 
   return (
     <div>
@@ -157,6 +180,14 @@ export default async function AdminLocationReportsPage({
           No {status === "all" ? "" : status} reports.
         </p>
       )}
+
+      <AdminPagination
+        hrefFor={hrefFor}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={ADMIN_PAGE_SIZE}
+      />
     </div>
   );
 }

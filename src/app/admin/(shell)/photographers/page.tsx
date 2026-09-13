@@ -12,13 +12,33 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { deletePhotographer } from "./actions";
+import { AdminPagination } from "@/components/admin/pagination";
+import { ADMIN_PAGE_SIZE, parsePage, rangeFor } from "@/lib/admin/pagination";
 
-export default async function AdminPhotographersPage() {
+export default async function AdminPhotographersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
   const supabase = await createClient();
+
+  // Count first: the data query's range depends on the page clamped to this
+  // total, so it can't run in parallel without risking an out-of-range page
+  // silently returning an empty page — same rule as Phase B1.
+  const { count } = await supabase
+    .from("sponsored_photographers")
+    .select("id", { count: "exact", head: true });
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+  const currentPage = parsePage(pageParam, totalPages);
+  const { from, to } = rangeFor(currentPage);
+
   const { data: photographers } = await supabase
     .from("sponsored_photographers")
     .select("*, states(name)")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   // Display-only — the actual active/expired boundary is enforced server-side
   // by the sponsored_photographers_public_read RLS policy and the state-
@@ -107,6 +127,14 @@ export default async function AdminPhotographersPage() {
       {photographers?.length === 0 && (
         <p className="mt-6 text-sm text-muted-foreground">No sponsored photographers yet.</p>
       )}
+
+      <AdminPagination
+        hrefFor={(page) => `/admin/photographers?page=${page}`}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={ADMIN_PAGE_SIZE}
+      />
     </div>
   );
 }

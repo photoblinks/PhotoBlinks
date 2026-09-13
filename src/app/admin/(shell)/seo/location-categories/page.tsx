@@ -12,14 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AdminPagination } from "@/components/admin/pagination";
+import { ADMIN_PAGE_SIZE, parsePage, rangeFor } from "@/lib/admin/pagination";
 import { LocationCategoryFilters } from "./filters";
 
-// Keeps the inventory list from ever growing unbounded on one page as the
-// number of city+category combinations increases — see PHASE 1 spec
-// (§5 Pagination).
-const PAGE_SIZE = 20;
-
-type Ref = { id: string; name: string; slug: string };
 type SortKey = "city" | "category" | "count";
 
 type Props = {
@@ -53,163 +49,118 @@ type Row = {
   seoDescription: string | null;
 };
 
+type InventoryRpcRow = {
+  city_id: string;
+  category_id: string;
+  country_name: string;
+  country_slug: string;
+  state_name: string;
+  state_slug: string;
+  city_name: string;
+  city_slug: string;
+  category_name: string;
+  category_slug: string;
+  location_count: number;
+  seo_title: string | null;
+  seo_description: string | null;
+};
+
+type FilterOptionsRpcRow = {
+  country_name: string;
+  country_slug: string;
+  state_name: string;
+  state_slug: string;
+  city_name: string;
+  city_slug: string;
+  category_name: string;
+  category_slug: string;
+};
+
 export default async function LocationCategorySeoPage({ searchParams }: Props) {
   const query = await searchParams;
   const q = (query.q ?? "").trim().toLowerCase();
   const sort: SortKey = query.sort === "category" || query.sort === "count" ? query.sort : "city";
   const dir: "asc" | "desc" = query.dir === "desc" ? "desc" : "asc";
-  const page = Math.max(1, Number(query.page) || 1);
 
   const supabase = await createClient();
 
-  // Only the four FK columns — mirrors the existing city-pages admin page's
-  // approach (count in JS from a narrow published-only select), extended
-  // with category. This is the same relationship the public City+Category
-  // route and sitemap.ts already use to decide a page/URL exists: at least
-  // one published location matching country+state+city+category.
-  const { data: locations } = await supabase
-    .from("locations")
-    .select("country_id, state_id, city_id, category_id")
-    .eq("is_published", true);
+  const rpcFilters = {
+    p_q: q || null,
+    p_country_slug: query.country || null,
+    p_state_slug: query.state || null,
+    p_city_slug: query.city || null,
+    p_category_slug: query.category || null,
+  };
 
-  const counts = new Map<string, number>();
-  for (const location of locations ?? []) {
-    if (!location.country_id || !location.state_id || !location.city_id || !location.category_id) {
-      continue;
-    }
-    const key = `${location.country_id}|${location.state_id}|${location.city_id}|${location.category_id}`;
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
+  // Count first: the inventory RPC's offset depends on the page clamped to
+  // this total, so it can't run in parallel with the list call without
+  // risking an out-of-range page silently returning an empty page — same
+  // correctness rule as the Phase B1/B2 admin pagination.
+  const { data: countData } = await supabase.rpc(
+    "get_admin_seo_location_category_inventory_count",
+    rpcFilters,
+  );
+  const total = Number(countData ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+  const currentPage = parsePage(query.page, totalPages);
+  const { from } = rangeFor(currentPage);
 
-  const countryIds = new Set<string>();
-  const stateIds = new Set<string>();
-  const cityIds = new Set<string>();
-  const categoryIds = new Set<string>();
-  for (const key of counts.keys()) {
-    const [countryId, stateId, cityId, categoryId] = key.split("|");
-    countryIds.add(countryId);
-    stateIds.add(stateId);
-    cityIds.add(cityId);
-    categoryIds.add(categoryId);
-  }
+  const [{ data: inventoryData }, { data: filterOptionsData }] = await Promise.all([
+    supabase.rpc("get_admin_seo_location_category_inventory", {
+      ...rpcFilters,
+      p_sort: sort,
+      p_dir: dir,
+      p_limit: ADMIN_PAGE_SIZE,
+      p_offset: from,
+    }),
+    // Unfiltered by q/country/state/city/category — the dropdowns must
+    // always offer every option the inventory could contain, not just the
+    // options visible on the current filtered/paginated page.
+    supabase.rpc("get_admin_seo_location_category_filter_options"),
+  ]);
 
-  // Batched, scoped to only the ids actually referenced above — same
-  // `.in("id", ids)` pattern the existing city-pages admin page uses,
-  // avoids both N+1 queries and fetching the full reference tables.
-  const [{ data: countries }, { data: states }, { data: cities }, { data: categories }] =
-    await Promise.all([
-      countryIds.size
-        ? supabase.from("countries").select("id, name, slug").in("id", [...countryIds])
-        : Promise.resolve({ data: [] as Ref[] }),
-      stateIds.size
-        ? supabase.from("states").select("id, name, slug, country_id").in("id", [...stateIds])
-        : Promise.resolve({ data: [] as (Ref & { country_id: string })[] }),
-      cityIds.size
-        ? supabase.from("cities").select("id, name, slug, state_id").in("id", [...cityIds])
-        : Promise.resolve({ data: [] as (Ref & { state_id: string })[] }),
-      categoryIds.size
-        ? supabase.from("categories").select("id, name, slug").in("id", [...categoryIds])
-        : Promise.resolve({ data: [] as Ref[] }),
-    ]);
-
-  const countryById = new Map((countries ?? []).map((c) => [c.id, c]));
-  const stateById = new Map((states ?? []).map((s) => [s.id, s]));
-  const cityById = new Map((cities ?? []).map((c) => [c.id, c]));
-  const categoryById = new Map((categories ?? []).map((c) => [c.id, c]));
-
-  // SEO overrides for the (city, category) pairs referenced above — narrow,
-  // batched by the already-scoped id sets, same pattern as the reference
-  // lookups. Keyed for O(1) lookup while building rows below.
-  const { data: seoRows } = cityIds.size
-    ? await supabase
-        .from("location_category_seo")
-        .select("city_id, category_id, meta_title, meta_description")
-        .in("city_id", [...cityIds])
-    : { data: [] as { city_id: string; category_id: string; meta_title: string | null; meta_description: string | null }[] };
-  const seoByKey = new Map((seoRows ?? []).map((s) => [`${s.city_id}|${s.category_id}`, s]));
-
-  const allRows: Row[] = [];
-  for (const [key, count] of counts) {
-    const [countryId, stateId, cityId, categoryId] = key.split("|");
-    const country = countryById.get(countryId);
-    const state = stateById.get(stateId);
-    const city = cityById.get(cityId);
-    const category = categoryById.get(categoryId);
-    if (!country || !state || !city || !category) continue; // stale/inactive ref — skip, don't guess
-
-    const seo = seoByKey.get(`${cityId}|${categoryId}`);
-
-    allRows.push({
-      key,
-      cityId,
-      categoryId,
-      countryName: country.name,
-      countrySlug: country.slug,
-      stateName: state.name,
-      stateSlug: state.slug,
-      cityName: city.name,
-      citySlug: city.slug,
-      categoryName: category.name,
-      categorySlug: category.slug,
-      count,
-      // Same slug-based path shape as the public route
-      // (locations/[country]/[state]/[city]/[category]) and sitemap.ts.
-      url: `/locations/${country.slug}/${state.slug}/${city.slug}/${category.slug}`,
-      seoTitle: seo?.meta_title ?? null,
-      seoDescription: seo?.meta_description ?? null,
-    });
-  }
-
-  // Distinct filter options, derived from the same computed rows — no
-  // extra query. Kept scoped to what actually exists so the dropdowns
-  // never offer a combination with zero pages.
-  const filterCountries = uniqueBy(allRows, (r) => r.countrySlug, (r) => ({
-    slug: r.countrySlug,
-    name: r.countryName,
-  }));
-  const filterStates = uniqueBy(allRows, (r) => r.stateSlug, (r) => ({
-    slug: r.stateSlug,
-    name: r.stateName,
-    countrySlug: r.countrySlug,
-  }));
-  const filterCities = uniqueBy(allRows, (r) => r.citySlug, (r) => ({
-    slug: r.citySlug,
-    name: r.cityName,
-    stateSlug: r.stateSlug,
-  }));
-  const filterCategories = uniqueBy(allRows, (r) => r.categorySlug, (r) => ({
-    slug: r.categorySlug,
-    name: r.categoryName,
+  const inventoryRows = (inventoryData ?? []) as InventoryRpcRow[];
+  const pageRows: Row[] = inventoryRows.map((row) => ({
+    key: `${row.city_id}|${row.category_id}`,
+    cityId: row.city_id,
+    categoryId: row.category_id,
+    countryName: row.country_name,
+    countrySlug: row.country_slug,
+    stateName: row.state_name,
+    stateSlug: row.state_slug,
+    cityName: row.city_name,
+    citySlug: row.city_slug,
+    categoryName: row.category_name,
+    categorySlug: row.category_slug,
+    count: Number(row.location_count),
+    // Same slug-based path shape as the public route
+    // (locations/[country]/[state]/[city]/[category]) and sitemap.ts.
+    url: `/locations/${row.country_slug}/${row.state_slug}/${row.city_slug}/${row.category_slug}`,
+    seoTitle: row.seo_title,
+    seoDescription: row.seo_description,
   }));
 
-  let rows = allRows;
-  if (query.country) rows = rows.filter((r) => r.countrySlug === query.country);
-  if (query.state) rows = rows.filter((r) => r.stateSlug === query.state);
-  if (query.city) rows = rows.filter((r) => r.citySlug === query.city);
-  if (query.category) rows = rows.filter((r) => r.categorySlug === query.category);
-  if (q) {
-    rows = rows.filter(
-      (r) =>
-        r.cityName.toLowerCase().includes(q) ||
-        r.stateName.toLowerCase().includes(q) ||
-        r.categoryName.toLowerCase().includes(q) ||
-        r.countryName.toLowerCase().includes(q),
-    );
-  }
+  const filterOptionRows = (filterOptionsData ?? []) as FilterOptionsRpcRow[];
+  const filterCountries = uniqueBy(filterOptionRows, (r) => r.country_slug, (r) => ({
+    slug: r.country_slug,
+    name: r.country_name,
+  }));
+  const filterStates = uniqueBy(filterOptionRows, (r) => r.state_slug, (r) => ({
+    slug: r.state_slug,
+    name: r.state_name,
+    countrySlug: r.country_slug,
+  }));
+  const filterCities = uniqueBy(filterOptionRows, (r) => r.city_slug, (r) => ({
+    slug: r.city_slug,
+    name: r.city_name,
+    stateSlug: r.state_slug,
+  }));
+  const filterCategories = uniqueBy(filterOptionRows, (r) => r.category_slug, (r) => ({
+    slug: r.category_slug,
+    name: r.category_name,
+  }));
 
   const hasAnyFilter = Boolean(q || query.country || query.state || query.city || query.category);
-
-  const sortMultiplier = dir === "desc" ? -1 : 1;
-  rows = [...rows].sort((a, b) => {
-    if (sort === "count") return (a.count - b.count) * sortMultiplier;
-    if (sort === "category") return a.categoryName.localeCompare(b.categoryName) * sortMultiplier;
-    return a.cityName.localeCompare(b.cityName) * sortMultiplier;
-  });
-
-  const total = rows.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageRows = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   function hrefFor(overrides: Record<string, string | number | undefined>) {
     const params = new URLSearchParams();
@@ -293,9 +244,7 @@ export default async function LocationCategorySeoPage({ searchParams }: Props) {
 
       {pageRows.length === 0 ? (
         <p className="mt-6 text-sm text-muted-foreground">
-          {allRows.length === 0
-            ? "No Location + Category pages found."
-            : "No matching pages found."}
+          {total === 0 ? "No Location + Category pages found." : "No matching pages found."}
         </p>
       ) : (
         <>
@@ -371,29 +320,13 @@ export default async function LocationCategorySeoPage({ searchParams }: Props) {
             </TableBody>
           </Table>
 
-          <div className="mt-4 flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages} · {total} result{total === 1 ? "" : "s"}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                render={<Link href={hrefFor({ page: currentPage - 1 })} />}
-                variant="outline"
-                size="sm"
-                disabled={currentPage <= 1}
-              >
-                Previous
-              </Button>
-              <Button
-                render={<Link href={hrefFor({ page: currentPage + 1 })} />}
-                variant="outline"
-                size="sm"
-                disabled={currentPage >= totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <AdminPagination
+            hrefFor={(page) => hrefFor({ page })}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            total={total}
+            pageSize={ADMIN_PAGE_SIZE}
+          />
         </>
       )}
     </div>

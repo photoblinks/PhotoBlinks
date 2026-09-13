@@ -4,13 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteBlogPost, toggleBlogPostFeatured, toggleBlogPostStatus } from "./actions";
+import { AdminPagination } from "@/components/admin/pagination";
+import { ADMIN_PAGE_SIZE, parsePage, rangeFor } from "@/lib/admin/pagination";
 
-export default async function AdminBlogPage() {
+export default async function AdminBlogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
   const supabase = await createClient();
+
+  // Count first: the data query's range depends on the page clamped to this
+  // total, so it can't run in parallel without risking an out-of-range page
+  // silently returning an empty page — same rule as Phase B1.
+  const { count } = await supabase.from("blog_posts").select("id", { count: "exact", head: true });
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+  const currentPage = parsePage(pageParam, totalPages);
+  const { from, to } = rangeFor(currentPage);
+
   const { data: posts } = await supabase
     .from("blog_posts")
     .select("id, title, slug, status, is_featured, published_at, blog_categories(name)")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   return (
     <div>
@@ -80,6 +98,14 @@ export default async function AdminBlogPage() {
       </Table>
 
       {posts?.length === 0 && <p className="mt-6 text-sm text-muted-foreground">No blog posts yet.</p>}
+
+      <AdminPagination
+        hrefFor={(page) => `/admin/blog?page=${page}`}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={ADMIN_PAGE_SIZE}
+      />
     </div>
   );
 }

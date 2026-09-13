@@ -15,42 +15,87 @@ import { deleteLocation, toggleLocationPublished } from "./actions";
 import { formatPricing } from "@/lib/format";
 import { isSeoEligible, seoEligibilityLabel } from "@/lib/seo-eligibility";
 import { AdminListFilters } from "@/components/admin/admin-list-filters";
+import { AdminPagination } from "@/components/admin/pagination";
+import { ADMIN_PAGE_SIZE, parsePage, rangeFor } from "@/lib/admin/pagination";
+
+type LocationFilters = {
+  q?: string;
+  country?: string;
+  state?: string;
+  city?: string;
+  category?: string;
+};
 
 export default async function AdminLocationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; country?: string; state?: string; city?: string; category?: string }>;
+  searchParams: Promise<
+    LocationFilters & { page?: string }
+  >;
 }) {
-  const { q, country, state, city, category } = await searchParams;
+  const { q, country, state, city, category, page: pageParam } = await searchParams;
+  const filters: LocationFilters = { q, country, state, city, category };
   const supabase = await createClient();
 
-  let query = supabase
+  // Count first (same filters, no columns/joins): the data query's range
+  // depends on the page clamped to this total, so it can't run in parallel
+  // without risking an out-of-range page silently returning an empty page
+  // — same correctness rule as the Phase B1 moderation RPCs.
+  let countQuery = supabase.from("locations").select("id", { count: "exact", head: true });
+  if (q) countQuery = countQuery.ilike("name", `%${q}%`);
+  if (country) countQuery = countQuery.eq("country_id", country);
+  if (state) countQuery = countQuery.eq("state_id", state);
+  if (city) countQuery = countQuery.eq("city_id", city);
+  if (category) countQuery = countQuery.eq("category_id", category);
+  const { count } = await countQuery;
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+  const currentPage = parsePage(pageParam, totalPages);
+  const { from, to } = rangeFor(currentPage);
+
+  let dataQuery = supabase
     .from("locations")
     .select(
       "*, categories(name, slug), states(name), cities(name, slug), location_images(image_url, sort_order)",
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
+  if (q) dataQuery = dataQuery.ilike("name", `%${q}%`);
+  if (country) dataQuery = dataQuery.eq("country_id", country);
+  if (state) dataQuery = dataQuery.eq("state_id", state);
+  if (city) dataQuery = dataQuery.eq("city_id", city);
+  if (category) dataQuery = dataQuery.eq("category_id", category);
 
-  if (q) query = query.ilike("name", `%${q}%`);
-  if (country) query = query.eq("country_id", country);
-  if (state) query = query.eq("state_id", state);
-  if (city) query = query.eq("city_id", city);
-  if (category) query = query.eq("category_id", category);
-
-  const [{ data: locations }, { data: publishedForSeo }, { data: countries }, { data: states }, { data: categories }, { data: allLocationsForFilters }] =
+  const [{ data: locations }, { data: countries }, { data: states }, { data: categories }, { data: allLocationsForFilters }] =
     await Promise.all([
-      query,
-      // One grouped aggregate — not one query per row — for the City +
-      // Category SEO eligibility count shown alongside each location. Same
-      // rule as the Phase 3 inventory (src/lib/seo-eligibility.ts).
-      supabase.from("locations").select("city_id, category_id").eq("is_published", true),
+      dataQuery,
       supabase.from("countries").select("id, name").order("name"),
       supabase.from("states").select("id, name, country_id").order("name"),
       supabase.from("categories").select("id, name").order("sort_order"),
       // Unfiltered, so the City dropdown always offers every city that has
       // at least one location, regardless of the currently applied filters.
+      // Not part of the paginated location list — this is filter-option
+      // metadata for the whole table, so it isn't scoped to the current page.
       supabase.from("locations").select("cities(id, name, state_id)"),
     ]);
+
+  // City + Category SEO eligibility count shown alongside each location.
+  // Scoped to only the city/category ids present on this page (not every
+  // published location in the table) — narrowed from a full-table scan to
+  // the handful of ids this page actually needs, per the Phase B2 audit.
+  const pageCityIds = [...new Set((locations ?? []).map((l) => l.city_id).filter((v): v is string => Boolean(v)))];
+  const pageCategoryIds = [
+    ...new Set((locations ?? []).map((l) => l.category_id).filter((v): v is string => Boolean(v))),
+  ];
+  const { data: publishedForSeo } =
+    pageCityIds.length && pageCategoryIds.length
+      ? await supabase
+          .from("locations")
+          .select("city_id, category_id")
+          .eq("is_published", true)
+          .in("city_id", pageCityIds)
+          .in("category_id", pageCategoryIds)
+      : { data: [] as { city_id: string | null; category_id: string | null }[] };
 
   const seoCounts = new Map<string, number>();
   for (const location of publishedForSeo ?? []) {
@@ -181,6 +226,25 @@ export default async function AdminLocationsPage({
       {locations?.length === 0 && (
         <p className="mt-6 text-sm text-muted-foreground">No locations yet.</p>
       )}
+
+      <AdminPagination
+        hrefFor={(page) => hrefFor(filters, page)}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={ADMIN_PAGE_SIZE}
+      />
     </div>
   );
+}
+
+function hrefFor(filters: LocationFilters, page: number): string {
+  const params = new URLSearchParams();
+  if (filters.q) params.set("q", filters.q);
+  if (filters.country) params.set("country", filters.country);
+  if (filters.state) params.set("state", filters.state);
+  if (filters.city) params.set("city", filters.city);
+  if (filters.category) params.set("category", filters.category);
+  params.set("page", String(page));
+  return `/admin/locations?${params.toString()}`;
 }

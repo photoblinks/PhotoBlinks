@@ -9,27 +9,40 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AdminPagination } from "@/components/admin/pagination";
+import { ADMIN_PAGE_SIZE, parsePage, rangeFor } from "@/lib/admin/pagination";
 
-export default async function AdminStatePagesPage() {
+type StateRow = {
+  id: string;
+  name: string;
+  slug: string;
+  country_slug: string;
+  location_count: number;
+};
+
+export default async function AdminStatePagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
   const supabase = await createClient();
-  const { data: locations } = await supabase
-    .from("locations")
-    .select("state_id")
-    .eq("is_published", true);
 
-  const counts = new Map<string, number>();
-  for (const location of locations ?? []) {
-    counts.set(location.state_id, (counts.get(location.state_id) ?? 0) + 1);
-  }
-  const stateIds = [...counts.keys()];
+  // Count first: the inventory RPC's offset depends on the page clamped to
+  // this total, so it can't run in parallel with the list call without
+  // risking an out-of-range page silently returning an empty page — same
+  // correctness rule as Phase B1/B2/B3.
+  const { data: countData } = await supabase.rpc("get_admin_state_pages_inventory_count");
+  const total = Number(countData ?? 0);
+  const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
+  const currentPage = parsePage(pageParam, totalPages);
+  const { from } = rangeFor(currentPage);
 
-  const { data: states } = stateIds.length
-    ? await supabase
-        .from("states")
-        .select("id, name, slug, countries(slug)")
-        .in("id", stateIds)
-        .order("name")
-    : { data: [] as { id: string; name: string; slug: string; countries: unknown }[] };
+  const { data } = await supabase.rpc("get_admin_state_pages_inventory", {
+    p_limit: ADMIN_PAGE_SIZE,
+    p_offset: from,
+  });
+  const states = (data ?? []) as StateRow[];
 
   return (
     <div>
@@ -51,15 +64,13 @@ export default async function AdminStatePagesPage() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {states?.map((state) => {
-            const country = Array.isArray(state.countries) ? state.countries[0] : state.countries;
-            const countrySlug = (country as { slug: string } | null)?.slug ?? "";
-            const path = `/locations/${countrySlug}/${state.slug}`;
+          {states.map((state) => {
+            const path = `/locations/${state.country_slug}/${state.slug}`;
             return (
               <TableRow key={state.id}>
                 <TableCell className="font-medium">{state.name}</TableCell>
                 <TableCell className="text-muted-foreground">{path}</TableCell>
-                <TableCell>{counts.get(state.id) ?? 0}</TableCell>
+                <TableCell>{state.location_count}</TableCell>
                 <TableCell className="flex justify-end gap-2">
                   <Button render={<Link href={path} target="_blank" />} variant="outline" size="sm">
                     View page
@@ -78,11 +89,19 @@ export default async function AdminStatePagesPage() {
         </TableBody>
       </Table>
 
-      {(!states || states.length === 0) && (
+      {states.length === 0 && (
         <p className="mt-6 text-sm text-muted-foreground">
           No state pages yet — publish a location first.
         </p>
       )}
+
+      <AdminPagination
+        hrefFor={(page) => `/admin/state-pages?page=${page}`}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        total={total}
+        pageSize={ADMIN_PAGE_SIZE}
+      />
     </div>
   );
 }
