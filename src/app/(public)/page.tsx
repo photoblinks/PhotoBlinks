@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import {
   getActiveCategories,
@@ -18,38 +19,54 @@ import { StudioCard } from "@/components/public/studio-card";
 import { AboutSection } from "@/components/public/about-section";
 import { JsonLd } from "@/components/public/json-ld";
 import { DEFAULT_OG_IMAGE, buildOrganizationJsonLd, buildWebSiteJsonLd } from "@/lib/jsonld";
+import { hasIndexAffectingParams } from "@/lib/seo-eligibility";
 
-export const metadata: Metadata = {
-  title: "Pre-Wedding Photoshoot Locations in India",
-  description:
-    "Discover pre-wedding photoshoot locations across India — beaches, waterfalls, temples, hills, and more. Browse by state, city, or category.",
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: "PhotoBlinks — Pre-Wedding Photoshoot Locations in India",
+type HomeSearchParams = Promise<{
+  q?: string;
+  state?: string;
+  city?: string;
+  category?: string;
+  pricing?: string;
+  drone?: string;
+  lat?: string;
+  lng?: string;
+}>;
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: HomeSearchParams;
+}): Promise<Metadata> {
+  const query = await searchParams;
+
+  return {
+    title: "Pre-Wedding Photoshoot Locations in India",
     description:
-      "Discover pre-wedding photoshoot locations across India — beaches, waterfalls, temples, hills, and more.",
-    url: "/",
-    siteName: "PhotoBlinks",
-    type: "website",
-    images: [DEFAULT_OG_IMAGE],
-  },
-};
+      "Discover pre-wedding photoshoot locations across India — beaches, waterfalls, temples, hills, and more. Browse by state, city, or category.",
+    alternates: { canonical: "/" },
+    openGraph: {
+      title: "PhotoBlinks — Pre-Wedding Photoshoot Locations in India",
+      description:
+        "Discover pre-wedding photoshoot locations across India — beaches, waterfalls, temples, hills, and more.",
+      url: "/",
+      siteName: "PhotoBlinks",
+      type: "website",
+      images: [DEFAULT_OG_IMAGE],
+    },
+    // Filter/search query variants (?state=, ?city=, ?category=, ?pricing=,
+    // ?drone=, ?q=, ?lat=/?lng=) are noindexed since they canonicalize to
+    // this same clean "/" URL and aren't meant to be standalone landing
+    // pages — see seo-eligibility.ts.
+    ...(hasIndexAffectingParams(query) ? { robots: { index: false, follow: true } } : {}),
+  };
+}
 
 const PREVIEW_COUNT = 4;
 
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    q?: string;
-    state?: string;
-    city?: string;
-    category?: string;
-    pricing?: string;
-    drone?: string;
-    lat?: string;
-    lng?: string;
-  }>;
+  searchParams: HomeSearchParams;
 }) {
   const params = await searchParams;
   const [states, cities, categories, siteSettings, locationCount, featuredImageUrl] =
@@ -125,19 +142,29 @@ export default async function HomePage({
         />
       </div>
 
-      {hasFilters ? (
-        <FilteredResults
-          categoryId={selectedCategory?.id}
-          stateId={selectedState?.id}
-          cityId={selectedCity?.id}
-          pricingType={pricingType}
-          droneStatus={droneStatus}
-          near={near}
-          search={search}
-        />
-      ) : (
-        <BrowseByCategory categories={categories} />
-      )}
+      {/* The hero and filter form above don't depend on the results below,
+          so a Suspense boundary here lets Next.js flush that shell to the
+          client immediately and stream this section in once its (cached)
+          data query resolves, instead of blocking the whole response on it.
+          `searchParams` is still read above to build the filter's `initial`
+          values, which keeps the route itself dynamic regardless — see the
+          F6 report for why that's unavoidable without enabling Next.js's
+          experimental Partial Prerendering. */}
+      <Suspense fallback={<ResultsSkeleton />}>
+        {hasFilters ? (
+          <FilteredResults
+            categoryId={selectedCategory?.id}
+            stateId={selectedState?.id}
+            cityId={selectedCity?.id}
+            pricingType={pricingType}
+            droneStatus={droneStatus}
+            near={near}
+            search={search}
+          />
+        ) : (
+          <BrowseByCategory categories={categories} />
+        )}
+      </Suspense>
 
       <AboutSection
         locationCount={locationCount}
@@ -147,6 +174,20 @@ export default async function HomePage({
 
       <JsonLd data={buildWebSiteJsonLd()} />
       <JsonLd data={buildOrganizationJsonLd()} />
+    </div>
+  );
+}
+
+/** Matches the FilteredResults/BrowseByCategory grid's column count and
+ * card aspect ratio so streaming this section in doesn't shift layout. */
+function ResultsSkeleton() {
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6" aria-hidden="true">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+        {Array.from({ length: PREVIEW_COUNT }).map((_, index) => (
+          <div key={index} className="aspect-square animate-pulse rounded-2xl bg-muted sm:aspect-4/3" />
+        ))}
+      </div>
     </div>
   );
 }

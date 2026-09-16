@@ -15,7 +15,7 @@ import { HomeFilter } from "@/components/public/home-filter";
 import { LocationCard } from "@/components/public/location-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
-import { isSeoEligible } from "@/lib/seo-eligibility";
+import { hasIndexAffectingParams, isSeoEligible } from "@/lib/seo-eligibility";
 
 type Props = {
   params: Promise<{ country: string }>;
@@ -40,8 +40,9 @@ const loadCountryPage = cache(async (countrySlug: string) => {
   return { country, locations };
 });
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { country: countrySlug } = await params;
+  const query = await searchParams;
   const data = await loadCountryPage(countrySlug);
   if (!data) return {};
 
@@ -65,8 +66,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Below the SEO eligibility threshold the page still renders for
     // product/UX purposes but shouldn't be indexed — see seo-eligibility.ts.
     // Never affects the country's individual location pages, which are
-    // always indexable when published.
-    ...(isSeoEligible(data.locations.length) ? {} : { robots: { index: false, follow: true } }),
+    // always indexable when published. Filter/search query variants
+    // (?state=, ?city=, ?category=, ?pricing=, ?drone=, ?q=) are noindexed
+    // too, since they canonicalize to this same clean URL and aren't meant
+    // to be standalone landing pages.
+    ...(isSeoEligible(data.locations.length) && !hasIndexAffectingParams(query)
+      ? {}
+      : { robots: { index: false, follow: true } }),
   };
 }
 

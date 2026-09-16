@@ -19,10 +19,12 @@ import { JsonLd } from "@/components/public/json-ld";
 import { LocationFactsStrip } from "@/components/public/location-facts-strip";
 import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
 import {
+  buildGeoDefaultDescription,
   buildStateCategoryDefaultDescription,
   buildStateCategoryDefaultTitle,
+  extractCategoryNames,
 } from "@/lib/seo-templates";
-import { isSeoEligible } from "@/lib/seo-eligibility";
+import { hasIndexAffectingParams, isSeoEligible } from "@/lib/seo-eligibility";
 import { summarizeLocationFacts } from "@/lib/location-facts";
 
 type Props = {
@@ -67,16 +69,26 @@ const loadSegmentPage = cache(async (countrySlug: string, stateSlug: string, slu
   return { kind: "stateCategory" as const, state, category, locations, seo, cities, categories };
 });
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { country: countrySlug, state: stateSlug, city: slug } = await params;
+  const query = await searchParams;
   const data = await loadSegmentPage(countrySlug, stateSlug, slug);
   if (!data) return {};
 
   if (data.kind === "city") {
+    // `city`'s query param is inert here — the city is fixed by the URL
+    // segment and this branch never reads it — so only the filters that
+    // actually change the result set count toward noindexing.
+    const isFiltered = hasIndexAffectingParams({
+      q: query.q,
+      category: query.category,
+      pricing: query.pricing,
+      drone: query.drone,
+    });
     const title = data.city.meta_title || `Pre-Wedding Photoshoot Locations in ${data.city.name}`;
     const description =
       data.city.meta_description ||
-      `Explore pre-wedding photoshoot locations in ${data.city.name}, ${data.state.name}, including beaches, temples, waterfalls, hills and other scenic locations.`;
+      buildGeoDefaultDescription(data.city.name, data.state.name, extractCategoryNames(data.locations));
     const path = `/locations/${countrySlug}/${data.state.slug}/${data.city.slug}`;
 
     return {
@@ -94,8 +106,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       // Below the SEO eligibility threshold the page still renders for
       // product/UX purposes but shouldn't be indexed — see
       // seo-eligibility.ts. Never affects the city's individual location
-      // pages, which are always indexable when published.
-      ...(isSeoEligible(data.locations.length) ? {} : { robots: { index: false, follow: true } }),
+      // pages, which are always indexable when published. Filter/search
+      // query variants are noindexed too, since they canonicalize to this
+      // same clean URL.
+      ...(isSeoEligible(data.locations.length) && !isFiltered
+        ? {}
+        : { robots: { index: false, follow: true } }),
     };
   }
 
@@ -120,7 +136,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     // Below the SEO eligibility threshold the page still renders for
     // product/UX purposes but shouldn't be indexed — see seo-eligibility.ts.
-    ...(isSeoEligible(data.locations.length) ? {} : { robots: { index: false, follow: true } }),
+    // Filter/search query variants (?city=, ?category=, ?pricing=, ?drone=,
+    // ?q=) are noindexed too, since they canonicalize to this same clean URL.
+    ...(isSeoEligible(data.locations.length) &&
+    !hasIndexAffectingParams({
+      q: query.q,
+      city: query.city,
+      category: query.category,
+      pricing: query.pricing,
+      drone: query.drone,
+    })
+      ? {}
+      : { robots: { index: false, follow: true } }),
   };
 }
 
@@ -413,12 +440,16 @@ function BrowseCity({
   }
   const categories = [...categoryMap.values()].sort((a, b) => a.name.localeCompare(b.name));
   const grouped = groupLocationsByCategory(locations);
+  const categoryNames = extractCategoryNames(locations);
 
   return (
     <>
       <p className="mb-2 max-w-2xl text-muted-foreground">
-        Explore pre-wedding photoshoot locations in {city.name}, {state.name}, including{" "}
-        {categories.map((c) => c.name.toLowerCase()).join(", ")} and other scenic spots.
+        {categoryNames.length > 0
+          ? `Explore pre-wedding photoshoot locations in ${city.name}, ${state.name}, including ${categoryNames
+              .map((name) => name.toLowerCase())
+              .join(", ")}.`
+          : `Explore pre-wedding photoshoot locations in ${city.name}, ${state.name}.`}
       </p>
 
       <div className="mt-8">

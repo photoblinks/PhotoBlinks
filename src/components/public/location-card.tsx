@@ -6,9 +6,27 @@ import { formatDistanceKm } from "@/lib/geo";
 import type { PublicLocationCard } from "@/lib/public-data";
 import { FavouriteButton } from "./favourite-button";
 
-export function LocationCard({ location }: { location: PublicLocationCard }) {
-  return (
-    <Link href={`/location/${location.slug}`} className="group flex flex-col gap-3">
+/** Optional props are only used by the photographer share feature; omitted
+ * everywhere else, where the card renders exactly as before.
+ * - `href`: override the link target (/c/[token]/location/[slug]).
+ * - `actions`: rendered below the card, outside its link; the card then opens
+ *   in a new tab (the Share Location picker). */
+export function LocationCard({
+  location,
+  href,
+  actions,
+}: {
+  location: PublicLocationCard;
+  href?: string;
+  actions?: React.ReactNode;
+}) {
+  const card = (
+    <Link
+      href={href ?? `/location/${location.slug}`}
+      className="group flex flex-col gap-3"
+      // In the picker, leaving the page would drop the in-progress selection.
+      {...(actions ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+    >
       <div className="relative aspect-square overflow-hidden rounded-2xl bg-muted sm:aspect-4/3">
         <FavouriteButton locationId={location.id} className="absolute top-3 right-3 z-10" />
         {location.primaryImageUrl ? (
@@ -53,5 +71,14 @@ export function LocationCard({ location }: { location: PublicLocationCard }) {
         )}
       </div>
     </Link>
+  );
+
+  if (!actions) return card;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {card}
+      {actions}
+    </div>
   );
 }

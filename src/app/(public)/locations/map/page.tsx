@@ -12,38 +12,52 @@ import { LocationsMap } from "@/components/public/locations-map";
 import { MapFiltersDrawer } from "@/components/public/map-filters-drawer";
 import { getCategoryMarkerStyle } from "@/lib/category-style";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
+import { hasIndexAffectingParams } from "@/lib/seo-eligibility";
 
 const TITLE = "Pre-Wedding Photoshoot Locations Map";
 const DESCRIPTION =
   "Browse pre-wedding photoshoot locations on an interactive map — filter by state, city, category, and pricing to find your next shoot location.";
 
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: "/locations/map" },
-  openGraph: {
-    title: `${TITLE} | PhotoBlinks`,
+type MapSearchParams = Promise<{
+  q?: string;
+  state?: string;
+  city?: string;
+  category?: string;
+  pricing?: string;
+  drone?: string;
+  lat?: string;
+  lng?: string;
+}>;
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: MapSearchParams;
+}): Promise<Metadata> {
+  const query = await searchParams;
+
+  return {
+    title: TITLE,
     description: DESCRIPTION,
-    url: "/locations/map",
-    siteName: "PhotoBlinks",
-    type: "website",
-    images: [DEFAULT_OG_IMAGE],
-  },
-};
+    alternates: { canonical: "/locations/map" },
+    openGraph: {
+      title: `${TITLE} | PhotoBlinks`,
+      description: DESCRIPTION,
+      url: "/locations/map",
+      siteName: "PhotoBlinks",
+      type: "website",
+      images: [DEFAULT_OG_IMAGE],
+    },
+    // Filter query variants are noindexed since they canonicalize to this
+    // same clean URL and aren't meant to be standalone landing pages.
+    ...(hasIndexAffectingParams(query) ? { robots: { index: false, follow: true } } : {}),
+  };
+}
 
 export default async function LocationsMapPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    q?: string;
-    state?: string;
-    city?: string;
-    category?: string;
-    pricing?: string;
-    drone?: string;
-    lat?: string;
-    lng?: string;
-  }>;
+  searchParams: MapSearchParams;
 }) {
   const params = await searchParams;
   const [states, cities, categories] = await Promise.all([

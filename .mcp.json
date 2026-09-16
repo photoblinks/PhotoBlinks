@@ -8,6 +8,17 @@
       ],
       "cwd": "C:\\Users\\shubi\\OneDrive\\Desktop\\PhotoBlinks",
       "type": "stdio"
+    },
+    "serena": {
+      "command": "C:\\Users\\shubi\\.local\\bin\\serena.exe",
+      "args": [
+        "start-mcp-server",
+        "--context",
+        "ide",
+        "--project",
+        "C:\\Users\\shubi\\OneDrive\\Desktop\\PhotoBlinks"
+      ],
+      "type": "stdio"
     }
   }
 }

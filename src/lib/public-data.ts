@@ -385,6 +385,68 @@ export async function getSharedFavouriteLocationIds(token: string): Promise<stri
   return (data ?? []).map((row: { location_id: string }) => row.location_id);
 }
 
+/** 32 random bytes, base64url — the only shape a real share token can have. */
+const SHARE_TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+
+export type SharedLocationCollection = {
+  name: string;
+  displayName: string;
+  studioName: string | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  phoneNumber: string;
+  whatsappNumber: string | null;
+  /** Currently-published location ids, in the photographer's saved order. */
+  locationIds: string[];
+};
+
+/** Resolves a photographer share token (/c/[token]) through the
+ * get_shared_location_collection() SECURITY DEFINER function — the
+ * collection tables have no public read policy (see
+ * 20260915000000_photographer_location_collections.sql). Returns null for an
+ * unknown/deleted token or a suspended photographer. Not unstable_cache-
+ * wrapped, same reason as getSharedFavouriteLocationIds: edits and deletes
+ * must take effect on the shared link immediately. React cache() only dedupes
+ * the metadata + page reads within one request. */
+export const getSharedLocationCollection = cache(async (token: string): Promise<SharedLocationCollection | null> => {
+  if (!SHARE_TOKEN_RE.test(token)) return null;
+  const supabase = createPublicClient();
+  const { data } = await supabase.rpc("get_shared_location_collection", { p_token: token }).maybeSingle<{
+    name: string;
+    display_name: string;
+    studio_name: string | null;
+    bio: string | null;
+    avatar_url: string | null;
+    phone_number: string;
+    whatsapp_number: string | null;
+    location_ids: string[];
+  }>();
+  if (!data) return null;
+  return {
+    name: data.name,
+    displayName: data.display_name,
+    studioName: data.studio_name,
+    bio: data.bio,
+    avatarUrl: data.avatar_url,
+    phoneNumber: data.phone_number,
+    whatsappNumber: data.whatsapp_number,
+    locationIds: data.location_ids ?? [],
+  };
+});
+
+/** True only when `token` is an active share link AND the published location
+ * with exactly `slug` belongs to it. Not cached, for the same reason as
+ * getSharedLocationCollection. */
+export async function sharedLocationCollectionHasLocation(token: string, slug: string): Promise<boolean> {
+  if (!SHARE_TOKEN_RE.test(token)) return false;
+  const supabase = createPublicClient();
+  const { data } = await supabase.rpc("shared_location_collection_has_location", {
+    p_token: token,
+    p_slug: slug,
+  });
+  return data === true;
+}
+
 export const LOCATION_COMMENTS_PAGE_SIZE = 10;
 
 export type PublicLocationComment = {
@@ -974,6 +1036,34 @@ export const getActiveBlogCategories = unstable_cache(
   },
   ["getActiveBlogCategories"],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
+export type PublicBlogCategoryDetail = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  is_active: boolean;
+};
+
+/** A single active blog category by slug, for the dedicated
+ * /blog/category/[slug] landing page — or null if it doesn't exist / isn't
+ * active. Same shape as location's getCategoryBySlug. */
+export const getBlogCategoryBySlug = cache(
+  unstable_cache(
+    async (slug: string): Promise<PublicBlogCategoryDetail | null> => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("blog_categories")
+        .select("id, name, slug, description, is_active")
+        .eq("slug", slug)
+        .eq("is_active", true)
+        .maybeSingle();
+      return data ?? null;
+    },
+    ["getBlogCategoryBySlug"],
+    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  ),
 );
 
 /** Published posts in one category, newest first. Returns an empty array

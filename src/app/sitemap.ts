@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import {
+  getActiveBlogCategories,
   getActiveCategories,
   getPublishedLocations,
   getPublishedStudios,
@@ -22,11 +23,12 @@ function latest(dates: string[]) {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [locations, studios, categories, blogPosts] = await Promise.all([
+  const [locations, studios, categories, blogPosts, blogCategories] = await Promise.all([
     getPublishedLocations(),
     getPublishedStudios(),
     getActiveCategories(),
     getPublishedBlogPostsForSitemap(),
+    getActiveBlogCategories(),
   ]);
 
   const entries: MetadataRoute.Sitemap = [
@@ -56,6 +58,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: location.updatedAt,
       changeFrequency: "weekly",
       priority: 0.7,
+    });
+  }
+
+  // Dedicated per-category blog landing pages (/blog/category/[slug]) — the
+  // F7 clean-URL replacement for the old ?category= query variant, which
+  // was never sitemap-eligible.
+  for (const category of blogCategories) {
+    entries.push({
+      url: `${SITE_URL}/blog/category/${category.slug}`,
+      changeFrequency: "weekly",
+      priority: 0.5,
     });
   }
 

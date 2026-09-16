@@ -16,7 +16,7 @@ import { JsonLd } from "@/components/public/json-ld";
 import { LocationFactsStrip } from "@/components/public/location-facts-strip";
 import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
 import { buildCategoryCityDefaultDescription, buildCategoryCityDefaultTitle } from "@/lib/seo-templates";
-import { isSeoEligible } from "@/lib/seo-eligibility";
+import { hasIndexAffectingParams, isSeoEligible } from "@/lib/seo-eligibility";
 import { summarizeLocationFacts } from "@/lib/location-facts";
 
 type Props = {
@@ -58,8 +58,9 @@ const loadCategoryPage = cache(
   },
 );
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { country: countrySlug, state: stateSlug, city: citySlug, category: categorySlug } = await params;
+  const query = await searchParams;
   const data = await loadCategoryPage(countrySlug, stateSlug, citySlug, categorySlug);
   if (!data) return {};
 
@@ -84,7 +85,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     // Below the SEO eligibility threshold the page still renders for
     // product/UX purposes but shouldn't be indexed — see seo-eligibility.ts.
-    ...(isSeoEligible(data.locations.length) ? {} : { robots: { index: false, follow: true } }),
+    // The "?city=", "?category=", "?pricing=", "?drone=", "?q=" preview
+    // filters never change this page's canonical/title/description (see the
+    // Props comment above), but a variant that uses them is still noindexed
+    // so the preview URL itself doesn't compete with the clean page.
+    ...(isSeoEligible(data.locations.length) &&
+    !hasIndexAffectingParams({
+      q: query.q,
+      city: query.city,
+      category: query.category,
+      pricing: query.pricing,
+      drone: query.drone,
+    })
+      ? {}
+      : { robots: { index: false, follow: true } }),
   };
 }
 

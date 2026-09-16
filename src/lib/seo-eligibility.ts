@@ -21,6 +21,18 @@ export function seoEligibilityLabel(publishedLocationCount: number): string {
   return `Needs ${remaining} more`;
 }
 
+/** True when any of the given search/filter query values is non-empty.
+ * Used to noindex (but still follow) query-parameter variants of an
+ * aggregation page — e.g. `?category=beach` or `?q=goa` — that are not
+ * meant to be standalone SEO landing pages. Only pass the keys that are
+ * genuine filter/search parameters for the route calling this; pagination
+ * or other non-filtering params must be excluded by the caller. The clean
+ * base URL (no query params) keeps its normal isSeoEligible-based
+ * indexability — this only ever adds a noindex on top, never removes one. */
+export function hasIndexAffectingParams(query: Record<string, string | undefined>): boolean {
+  return Object.values(query).some((value) => typeof value === "string" && value.trim() !== "");
+}
+
 type GeoGroupableLocation = {
   country: { name: string; slug: string } | null;
   state: { name: string; slug: string } | null;

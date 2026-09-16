@@ -15,7 +15,8 @@ import { HomeFilter } from "@/components/public/home-filter";
 import { LocationCard } from "@/components/public/location-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
-import { isSeoEligible } from "@/lib/seo-eligibility";
+import { hasIndexAffectingParams, isSeoEligible } from "@/lib/seo-eligibility";
+import { buildGeoDefaultDescription, extractCategoryNames } from "@/lib/seo-templates";
 
 type Props = {
   params: Promise<{ country: string; state: string }>;
@@ -33,15 +34,16 @@ const loadStatePage = cache(async (countrySlug: string, stateSlug: string) => {
   return { state, locations };
 });
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { country: countrySlug, state: stateSlug } = await params;
+  const query = await searchParams;
   const data = await loadStatePage(countrySlug, stateSlug);
   if (!data) return {};
 
   const title = data.state.meta_title || `Pre-Wedding Photoshoot Locations in ${data.state.name}`;
   const description =
     data.state.meta_description ||
-    `Explore pre-wedding photoshoot locations in ${data.state.name}, including beaches, temples, waterfalls, hills and other scenic spots.`;
+    buildGeoDefaultDescription(data.state.name, null, extractCategoryNames(data.locations));
   const path = `/locations/${countrySlug}/${data.state.slug}`;
 
   return {
@@ -59,8 +61,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Below the SEO eligibility threshold the page still renders for
     // product/UX purposes but shouldn't be indexed — see seo-eligibility.ts.
     // Never affects the state's individual location pages, which are always
-    // indexable when published.
-    ...(isSeoEligible(data.locations.length) ? {} : { robots: { index: false, follow: true } }),
+    // indexable when published. Filter/search query variants (?city=,
+    // ?category=, ?pricing=, ?drone=, ?q=) are noindexed too, since they
+    // canonicalize to this same clean URL.
+    ...(isSeoEligible(data.locations.length) && !hasIndexAffectingParams(query)
+      ? {}
+      : { robots: { index: false, follow: true } }),
   };
 }
 
@@ -227,12 +233,16 @@ function BrowseState({
   const cities = [...cityMap.values()].sort((a, b) => a.name.localeCompare(b.name));
   const categories = [...categoryMap.values()].sort((a, b) => a.name.localeCompare(b.name));
   const grouped = groupLocationsByCategory(locations);
+  const categoryNames = extractCategoryNames(locations);
 
   return (
     <>
       <p className="mb-2 max-w-2xl text-muted-foreground">
-        Explore pre-wedding photoshoot locations in {state.name}, including{" "}
-        {categories.map((c) => c.name.toLowerCase()).join(", ")} and other scenic spots.
+        {categoryNames.length > 0
+          ? `Explore pre-wedding photoshoot locations in ${state.name}, including ${categoryNames
+              .map((name) => name.toLowerCase())
+              .join(", ")}.`
+          : `Explore pre-wedding photoshoot locations in ${state.name}.`}
       </p>
 
       {cities.length > 0 && (

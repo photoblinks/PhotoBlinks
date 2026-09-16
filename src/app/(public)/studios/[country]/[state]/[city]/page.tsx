@@ -6,6 +6,7 @@ import { StudioCard } from "@/components/public/studio-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { StudioSearch } from "@/components/public/studio-search";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
+import { hasIndexAffectingParams } from "@/lib/seo-eligibility";
 
 type Props = {
   params: Promise<{ country: string; state: string; city: string }>;
@@ -29,8 +30,9 @@ const loadCityPage = cache(async (countrySlug: string, stateSlug: string, citySl
   return { state, city, studios };
 });
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { country: countrySlug, state: stateSlug, city: citySlug } = await params;
+  const query = await searchParams;
   const data = await loadCityPage(countrySlug, stateSlug, citySlug);
   if (!data) return {};
 
@@ -50,6 +52,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       images: [DEFAULT_OG_IMAGE],
     },
+    // The "?q=" search variant is noindexed since it canonicalizes to this
+    // same clean URL and isn't meant to be its own landing page.
+    ...(hasIndexAffectingParams(query) ? { robots: { index: false, follow: true } } : {}),
   };
 }
 

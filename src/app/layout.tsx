@@ -5,6 +5,7 @@ import "./globals.css";
 import { SITE_URL } from "@/lib/site-url";
 
 const GA_MEASUREMENT_ID = "G-GJEBVWSMWF";
+const CLARITY_PROJECT_ID = "yi1lly61d1";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -73,6 +74,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
           gtag('config', '${GA_MEASUREMENT_ID}');
+        `}
+      </Script>
+      {/* Microsoft Clarity: beforeInteractive so the snippet is injected into
+          the initial HTML <head> (Clarity's official install requirement),
+          matching the site-wide GA scripts that live in this root layout. */}
+      <Script id="clarity" strategy="beforeInteractive">
+        {`
+          (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+          })(window, document, "clarity", "script", '${CLARITY_PROJECT_ID}');
         `}
       </Script>
     </html>

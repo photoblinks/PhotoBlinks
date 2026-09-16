@@ -70,6 +70,12 @@ export default async function PhotographerShellLayout({
               Profile
             </Link>
             <Link
+              href="/photographer/share-location"
+              className="rounded-md px-2 py-1.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Share Location
+            </Link>
+            <Link
               href="/"
               className="rounded-md px-2 py-1.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
             >

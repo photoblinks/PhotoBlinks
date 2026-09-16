@@ -28,7 +28,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const post = await getPublishedBlogPostBySlug(slug);
   if (!post) return {};
 
-  const title = post.metaTitle || `${post.title} | PhotoBlinks Blog`;
+  // Plain fallback (no manual brand suffix) so the root layout's title
+  // template ("%s | PhotoBlinks", see src/app/layout.tsx) appends it exactly
+  // once — the old "${post.title} | PhotoBlinks Blog" fallback rendered as
+  // "Article | PhotoBlinks Blog | PhotoBlinks" once the template ran. An
+  // admin-supplied metaTitle still goes through the template unchanged, same
+  // as it always has. Open Graph isn't templated, so its title is computed
+  // separately to keep the OG title exactly what it rendered before this fix.
+  const title = post.metaTitle || post.title;
+  const ogTitle = post.metaTitle || `${post.title} | PhotoBlinks Blog`;
   const description = post.metaDescription || post.excerpt || post.title;
   // Only ever an R2-hosted image URL (validated at write time and again
   // here) ever reaches Open Graph — never an attacker-controlled host.
@@ -39,7 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
-      title,
+      title: ogTitle,
       description,
       url: `/blog/${post.slug}`,
       siteName: "PhotoBlinks",
@@ -88,7 +96,7 @@ export default async function BlogPostPage({ params }: Props) {
   const breadcrumbItems = [
     { name: "Home", path: "/" },
     { name: "Blog", path: "/blog" },
-    ...(post.category ? [{ name: post.category.name, path: `/blog?category=${post.category.slug}` }] : []),
+    ...(post.category ? [{ name: post.category.name, path: `/blog/category/${post.category.slug}` }] : []),
     { name: post.title, path: `/blog/${post.slug}` },
   ];
 
@@ -101,7 +109,7 @@ export default async function BlogPostPage({ params }: Props) {
       <header className="mb-6">
         {post.category && (
           <Link
-            href={`/blog?category=${post.category.slug}`}
+            href={`/blog/category/${post.category.slug}`}
             className="text-xs font-semibold uppercase tracking-wide text-pb-brand hover:underline"
           >
             {post.category.name}

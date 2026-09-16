@@ -14,15 +14,16 @@ import { LocationCard } from "@/components/public/location-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { JsonLd } from "@/components/public/json-ld";
 import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
-import { isSeoEligible } from "@/lib/seo-eligibility";
+import { hasIndexAffectingParams, isSeoEligible } from "@/lib/seo-eligibility";
 
 type Props = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ q?: string; state?: string; city?: string; pricing?: string; drone?: string }>;
 };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const query = await searchParams;
   const category = await getCategoryBySlug(slug);
   if (!category) return {};
 
@@ -52,7 +53,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     // Below the SEO eligibility threshold the page still renders for
     // product/UX purposes but shouldn't be indexed — see seo-eligibility.ts.
-    ...(isSeoEligible(locations.length) ? {} : { robots: { index: false, follow: true } }),
+    // Filter/search query variants (?state=, ?city=, ?pricing=, ?drone=,
+    // ?q=) are noindexed too, since they canonicalize to this same clean URL.
+    ...(isSeoEligible(locations.length) && !hasIndexAffectingParams(query)
+      ? {}
+      : { robots: { index: false, follow: true } }),
   };
 }
 
