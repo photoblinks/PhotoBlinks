@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -19,6 +20,8 @@ export default async function AdminCountryPagesPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  await requireAdminPage();
+
   const { page: pageParam } = await searchParams;
   const supabase = await createClient();
 

@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { BlogCategoryForm } from "../blog-category-form";
 import { createBlogCategory } from "../actions";
 
@@ -6,6 +7,8 @@ export default async function NewBlogCategoryPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  await requireAdminPage();
+
   const { error } = await searchParams;
 
   return (

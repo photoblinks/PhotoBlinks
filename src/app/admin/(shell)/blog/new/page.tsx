@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { BlogPostForm } from "../blog-post-form";
 import { createBlogPost } from "../actions";
 
@@ -8,6 +9,8 @@ export default async function NewBlogPostPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  await requireAdminPage();
+
   const { error } = await searchParams;
   const supabase = await createClient();
 

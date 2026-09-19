@@ -15,9 +15,17 @@ export async function login(formData: FormData) {
     redirect(`/admin/login?error=${encodeURIComponent("Invalid email or password.")}`);
   }
 
-  if (!(await isAdminUser(supabase, data.user.id))) {
-    await supabase.auth.signOut();
-    redirect(`/admin/login?error=${encodeURIComponent("This account is not an admin.")}`);
+  // Legacy admins and active employees are both admitted; module-level access
+  // is enforced server-side downstream (per-page and per-action), never here.
+  const isAdmin = await isAdminUser(supabase, data.user.id);
+  if (!isAdmin) {
+    const { data: isEmployee } = await supabase.rpc("is_employee");
+    if (isEmployee !== true) {
+      await supabase.auth.signOut();
+      redirect(
+        `/admin/login?error=${encodeURIComponent("This account does not have access to the admin panel.")}`,
+      );
+    }
   }
 
   redirect("/admin");

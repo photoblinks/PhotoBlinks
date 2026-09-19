@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { GalleryUploader } from "@/components/admin/gallery-uploader";
 import { Field, FieldGroup, FieldLabel, FieldDescription, FieldError } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,8 @@ export default async function AdminSettingsPage({
 }: {
   searchParams: Promise<{ error?: string; saved?: string }>;
 }) {
+  await requireAdminPage();
+
   const { error, saved } = await searchParams;
   const supabase = await createClient();
   const { data: bannerImages, error: bannerError } = await supabase

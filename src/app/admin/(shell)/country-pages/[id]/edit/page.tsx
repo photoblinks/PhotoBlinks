@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { GeoPageForm } from "@/components/admin/geo-page-form";
 import { updateCountryPage } from "../../actions";
 
@@ -10,6 +11,8 @@ export default async function EditCountryPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
+  await requireAdminPage();
+
   const { id } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();

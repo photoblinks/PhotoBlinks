@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { LocationForm } from "../../location-form";
 import { updateLocation } from "../../actions";
 
@@ -8,6 +9,8 @@ export default async function EditLocationPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireModulePage([PERMISSION.LOCATIONS_EDIT]);
+
   const { id } = await params;
   const supabase = await createClient();
 

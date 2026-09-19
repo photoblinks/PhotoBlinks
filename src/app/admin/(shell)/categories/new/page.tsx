@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { CategoryForm } from "../category-form";
 import { createCategory } from "../actions";
 
@@ -7,6 +8,8 @@ export default async function NewCategoryPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  await requireAdminPage();
+
   const { error } = await searchParams;
   const supabase = await createClient();
   const { count } = await supabase

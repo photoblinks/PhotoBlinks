@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { checkAdmin, checkModulePermission, hasPermission, PERMISSION } from "@/lib/supabase/require-permission";
+import { recordActivityFor } from "@/lib/activity";
 import { resolveLocationGeo } from "@/lib/admin-geo";
 import { slugify } from "@/lib/slug";
 import { isValidYouTubeUrl } from "@/lib/youtube";
@@ -155,35 +157,64 @@ async function replaceLocationImages(
   supabase: Awaited<ReturnType<typeof createClient>>,
   locationId: string,
   imageUrls: string[],
-) {
-  await supabase.from("location_images").delete().eq("location_id", locationId);
-  if (imageUrls.length === 0) return;
+): Promise<boolean> {
+  const { data: existing } = await supabase
+    .from("location_images")
+    .select("image_url")
+    .eq("location_id", locationId)
+    .order("sort_order");
+  const existingUrls = (existing ?? []).map((row) => row.image_url);
+  const unchanged =
+    existingUrls.length === imageUrls.length &&
+    existingUrls.every((url, index) => url === imageUrls[index]);
 
-  await supabase.from("location_images").insert(
-    imageUrls.map((image_url, index) => ({
-      location_id: locationId,
-      image_url,
-      sort_order: index,
-    })),
-  );
+  if (unchanged) return false;
+
+  await supabase.from("location_images").delete().eq("location_id", locationId);
+  if (imageUrls.length > 0) {
+    await supabase.from("location_images").insert(
+      imageUrls.map((image_url, index) => ({
+        location_id: locationId,
+        image_url,
+        sort_order: index,
+      })),
+    );
+  }
+  return true;
 }
 
 async function replaceLocationFaqs(
   supabase: Awaited<ReturnType<typeof createClient>>,
   locationId: string,
   faqs: { question: string; answer: string }[],
-) {
-  await supabase.from("location_faqs").delete().eq("location_id", locationId);
-  if (faqs.length === 0) return;
+): Promise<boolean> {
+  const { data: existing } = await supabase
+    .from("location_faqs")
+    .select("question, answer")
+    .eq("location_id", locationId)
+    .order("sort_order");
+  const rows = existing ?? [];
+  const unchanged =
+    rows.length === faqs.length &&
+    rows.every(
+      (row, index) =>
+        row.question === faqs[index].question && row.answer === faqs[index].answer,
+    );
 
-  await supabase.from("location_faqs").insert(
-    faqs.map((faq, index) => ({
-      location_id: locationId,
-      question: faq.question,
-      answer: faq.answer,
-      sort_order: index,
-    })),
-  );
+  if (unchanged) return false;
+
+  await supabase.from("location_faqs").delete().eq("location_id", locationId);
+  if (faqs.length > 0) {
+    await supabase.from("location_faqs").insert(
+      faqs.map((faq, index) => ({
+        location_id: locationId,
+        question: faq.question,
+        answer: faq.answer,
+        sort_order: index,
+      })),
+    );
+  }
+  return true;
 }
 
 export type LocationFormState = { error: string } | undefined;
@@ -194,12 +225,28 @@ export async function createLocation(
 ): Promise<LocationFormState> {
   const supabase = await createClient();
 
+  const auth = await checkModulePermission(supabase, PERMISSION.LOCATIONS_EDIT);
+  if (!auth.ok) {
+    return {
+      error:
+        auth.reason === "forbidden"
+          ? "You do not have permission to edit locations."
+          : "You must be signed in to edit locations.",
+    };
+  }
+
   let values: ReturnType<typeof parseLocationForm>;
   try {
     values = parseLocationForm(formData);
   } catch (err) {
     const message = err instanceof z.ZodError ? err.issues[0].message : "Invalid form data.";
     return { error: message };
+  }
+
+  // Publishing is a separate permission — an editor cannot create an already
+  // published location. (Unpublishing/deleting is handled elsewhere.)
+  if (values.is_published && !(await hasPermission(supabase, PERMISSION.LOCATIONS_PUBLISH))) {
+    return { error: "You do not have permission to publish locations." };
   }
 
   const { images, faqs, city_name, ...locationValues } = values;
@@ -228,6 +275,13 @@ export async function createLocation(
   await replaceLocationImages(supabase, data.id, images);
   await replaceLocationFaqs(supabase, data.id, faqs);
 
+  await recordActivityFor(supabase, {
+    module: "locations",
+    action: "created",
+    entity_id: data.id,
+    metadata: { name: locationValues.name, images: images.length, faqs: faqs.length },
+  });
+
   revalidatePath("/admin/locations");
   redirect("/admin/locations");
 }
@@ -239,12 +293,38 @@ export async function updateLocation(
 ): Promise<LocationFormState> {
   const supabase = await createClient();
 
+  const auth = await checkModulePermission(supabase, PERMISSION.LOCATIONS_EDIT);
+  if (!auth.ok) {
+    return {
+      error:
+        auth.reason === "forbidden"
+          ? "You do not have permission to edit locations."
+          : "You must be signed in to edit locations.",
+    };
+  }
+
   let values: ReturnType<typeof parseLocationForm>;
   try {
     values = parseLocationForm(formData);
   } catch (err) {
     const message = err instanceof z.ZodError ? err.issues[0].message : "Invalid form data.";
     return { error: message };
+  }
+
+  // An editor cannot flip publication status through the edit form: the
+  // protect_location_publish_status trigger also rejects it at the DB level,
+  // but pre-checking here gives a clearer error before any write is attempted.
+  if (values.is_published !== undefined) {
+    const { data: existing } = await supabase
+      .from("locations")
+      .select("is_published")
+      .eq("id", id)
+      .single();
+    if (existing && existing.is_published !== values.is_published) {
+      if (!(await hasPermission(supabase, PERMISSION.LOCATIONS_PUBLISH))) {
+        return { error: "You do not have permission to publish or unpublish locations." };
+      }
+    }
   }
 
   const { images, faqs, city_name, ...locationValues } = values;
@@ -260,34 +340,103 @@ export async function updateLocation(
     return { error: err instanceof Error ? err.message : "Could not resolve the city." };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("locations")
     .update({ ...locationValues, city_id: cityId })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
 
   if (error) {
     return { error: error.message };
   }
+  if (!updated || updated.length === 0) {
+    return { error: "This location no longer exists." };
+  }
 
-  await replaceLocationImages(supabase, id, images);
-  await replaceLocationFaqs(supabase, id, faqs);
+  const imagesChanged = await replaceLocationImages(supabase, id, images);
+  const faqsChanged = await replaceLocationFaqs(supabase, id, faqs);
+
+  await recordActivityFor(supabase, {
+    module: "locations",
+    action: "updated",
+    entity_id: id,
+    metadata: { name: locationValues.name },
+  });
+  if (imagesChanged) {
+    await recordActivityFor(supabase, {
+      module: "locations",
+      action: "images_updated",
+      entity_id: id,
+      metadata: { count: images.length },
+    });
+  }
+  if (faqsChanged) {
+    await recordActivityFor(supabase, {
+      module: "locations",
+      action: "faqs_updated",
+      entity_id: id,
+      metadata: { count: faqs.length },
+    });
+  }
 
   revalidatePath("/admin/locations");
   redirect("/admin/locations");
 }
 
-export async function toggleLocationPublished(id: string, nextValue: boolean) {
+export type LocationRowResult = { ok: true } | { error: string };
+
+export async function toggleLocationPublished(id: string, nextValue: boolean): Promise<LocationRowResult> {
   const supabase = await createClient();
-  await supabase.from("locations").update({ is_published: nextValue }).eq("id", id);
+  const auth = await checkModulePermission(supabase, PERMISSION.LOCATIONS_PUBLISH);
+  if (!auth.ok) {
+    return {
+      error:
+        auth.reason === "forbidden"
+          ? "You do not have permission to publish locations."
+          : "You must be signed in to publish locations.",
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("locations")
+    .update({ is_published: nextValue })
+    .eq("id", id)
+    .select("id");
+
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "This location no longer exists." };
+
+  await recordActivityFor(supabase, {
+    module: "locations",
+    action: nextValue ? "published" : "unpublished",
+    entity_id: id,
+  });
+
   revalidatePath("/admin/locations");
+  return { ok: true };
 }
 
-export async function deleteLocation(id: string) {
+export async function deleteLocation(id: string): Promise<LocationRowResult> {
   const supabase = await createClient();
+  const auth = await checkAdmin(supabase);
+  if (!auth.ok) {
+    return {
+      error:
+        auth.reason === "forbidden"
+          ? "Only administrators can delete locations."
+          : "You must be signed in to delete locations.",
+    };
+  }
+
   // Nothing references a location as a foreign key (location_images cascades
   // on delete), so unlike categories there's no "in use" case to guard —
   // a straightforward delete is safe. Publish/unpublish covers the
   // reversible/soft case.
-  await supabase.from("locations").delete().eq("id", id);
+  const { data, error } = await supabase.from("locations").delete().eq("id", id).select("id");
+
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "This location no longer exists." };
+
   revalidatePath("/admin/locations");
+  return { ok: true };
 }

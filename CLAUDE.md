@@ -18,8 +18,11 @@ These rules define project scope, architecture, security, engineering decisions,
 - `npm run db:start` — start local Supabase stack and apply `supabase/migrations/`.
 - `npm run db:stop` — stop the local stack.
 - `npm run db:reset` — rebuild local DB from migrations; local only. Never run it against production or use it unprompted for test cleanup.
+- `npm run db:preflight` — read-only pre-flight for the *linked hosted* project (target host printed, no writes): stops on history/code drift, out-of-order pending migrations, or an object existing while its version is missing from `supabase_migrations.schema_migrations`. Run before any push.
+- `npm run db:push` — apply pending migrations to the linked hosted project via the Supabase CLI (`supabase db push --linked`). This is the ONLY supported hosted migration path: it records history and refuses out-of-order application. Verify with `npx supabase db push --linked --dry-run` first; never add `--include-all` or `--include-seed` without a deliberate, reviewed decision.
 - No test runner is configured in this repo.
-- Hosted migration command: `node --env-file=.env.production-backup scripts/run-migration.mjs supabase/migrations/<file>.sql`. Treat `.env.production-backup` as sensitive and this command as a real-data operation.
+- Hosted migration is a real-data operation. `.env.production-backup` is sensitive; the CLI needs the hosted DB password via `SUPABASE_DB_PASSWORD` or its prompt (never stored in the repo).
+- `scripts/run-migration.mjs` is now local-only for one-off SQL: it applies raw SQL and writes NO migration history. It refuses a non-local `DATABASE_URL` unless `--allow-remote` is passed, and prints the `supabase migration repair --status applied <version> --linked` commands that must follow when it is. Do not use it for migrations.
 
 ## 1. Scope — Do Not Invent Features
 

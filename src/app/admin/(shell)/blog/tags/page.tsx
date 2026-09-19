@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteBlogTag, toggleBlogTagActive } from "./actions";
 
 export default async function AdminBlogTagsPage() {
+  await requireAdminPage();
+
   const supabase = await createClient();
   const { data: tags } = await supabase.from("blog_tags").select("*").order("name");
 

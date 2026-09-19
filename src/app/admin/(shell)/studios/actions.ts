@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { checkAdmin, checkModulePermission, hasPermission, PERMISSION } from "@/lib/supabase/require-permission";
+import { recordActivityFor } from "@/lib/activity";
 import { resolveLocationGeo } from "@/lib/admin-geo";
 import { slugify } from "@/lib/slug";
 import { isValidYouTubeUrl } from "@/lib/youtube";
@@ -180,53 +182,98 @@ async function replaceStudioImages(
   supabase: Awaited<ReturnType<typeof createClient>>,
   studioId: string,
   imageUrls: string[],
-) {
-  await supabase.from("studio_images").delete().eq("studio_id", studioId);
-  if (imageUrls.length === 0) return;
+): Promise<boolean> {
+  const { data: existing } = await supabase
+    .from("studio_images")
+    .select("image_url")
+    .eq("studio_id", studioId)
+    .order("sort_order");
+  const existingUrls = (existing ?? []).map((row) => row.image_url);
+  const unchanged =
+    existingUrls.length === imageUrls.length &&
+    existingUrls.every((url, index) => url === imageUrls[index]);
 
-  await supabase.from("studio_images").insert(
-    imageUrls.map((image_url, index) => ({
-      studio_id: studioId,
-      image_url,
-      sort_order: index,
-    })),
-  );
+  if (unchanged) return false;
+
+  await supabase.from("studio_images").delete().eq("studio_id", studioId);
+  if (imageUrls.length > 0) {
+    await supabase.from("studio_images").insert(
+      imageUrls.map((image_url, index) => ({
+        studio_id: studioId,
+        image_url,
+        sort_order: index,
+      })),
+    );
+  }
+  return true;
 }
 
 async function replaceStudioPricingOptions(
   supabase: Awaited<ReturnType<typeof createClient>>,
   studioId: string,
   options: { label: string; price: number }[],
-) {
-  await supabase.from("studio_pricing_options").delete().eq("studio_id", studioId);
-  if (options.length === 0) return;
+): Promise<boolean> {
+  const { data: existing } = await supabase
+    .from("studio_pricing_options")
+    .select("label, price")
+    .eq("studio_id", studioId)
+    .order("sort_order");
+  const rows = existing ?? [];
+  const unchanged =
+    rows.length === options.length &&
+    rows.every(
+      (row, index) =>
+        row.label === options[index].label && Number(row.price) === Number(options[index].price),
+    );
 
-  await supabase.from("studio_pricing_options").insert(
-    options.map((option, index) => ({
-      studio_id: studioId,
-      label: option.label,
-      price: option.price,
-      sort_order: index,
-    })),
-  );
+  if (unchanged) return false;
+
+  await supabase.from("studio_pricing_options").delete().eq("studio_id", studioId);
+  if (options.length > 0) {
+    await supabase.from("studio_pricing_options").insert(
+      options.map((option, index) => ({
+        studio_id: studioId,
+        label: option.label,
+        price: option.price,
+        sort_order: index,
+      })),
+    );
+  }
+  return true;
 }
 
 async function replaceStudioFaqs(
   supabase: Awaited<ReturnType<typeof createClient>>,
   studioId: string,
   faqs: { question: string; answer: string }[],
-) {
-  await supabase.from("studio_faqs").delete().eq("studio_id", studioId);
-  if (faqs.length === 0) return;
+): Promise<boolean> {
+  const { data: existing } = await supabase
+    .from("studio_faqs")
+    .select("question, answer")
+    .eq("studio_id", studioId)
+    .order("sort_order");
+  const rows = existing ?? [];
+  const unchanged =
+    rows.length === faqs.length &&
+    rows.every(
+      (row, index) =>
+        row.question === faqs[index].question && row.answer === faqs[index].answer,
+    );
 
-  await supabase.from("studio_faqs").insert(
-    faqs.map((faq, index) => ({
-      studio_id: studioId,
-      question: faq.question,
-      answer: faq.answer,
-      sort_order: index,
-    })),
-  );
+  if (unchanged) return false;
+
+  await supabase.from("studio_faqs").delete().eq("studio_id", studioId);
+  if (faqs.length > 0) {
+    await supabase.from("studio_faqs").insert(
+      faqs.map((faq, index) => ({
+        studio_id: studioId,
+        question: faq.question,
+        answer: faq.answer,
+        sort_order: index,
+      })),
+    );
+  }
+  return true;
 }
 
 export type StudioFormState = { error: string } | undefined;
@@ -237,12 +284,28 @@ export async function createStudio(
 ): Promise<StudioFormState> {
   const supabase = await createClient();
 
+  const auth = await checkModulePermission(supabase, PERMISSION.STUDIOS_EDIT);
+  if (!auth.ok) {
+    return {
+      error:
+        auth.reason === "forbidden"
+          ? "You do not have permission to edit studios."
+          : "You must be signed in to edit studios.",
+    };
+  }
+
   let values: ReturnType<typeof parseStudioForm>;
   try {
     values = parseStudioForm(formData);
   } catch (err) {
     const message = err instanceof z.ZodError ? err.issues[0].message : "Invalid form data.";
     return { error: message };
+  }
+
+  // Publishing is a separate permission — an editor cannot create an already
+  // published studio.
+  if (values.is_published && !(await hasPermission(supabase, PERMISSION.STUDIOS_PUBLISH))) {
+    return { error: "You do not have permission to publish studios." };
   }
 
   const { images, pricingOptions, faqs, city_name, ...studioValues } = values;
@@ -272,6 +335,18 @@ export async function createStudio(
   await replaceStudioPricingOptions(supabase, data.id, pricingOptions);
   await replaceStudioFaqs(supabase, data.id, faqs);
 
+  await recordActivityFor(supabase, {
+    module: "studios",
+    action: "created",
+    entity_id: data.id,
+    metadata: {
+      name: studioValues.name,
+      images: images.length,
+      faqs: faqs.length,
+      pricing: pricingOptions.length,
+    },
+  });
+
   revalidatePath("/admin/studios");
   redirect("/admin/studios");
 }
@@ -283,12 +358,37 @@ export async function updateStudio(
 ): Promise<StudioFormState> {
   const supabase = await createClient();
 
+  const auth = await checkModulePermission(supabase, PERMISSION.STUDIOS_EDIT);
+  if (!auth.ok) {
+    return {
+      error:
+        auth.reason === "forbidden"
+          ? "You do not have permission to edit studios."
+          : "You must be signed in to edit studios.",
+    };
+  }
+
   let values: ReturnType<typeof parseStudioForm>;
   try {
     values = parseStudioForm(formData);
   } catch (err) {
     const message = err instanceof z.ZodError ? err.issues[0].message : "Invalid form data.";
     return { error: message };
+  }
+
+  // An editor cannot flip publication status through the edit form (the
+  // protect_studio_publish_status trigger also rejects it at the DB level).
+  if (values.is_published !== undefined) {
+    const { data: existing } = await supabase
+      .from("studios")
+      .select("is_published")
+      .eq("id", id)
+      .single();
+    if (existing && existing.is_published !== values.is_published) {
+      if (!(await hasPermission(supabase, PERMISSION.STUDIOS_PUBLISH))) {
+        return { error: "You do not have permission to publish or unpublish studios." };
+      }
+    }
   }
 
   const { images, pricingOptions, faqs, city_name, ...studioValues } = values;
@@ -304,34 +404,111 @@ export async function updateStudio(
     return { error: err instanceof Error ? err.message : "Could not resolve the city." };
   }
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("studios")
     .update({ ...studioValues, city_id: cityId })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
 
   if (error) {
     return { error: error.message };
   }
+  if (!updated || updated.length === 0) {
+    return { error: "This studio no longer exists." };
+  }
 
-  await replaceStudioImages(supabase, id, images);
-  await replaceStudioPricingOptions(supabase, id, pricingOptions);
-  await replaceStudioFaqs(supabase, id, faqs);
+  const imagesChanged = await replaceStudioImages(supabase, id, images);
+  const pricingChanged = await replaceStudioPricingOptions(supabase, id, pricingOptions);
+  const faqsChanged = await replaceStudioFaqs(supabase, id, faqs);
+
+  await recordActivityFor(supabase, {
+    module: "studios",
+    action: "updated",
+    entity_id: id,
+    metadata: { name: studioValues.name },
+  });
+  if (imagesChanged) {
+    await recordActivityFor(supabase, {
+      module: "studios",
+      action: "images_updated",
+      entity_id: id,
+      metadata: { count: images.length },
+    });
+  }
+  if (pricingChanged) {
+    await recordActivityFor(supabase, {
+      module: "studios",
+      action: "pricing_updated",
+      entity_id: id,
+      metadata: { count: pricingOptions.length },
+    });
+  }
+  if (faqsChanged) {
+    await recordActivityFor(supabase, {
+      module: "studios",
+      action: "faqs_updated",
+      entity_id: id,
+      metadata: { count: faqs.length },
+    });
+  }
 
   revalidatePath("/admin/studios");
   redirect("/admin/studios");
 }
 
-export async function toggleStudioPublished(id: string, nextValue: boolean) {
+export type StudioRowResult = { ok: true } | { error: string };
+
+export async function toggleStudioPublished(id: string, nextValue: boolean): Promise<StudioRowResult> {
   const supabase = await createClient();
-  await supabase.from("studios").update({ is_published: nextValue }).eq("id", id);
+  const auth = await checkModulePermission(supabase, PERMISSION.STUDIOS_PUBLISH);
+  if (!auth.ok) {
+    return {
+      error:
+        auth.reason === "forbidden"
+          ? "You do not have permission to publish studios."
+          : "You must be signed in to publish studios.",
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("studios")
+    .update({ is_published: nextValue })
+    .eq("id", id)
+    .select("id");
+
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "This studio no longer exists." };
+
+  await recordActivityFor(supabase, {
+    module: "studios",
+    action: nextValue ? "published" : "unpublished",
+    entity_id: id,
+  });
+
   revalidatePath("/admin/studios");
+  return { ok: true };
 }
 
-export async function deleteStudio(id: string) {
+export async function deleteStudio(id: string): Promise<StudioRowResult> {
   const supabase = await createClient();
+  const auth = await checkAdmin(supabase);
+  if (!auth.ok) {
+    return {
+      error:
+        auth.reason === "forbidden"
+          ? "Only administrators can delete studios."
+          : "You must be signed in to delete studios.",
+    };
+  }
+
   // Nothing references a studio as a foreign key (studio_images and
   // studio_pricing_options cascade on delete), so a straightforward delete
   // is safe — same reasoning as deleteLocation.
-  await supabase.from("studios").delete().eq("id", id);
+  const { data, error } = await supabase.from("studios").delete().eq("id", id).select("id");
+
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "This studio no longer exists." };
+
   revalidatePath("/admin/studios");
+  return { ok: true };
 }

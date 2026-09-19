@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deleteStudio, toggleStudioPublished } from "./actions";
+import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
+import { StudioRowActions } from "@/components/admin/studio-row-actions";
 import { AdminListFilters } from "@/components/admin/admin-list-filters";
 import { AdminPagination } from "@/components/admin/pagination";
 import { ADMIN_PAGE_SIZE, parsePage, rangeFor } from "@/lib/admin/pagination";
@@ -33,6 +35,10 @@ export default async function AdminStudiosPage({
 }: {
   searchParams: Promise<StudioFilters & { page?: string }>;
 }) {
+  const staff = await getAuthorizedStaffUser();
+  if (!staff) redirect("/admin/login");
+  if (!staff.canAny([PERMISSION.STUDIOS_EDIT, PERMISSION.STUDIOS_PUBLISH])) redirect("/admin");
+
   const { q, country, state, city, page: pageParam } = await searchParams;
   const filters: StudioFilters = { q, country, state, city };
   const supabase = await createClient();
@@ -84,7 +90,9 @@ export default async function AdminStudiosPage({
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Studios</h1>
-        <Button render={<Link href="/admin/studios/new" />}>Add studio</Button>
+        {staff.can(PERMISSION.STUDIOS_EDIT) && (
+          <Button render={<Link href="/admin/studios/new" />}>Add studio</Button>
+        )}
       </div>
 
       <AdminListFilters
@@ -132,23 +140,21 @@ export default async function AdminStudiosPage({
                   </Badge>
                 </TableCell>
                 <TableCell className="flex justify-end gap-2">
-                  <Button
-                    render={<Link href={`/admin/studios/${studio.id}/edit`} />}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Edit
-                  </Button>
-                  <form action={toggleStudioPublished.bind(null, studio.id, !studio.is_published)}>
-                    <Button type="submit" variant="outline" size="sm">
-                      {studio.is_published ? "Unpublish" : "Publish"}
+                  {staff.can(PERMISSION.STUDIOS_EDIT) && (
+                    <Button
+                      render={<Link href={`/admin/studios/${studio.id}/edit`} />}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Edit
                     </Button>
-                  </form>
-                  <form action={deleteStudio.bind(null, studio.id)}>
-                    <Button type="submit" variant="destructive" size="sm">
-                      Delete
-                    </Button>
-                  </form>
+                  )}
+                  <StudioRowActions
+                    id={studio.id}
+                    isPublished={studio.is_published}
+                    canPublish={staff.can(PERMISSION.STUDIOS_PUBLISH)}
+                    canDelete={staff.isAdmin}
+                  />
                 </TableCell>
               </TableRow>
             );

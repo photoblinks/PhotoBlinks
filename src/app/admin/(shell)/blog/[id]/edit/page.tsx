@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { BlogPostForm } from "../../blog-post-form";
 import { updateBlogPost } from "../../actions";
 import type { BlogBlockInput } from "@/components/admin/blog-content-editor";
@@ -12,6 +13,8 @@ export default async function EditBlogPostPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
+  await requireAdminPage();
+
   const { id } = await params;
   const { error } = await searchParams;
   const supabase = await createClient();

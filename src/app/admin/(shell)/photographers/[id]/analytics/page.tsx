@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -43,6 +44,8 @@ export default async function PhotographerAnalyticsPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ range?: string }>;
 }) {
+  await requireAdminPage();
+
   const { id } = await params;
   const { range: rangeParam } = await searchParams;
   const range: RangeValue = RANGE_OPTIONS.some((r) => r.value === rangeParam)

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +18,8 @@ type Props = {
 };
 
 export default async function EditLocationStateCategorySeoPage({ params, searchParams }: Props) {
+  await requireAdminPage();
+
   const { stateId, categoryId } = await params;
   const { error, returnTo } = await searchParams;
   const supabase = await createClient();

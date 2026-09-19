@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { StudioForm } from "../../studio-form";
 import { updateStudio } from "../../actions";
 
@@ -8,6 +9,8 @@ export default async function EditStudioPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireModulePage([PERMISSION.STUDIOS_EDIT]);
+
   const { id } = await params;
   const supabase = await createClient();
 

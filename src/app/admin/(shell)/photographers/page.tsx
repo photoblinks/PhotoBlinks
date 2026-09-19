@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,6 +21,8 @@ export default async function AdminPhotographersPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  await requireAdminPage();
+
   const { page: pageParam } = await searchParams;
   const supabase = await createClient();
 

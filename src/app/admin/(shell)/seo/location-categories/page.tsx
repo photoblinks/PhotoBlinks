@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +78,8 @@ type FilterOptionsRpcRow = {
 };
 
 export default async function LocationCategorySeoPage({ searchParams }: Props) {
+  await requireAdminPage();
+
   const query = await searchParams;
   const q = (query.q ?? "").trim().toLowerCase();
   const sort: SortKey = query.sort === "category" || query.sort === "count" ? query.sort : "city";

@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteBlogCategory, toggleBlogCategoryActive } from "./actions";
 
 export default async function AdminBlogCategoriesPage() {
+  await requireAdminPage();
+
   const supabase = await createClient();
   const { data: categories } = await supabase.from("blog_categories").select("*").order("sort_order");
 

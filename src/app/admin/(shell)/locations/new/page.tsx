@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { LocationForm } from "../location-form";
 import { createLocation } from "../actions";
 
 export default async function NewLocationPage() {
+  await requireModulePage([PERMISSION.LOCATIONS_EDIT]);
+
   const supabase = await createClient();
 
   const [{ data: categories }, { data: countries }, { data: states }] = await Promise.all([

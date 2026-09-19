@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -57,6 +58,8 @@ export default async function AdminLocationReportsPage({
 }: {
   searchParams: Promise<{ status?: string; page?: string }>;
 }) {
+  await requireAdminPage();
+
   const { status: statusParam, page: pageParam } = await searchParams;
   const status: StatusFilter = STATUS_TABS.some((t) => t.value === statusParam)
     ? (statusParam as StatusFilter)

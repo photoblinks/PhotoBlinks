@@ -1,14 +1,20 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
+import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
 import { logout } from "../login/actions";
 import { Button } from "@/components/ui/button";
 
-const NAV_LINKS = [
+// Links without `permissions` are admin-only; links with them are also shown
+// to employees whose active role grants any of those permissions. This mirrors
+// the server-side guards on each page — hiding a link is only a convenience,
+// the real enforcement happens in the page/action guards and RLS.
+const NAV_LINKS: { href: string; label: string; permissions?: readonly string[] }[] = [
   { href: "/admin", label: "Dashboard" },
+  { href: "/admin/activity", label: "Employee Activity", permissions: [PERMISSION.ACTIVITY_VIEW] },
+  { href: "/admin/employees", label: "Employees" },
   { href: "/admin/categories", label: "Categories" },
-  { href: "/admin/locations", label: "Locations" },
-  { href: "/admin/studios", label: "Studios" },
+  { href: "/admin/locations", label: "Locations", permissions: [PERMISSION.LOCATIONS_EDIT, PERMISSION.LOCATIONS_PUBLISH] },
+  { href: "/admin/studios", label: "Studios", permissions: [PERMISSION.STUDIOS_EDIT, PERMISSION.STUDIOS_PUBLISH] },
   { href: "/admin/blog", label: "Blog" },
   { href: "/admin/photographers", label: "Sponsored Photographers" },
   { href: "/admin/comments", label: "Comments" },
@@ -27,15 +33,19 @@ export default async function AdminShellLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getAuthorizedAdminUser();
-  if (!user) redirect("/admin/login");
+  const staff = await getAuthorizedStaffUser();
+  if (!staff) redirect("/admin/login");
+
+  const visibleLinks = NAV_LINKS.filter((link) =>
+    link.permissions ? staff.canAny(link.permissions) : staff.isAdmin,
+  );
 
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-56 shrink-0 flex-col border-r bg-muted/20 p-4">
         <div className="mb-6 px-2 text-lg font-semibold">PhotoBlinks</div>
         <nav className="flex flex-1 flex-col gap-1">
-          {NAV_LINKS.map((link) => (
+          {visibleLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -46,7 +56,7 @@ export default async function AdminShellLayout({
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-2 border-t pt-4">
-          <span className="truncate px-2 text-xs text-muted-foreground">{user.email}</span>
+          <span className="truncate px-2 text-xs text-muted-foreground">{staff.user.email}</span>
           <form action={logout}>
             <Button type="submit" variant="outline" size="sm" className="w-full">
               Log out

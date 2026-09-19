@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { BlogTagForm } from "../blog-tag-form";
 import { createBlogTag } from "../actions";
 
@@ -6,6 +7,8 @@ export default async function NewBlogTagPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  await requireAdminPage();
+
   const { error } = await searchParams;
 
   return (

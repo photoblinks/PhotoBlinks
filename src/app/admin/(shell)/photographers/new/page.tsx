@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { PhotographerForm } from "../photographer-form";
 import { createPhotographer } from "../actions";
 
@@ -7,6 +8,8 @@ export default async function NewPhotographerPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  await requireAdminPage();
+
   const { error } = await searchParams;
   const supabase = await createClient();
 

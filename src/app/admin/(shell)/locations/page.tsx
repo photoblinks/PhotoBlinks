@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { deleteLocation, toggleLocationPublished } from "./actions";
+import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
+import { LocationRowActions } from "@/components/admin/location-row-actions";
 import { formatPricing } from "@/lib/format";
 import { isSeoEligible, seoEligibilityLabel } from "@/lib/seo-eligibility";
 import { AdminListFilters } from "@/components/admin/admin-list-filters";
@@ -33,6 +35,10 @@ export default async function AdminLocationsPage({
     LocationFilters & { page?: string }
   >;
 }) {
+  const staff = await getAuthorizedStaffUser();
+  if (!staff) redirect("/admin/login");
+  if (!staff.canAny([PERMISSION.LOCATIONS_EDIT, PERMISSION.LOCATIONS_PUBLISH])) redirect("/admin");
+
   const { q, country, state, city, category, page: pageParam } = await searchParams;
   const filters: LocationFilters = { q, country, state, city, category };
   const supabase = await createClient();
@@ -114,7 +120,9 @@ export default async function AdminLocationsPage({
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Locations</h1>
-        <Button render={<Link href="/admin/locations/new" />}>Add location</Button>
+        {staff.can(PERMISSION.LOCATIONS_EDIT) && (
+          <Button render={<Link href="/admin/locations/new" />}>Add location</Button>
+        )}
       </div>
 
       <AdminListFilters
@@ -197,25 +205,21 @@ export default async function AdminLocationsPage({
                   )}
                 </TableCell>
                 <TableCell className="flex justify-end gap-2">
-                  <Button
-                    render={<Link href={`/admin/locations/${location.id}/edit`} />}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Edit
-                  </Button>
-                  <form
-                    action={toggleLocationPublished.bind(null, location.id, !location.is_published)}
-                  >
-                    <Button type="submit" variant="outline" size="sm">
-                      {location.is_published ? "Unpublish" : "Publish"}
+                  {staff.can(PERMISSION.LOCATIONS_EDIT) && (
+                    <Button
+                      render={<Link href={`/admin/locations/${location.id}/edit`} />}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Edit
                     </Button>
-                  </form>
-                  <form action={deleteLocation.bind(null, location.id)}>
-                    <Button type="submit" variant="destructive" size="sm">
-                      Delete
-                    </Button>
-                  </form>
+                  )}
+                  <LocationRowActions
+                    id={location.id}
+                    isPublished={location.is_published}
+                    canPublish={staff.can(PERMISSION.LOCATIONS_PUBLISH)}
+                    canDelete={staff.isAdmin}
+                  />
                 </TableCell>
               </TableRow>
             );

@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { StudioForm } from "../studio-form";
 import { createStudio } from "../actions";
 
 export default async function NewStudioPage() {
+  await requireModulePage([PERMISSION.STUDIOS_EDIT]);
+
   const supabase = await createClient();
 
   const [{ data: countries }, { data: states }] = await Promise.all([
