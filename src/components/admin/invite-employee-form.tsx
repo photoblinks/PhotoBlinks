@@ -25,6 +25,7 @@ export function InviteEmployeeForm({ roles }: { roles: RoleOption[] }) {
   const [isPending, setIsPending] = useState(false);
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
   const [roleId, setRoleId] = useState<string | undefined>(undefined);
 
   async function handleSubmit(formData: FormData) {
@@ -36,6 +37,7 @@ export function InviteEmployeeForm({ roles }: { roles: RoleOption[] }) {
     if (result && "success" in result) {
       setEmail("");
       setFullName("");
+      setPassword("");
       setRoleId(undefined);
     }
   }
@@ -77,6 +79,21 @@ export function InviteEmployeeForm({ roles }: { roles: RoleOption[] }) {
             />
           </Field>
 
+          <Field className="min-w-56 flex-1">
+            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Optional — leave blank to email an invite"
+              minLength={10}
+              maxLength={72}
+            />
+          </Field>
+
           <Field className="w-56">
             <FieldLabel htmlFor="role_id">
               Role
@@ -103,7 +120,7 @@ export function InviteEmployeeForm({ roles }: { roles: RoleOption[] }) {
           </Field>
 
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Inviting…" : "Invite"}
+            {isPending ? "Saving…" : password ? "Create account" : "Invite"}
           </Button>
         </div>
       </FieldGroup>

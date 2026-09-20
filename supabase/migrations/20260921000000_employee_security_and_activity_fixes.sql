@@ -1,4 +1,4 @@
--- Corrective migration for the employee/activity migrations
+r-- Corrective migration for the employee/activity migrations
 -- (20260916000000 .. 20260920000000). Applied AFTER them; it only redefines
 -- objects those migrations create, so it touches no pre-existing production
 -- table row, column, or policy. Idempotent (create or replace / drop-if-exists /

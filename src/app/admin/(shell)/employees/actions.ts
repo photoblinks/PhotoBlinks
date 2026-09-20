@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
+import { getAuthorizedAdminUser, isAdminUser } from "@/lib/supabase/require-admin";
 
 // Every action here re-checks the admin gate server-side even though the
 // admin shell layout already redirects non-admins away: the actions are the
@@ -12,10 +12,17 @@ import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
 // Writes go through the request-scoped client so RLS still applies; the
 // service-role client is used only to mint the auth user during provisioning.
 
+// 72 = bcrypt's input limit; longer values would be silently truncated.
+const passwordSchema = z
+  .string()
+  .min(10, "Password must be at least 10 characters.")
+  .max(72, "Password must be at most 72 characters.");
+
 const inviteSchema = z.object({
   email: z.string().trim().toLowerCase().email("Enter a valid email address."),
   full_name: z.string().trim().max(120, "Name is too long.").optional(),
   role_id: z.string().uuid("Select a role."),
+  password: passwordSchema.optional(),
 });
 
 export type EmployeeFormState = { error: string } | { success: string } | undefined;
@@ -35,6 +42,7 @@ export async function inviteEmployee(
       email: String(formData.get("email") ?? ""),
       full_name: String(formData.get("full_name") ?? ""),
       role_id: String(formData.get("role_id") ?? ""),
+      password: String(formData.get("password") ?? "") || undefined,
     });
   } catch (err) {
     return { error: err instanceof z.ZodError ? err.issues[0].message : "Invalid form data." };
@@ -51,6 +59,8 @@ export async function inviteEmployee(
   if (!role) return { error: "The selected role does not exist." };
 
   let userId: string;
+  let passwordSet = false;
+  let linkedExisting = false;
 
   // Already-registered account (e.g. an existing admin)? Link it instead of
   // failing the invite. The lookup is a security-definer RPC guarded by
@@ -60,12 +70,22 @@ export async function inviteEmployee(
   });
 
   if (existingUserId) {
+    // Linking never touches an existing account's password, even if one was
+    // typed: otherwise an admin could take over any registered account.
     userId = existingUserId as string;
+    linkedExisting = true;
   } else {
     const adminAuth = createAdminClient();
-    const { data: inviteData, error: inviteError } = await adminAuth.auth.admin.inviteUserByEmail(
-      values.email,
-    );
+    // With a password the admin hands credentials over directly (no email is
+    // sent); without one Supabase emails the invite link.
+    const { data: inviteData, error: inviteError } = values.password
+      ? await adminAuth.auth.admin.createUser({
+          email: values.email,
+          password: values.password,
+          email_confirm: true,
+        })
+      : await adminAuth.auth.admin.inviteUserByEmail(values.email);
+    passwordSet = Boolean(values.password) && !inviteError;
 
     if (inviteError) {
       // Log the real error server-side (never echoed to the browser), then
@@ -112,7 +132,49 @@ export async function inviteEmployee(
   }
 
   revalidatePath("/admin/employees");
-  return { success: `Invitation sent to ${values.email}.` };
+  if (linkedExisting) {
+    return {
+      success: `${values.email} already has an account and was linked as an employee. Their password was not changed${
+        values.password ? " (use Set password on the employee row)" : ""
+      }.`,
+    };
+  }
+  return {
+    success: passwordSet
+      ? `Account created for ${values.email} with the password you set. No email was sent — share it securely.`
+      : `Invitation sent to ${values.email}.`,
+  };
+}
+
+export async function setEmployeePassword(id: string, password: string): Promise<EmployeeActionResult> {
+  const admin = await getAuthorizedAdminUser();
+  if (!admin) return { error: "Not authorized." };
+
+  const parsed = passwordSchema.safeParse(password);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { data: employee } = await supabase
+    .from("employees")
+    .select("user_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!employee) return { error: "This employee no longer exists." };
+
+  // Admin accounts are never reset from here: a linked legacy admin could
+  // otherwise be taken over by any other admin. They change their own password.
+  if (await isAdminUser(supabase, employee.user_id)) {
+    return { error: "Administrator accounts must change their password themselves." };
+  }
+
+  const { error } = await createAdminClient().auth.admin.updateUserById(employee.user_id, {
+    password: parsed.data,
+  });
+  if (error) {
+    console.error("[setEmployeePassword] update failed:", error.message);
+    return { error: "Could not set the password. Please try again." };
+  }
+  return { ok: true };
 }
 
 export async function setEmployeeActive(id: string, nextValue: boolean): Promise<EmployeeActionResult> {

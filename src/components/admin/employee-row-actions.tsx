@@ -10,7 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { updateEmployeeRole, setEmployeeActive } from "@/app/admin/(shell)/employees/actions";
+import { Input } from "@/components/ui/input";
+import {
+  updateEmployeeRole,
+  setEmployeeActive,
+  setEmployeePassword,
+} from "@/app/admin/(shell)/employees/actions";
 
 type RoleOption = { id: string; name: string };
 
@@ -32,6 +37,22 @@ export function EmployeeRowActions({
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState("");
+
+  async function handleSetPassword() {
+    setPending(true);
+    setMessage(null);
+    const result = await setEmployeePassword(id, password);
+    setPending(false);
+    if ("error" in result) {
+      setMessage(result.error);
+      return;
+    }
+    setPassword("");
+    setShowPassword(false);
+    setMessage("Password updated.");
+  }
 
   async function handleRoleChange(value: string | null) {
     if (!value) return;
@@ -87,8 +108,38 @@ export function EmployeeRowActions({
         >
           {isActive ? "Deactivate" : "Activate"}
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={pending}
+          onClick={() => setShowPassword((v) => !v)}
+        >
+          Set password
+        </Button>
       </div>
-      {message && <p className="text-xs text-destructive">{message}</p>}
+      {showPassword && (
+        <div className="flex items-center gap-2">
+          <Input
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="New password (min 10)"
+            minLength={10}
+            maxLength={72}
+            className="h-8 w-52"
+          />
+          <Button type="button" size="sm" disabled={pending || password.length < 10} onClick={handleSetPassword}>
+            Save
+          </Button>
+        </div>
+      )}
+      {message && (
+        <p className={`text-xs ${message === "Password updated." ? "text-green-700 dark:text-green-400" : "text-destructive"}`}>
+          {message}
+        </p>
+      )}
     </div>
   );
 }
