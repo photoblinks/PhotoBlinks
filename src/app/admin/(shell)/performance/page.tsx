@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { checkAdmin, PERMISSION, requireModulePage } from "@/lib/supabase/require-permission";
+import { checkAdmin, requireStaffPage } from "@/lib/supabase/require-permission";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -178,7 +178,7 @@ export default async function EmployeePerformancePage({
 }: {
   searchParams: Promise<{ employee?: string; from?: string; to?: string }>;
 }) {
-  await requireModulePage([PERMISSION.ACTIVITY_VIEW]);
+  await requireStaffPage();
 
   const { employee: employeeParam, from: fromParam, to: toParam } = await searchParams;
 

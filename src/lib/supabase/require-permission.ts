@@ -106,6 +106,15 @@ export async function requireModulePage(codes: readonly string[]): Promise<void>
   if (!staff.canAny(codes)) redirect("/admin");
 }
 
+/** Page-level guard for pages open to every authenticated active employee
+ * (and every legacy admin) — e.g. the Employee Performance dashboard. Uses
+ * the same staff resolution as the shell layout, so plain users and inactive
+ * employees are redirected to login exactly like every other admin page. */
+export async function requireStaffPage(): Promise<void> {
+  const staff = await getAuthorizedStaffUser();
+  if (!staff) redirect("/admin/login");
+}
+
 /** Page-level guard for admin-only pages. Employees are redirected away even
  * if they type the URL directly; authorization is enforced here server-side,
  * never only through hidden navigation. */

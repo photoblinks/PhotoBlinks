@@ -5,13 +5,19 @@ import { logout } from "../login/actions";
 import { Button } from "@/components/ui/button";
 
 // Links without `permissions` are admin-only; links with them are also shown
-// to employees whose active role grants any of those permissions. This mirrors
-// the server-side guards on each page — hiding a link is only a convenience,
-// the real enforcement happens in the page/action guards and RLS.
-const NAV_LINKS: { href: string; label: string; permissions?: readonly string[] }[] = [
+// to employees whose active role grants any of those permissions. `allStaff`
+// links are shown to every admin and every active employee. This mirrors the
+// server-side guards on each page — hiding a link is only a convenience, the
+// real enforcement happens in the page/action guards and RLS.
+const NAV_LINKS: {
+  href: string;
+  label: string;
+  permissions?: readonly string[];
+  allStaff?: boolean;
+}[] = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/activity", label: "Employee Activity", permissions: [PERMISSION.ACTIVITY_VIEW] },
-  { href: "/admin/performance", label: "Employee Performance", permissions: [PERMISSION.ACTIVITY_VIEW] },
+  { href: "/admin/performance", label: "Employee Performance", allStaff: true },
   { href: "/admin/employees", label: "Employees" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/locations", label: "Locations", permissions: [PERMISSION.LOCATIONS_EDIT, PERMISSION.LOCATIONS_PUBLISH] },
@@ -37,8 +43,9 @@ export default async function AdminShellLayout({
   const staff = await getAuthorizedStaffUser();
   if (!staff) redirect("/admin/login");
 
-  const visibleLinks = NAV_LINKS.filter((link) =>
-    link.permissions ? staff.canAny(link.permissions) : staff.isAdmin,
+  const visibleLinks = NAV_LINKS.filter(
+    (link) =>
+      link.allStaff || (link.permissions ? staff.canAny(link.permissions) : staff.isAdmin),
   );
 
   return (
