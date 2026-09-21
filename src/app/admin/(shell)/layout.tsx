@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 const NAV_LINKS: { href: string; label: string; permissions?: readonly string[] }[] = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/activity", label: "Employee Activity", permissions: [PERMISSION.ACTIVITY_VIEW] },
+  { href: "/admin/performance", label: "Employee Performance", permissions: [PERMISSION.ACTIVITY_VIEW] },
   { href: "/admin/employees", label: "Employees" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/locations", label: "Locations", permissions: [PERMISSION.LOCATIONS_EDIT, PERMISSION.LOCATIONS_PUBLISH] },
