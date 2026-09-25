@@ -4,6 +4,9 @@ import { ChevronDown } from "lucide-react";
 import type { BlogBlock } from "@/lib/blog/content-blocks";
 import { isInternalCtaPath } from "@/lib/blog/content-blocks";
 import { isAllowedR2ImageUrl } from "@/lib/r2/upload";
+import { LocationInfoTable } from "@/components/public/location-info-table";
+import type { LocationInfoTableConfig } from "@/lib/location-info-fields";
+import type { PublicLocationInfoEntry } from "@/lib/public-data";
 
 type LocationLink = { id: string; name: string; slug: string };
 
@@ -26,16 +29,26 @@ type LocationLink = { id: string; name: string; slug: string };
 export function BlogContentRenderer({
   blocks,
   locationLinks,
+  locationInfo,
+  infoTableConfig,
 }: {
   blocks: BlogBlock[];
   locationLinks: LocationLink[];
+  locationInfo?: Map<string, PublicLocationInfoEntry>;
+  infoTableConfig?: LocationInfoTableConfig | null;
 }) {
   const locationById = new Map(locationLinks.map((l) => [l.id, l]));
 
   return (
     <div className="flex flex-col gap-6">
       {blocks.map((block, index) => (
-        <BlogBlockView key={index} block={block} locationById={locationById} />
+        <BlogBlockView
+          key={index}
+          block={block}
+          locationById={locationById}
+          locationInfo={locationInfo}
+          infoTableConfig={infoTableConfig ?? {}}
+        />
       ))}
     </div>
   );
@@ -44,9 +57,13 @@ export function BlogContentRenderer({
 function BlogBlockView({
   block,
   locationById,
+  locationInfo,
+  infoTableConfig,
 }: {
   block: BlogBlock;
   locationById: Map<string, LocationLink>;
+  locationInfo?: Map<string, PublicLocationInfoEntry>;
+  infoTableConfig: LocationInfoTableConfig;
 }) {
   switch (block.type) {
     case "heading": {
@@ -121,6 +138,17 @@ function BlogBlockView({
           <span className="text-sm text-pb-brand">View location →</span>
         </Link>
       );
+    }
+
+    case "locationInfoTable": {
+      // Only rendered when the caller resolved location info (editorial
+      // pages always do); otherwise the block is skipped rather than
+      // rendering broken/empty data.
+      if (!locationInfo) return null;
+      const locations = block.locationIds
+        .map((id) => locationInfo.get(id))
+        .filter((location): location is PublicLocationInfoEntry => location !== undefined);
+      return <LocationInfoTable title={block.title} locations={locations} config={infoTableConfig} />;
     }
 
     case "cta": {

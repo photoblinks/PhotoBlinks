@@ -115,6 +115,19 @@ const locationLinkBlock = z
   })
   .strict();
 
+// References a list of canonical location ids rather than duplicating any
+// location facts — the public renderer resolves each id against published
+// locations and draws only the configured fields (see
+// location-info-fields.ts). Bounded so a single block can't balloon into an
+// unbounded payload.
+const locationInfoTableBlock = z
+  .object({
+    type: z.literal("locationInfoTable"),
+    locationIds: z.array(z.string().uuid()).min(1).max(50),
+    title: optionalPlainText(200),
+  })
+  .strict();
+
 const ctaBlock = z
   .object({
     type: z.literal("cta"),
@@ -168,6 +181,7 @@ export const blogBlockSchema = z.discriminatedUnion("type", [
   imageBlock,
   faqBlock,
   locationLinkBlock,
+  locationInfoTableBlock,
   ctaBlock,
   galleryBlock,
   dividerBlock,
@@ -191,4 +205,59 @@ export function parseBlogContent(raw: string): BlogBlock[] {
     throw new Error("Content is not valid JSON.");
   }
   return blogContentSchema.parse(json);
+}
+
+// --- Editorial content (State / State + Category pages) --------------------
+// Editorial content is the blog block model WITHOUT image/gallery blocks —
+// editorial images are not part of this feature, and the R2 blog namespace
+// is not reused for editorial uploads. Every other block (including the new
+// locationInfoTable) is shared with the blog, so the public renderer and
+// editor are reused unchanged. Rejected content fails the whole parse —
+// never coerced or dropped silently.
+
+export const editorialBlockSchema = z.discriminatedUnion("type", [
+  headingBlock,
+  paragraphBlock,
+  listBlock,
+  quoteBlock,
+  faqBlock,
+  locationLinkBlock,
+  locationInfoTableBlock,
+  ctaBlock,
+  dividerBlock,
+  spacerBlock,
+]);
+
+export type EditorialBlock = z.infer<typeof editorialBlockSchema>;
+
+export const editorialContentSchema = z.array(editorialBlockSchema).max(200);
+
+/** Parses a JSON string (as submitted by the content block editor's hidden
+ * input) into a validated editorial block array. Throws a ZodError on
+ * anything malformed — caller is expected to catch it the same way other
+ * admin forms catch z.ZodError. */
+export function parseEditorialContent(raw: string): EditorialBlock[] {
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    throw new Error("Content is not valid JSON.");
+  }
+  return editorialContentSchema.parse(json);
+}
+
+/** Per-block fail-closed validation of an already-parsed (JSONB) content
+ * value. Each block is validated individually against editorialBlockSchema;
+ * invalid blocks are dropped and a non-array value yields an empty array.
+ * Used by the public read path (public-data.ts) and the admin editor when
+ * hydrating stored content. */
+export function parseEditorialBlocks(value: unknown): EditorialBlock[] {
+  if (!Array.isArray(value)) return [];
+  const blocks: EditorialBlock[] = [];
+  for (const block of value) {
+    if (blocks.length >= 200) break;
+    const parsed = editorialBlockSchema.safeParse(block);
+    if (parsed.success) blocks.push(parsed.data);
+  }
+  return blocks;
 }

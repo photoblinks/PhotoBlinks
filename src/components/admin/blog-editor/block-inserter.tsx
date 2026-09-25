@@ -11,6 +11,7 @@ import {
   HelpCircle,
   MapPin,
   MousePointerClick,
+  Table,
   Minus,
   MoveVertical,
   Plus,
@@ -34,6 +35,7 @@ export const BLOCK_LIBRARY: {
   { type: "gallery", label: "Gallery", category: "Media", icon: Images },
   { type: "faq", label: "FAQ", category: "PhotoBlinks", icon: HelpCircle },
   { type: "locationLink", label: "Location", category: "PhotoBlinks", icon: MapPin },
+  { type: "locationInfoTable", label: "Location Information Table", category: "PhotoBlinks", icon: Table },
   { type: "cta", label: "Call to Action", category: "PhotoBlinks", icon: MousePointerClick },
   { type: "divider", label: "Divider", category: "Layout", icon: Minus },
   { type: "spacer", label: "Spacer", category: "Layout", icon: MoveVertical },
@@ -47,9 +49,11 @@ const CATEGORIES = ["Text", "Media", "PhotoBlinks", "Layout"] as const;
  * base-ui Popover — no new dependency. */
 export function BlockInserter({
   onInsert,
+  blockTypes,
   variant = "gap",
 }: {
   onInsert: (type: BlockType) => void;
+  blockTypes?: readonly BlockType[];
   /** "gap" renders the thin hover-revealed "+" used between blocks;
    * "button" renders a full labeled button, used for the initial/empty
    * canvas state. */
@@ -89,7 +93,9 @@ export function BlockInserter({
           <CommandList>
             <CommandEmpty>No blocks found.</CommandEmpty>
             {CATEGORIES.map((category) => {
-              const items = BLOCK_LIBRARY.filter((b) => b.category === category);
+              const items = BLOCK_LIBRARY.filter(
+                (b) => b.category === category && (!blockTypes || blockTypes.includes(b.type)),
+              );
               if (items.length === 0) return null;
               return (
                 <CommandGroup key={category} heading={category}>

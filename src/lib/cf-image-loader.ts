@@ -22,7 +22,10 @@ const CF_IMAGE_DOMAIN = process.env.NEXT_PUBLIC_R2_IMAGE_DOMAIN || "images.photo
 // Fixed, non-randomized default so repeated requests for the same image at
 // the same width reuse the same Cloudflare transformation variant instead
 // of burning the Free plan's 5,000/month unique-transformation quota.
-const DEFAULT_QUALITY = 75;
+// Raised 75 → 85: at 75, Cloudflare's format=auto (WebP/AVIF) re-encode
+// visibly softened photo detail ("blurry" reports). Still a single fixed
+// value, so the unique-transformation quota behavior is unchanged.
+const DEFAULT_QUALITY = 85;
 
 const R2_DEV_HOSTNAME_SUFFIX = ".r2.dev";
 const CDN_CGI_IMAGE_PREFIX = "/cdn-cgi/image/";

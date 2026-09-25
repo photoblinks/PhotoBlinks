@@ -71,7 +71,17 @@ export function ImageGallery({
     <>
       {/* Mobile: simple stacked column. Desktop: primary image left, three
           supporting rows on the right (two full-width, one split in two).
-          Every photo opens the full-size, scrollable lightbox when clicked. */}
+          Every photo opens the full-size, scrollable lightbox when clicked.
+
+          The `sizes` values below mirror these real rendered widths: the
+          gallery sits inside a `max-w-7xl px-4 sm:px-6` container (at most
+          1232px of content on viewports >= 1280px), split 55%/45% with an
+          8px gap, and the 45% column stacks two full-width thumbs above a
+          row split in two again. Once the container stops growing the vw
+          values are capped at the exact px width; every value is rounded
+          up, never down, so the chosen srcset candidate is always >= the
+          displayed size (undersizing renders blurry thumbnails, mild
+          overshoot only costs bandwidth). */}
       <div className="flex flex-col gap-2 sm:h-[420px] sm:flex-row lg:h-[480px]">
         <button
           type="button"
@@ -84,7 +94,7 @@ export function ImageGallery({
             alt={captionAt(0)}
             fill
             priority
-            sizes="(min-width: 640px) 55vw, 100vw"
+            sizes="(min-width: 1280px) 678px, (min-width: 640px) 55vw, 100vw"
             className="object-cover"
           />
         </button>
@@ -102,7 +112,7 @@ export function ImageGallery({
                   src={supporting[0]}
                   alt={captionAt(1)}
                   fill
-                  sizes="(min-width: 640px) 45vw, 50vw"
+                  sizes="(min-width: 1280px) 547px, (min-width: 640px) 45vw, 50vw"
                   className="object-cover"
                 />
               </button>
@@ -118,7 +128,7 @@ export function ImageGallery({
                   src={supporting[1]}
                   alt={captionAt(2)}
                   fill
-                  sizes="(min-width: 640px) 45vw, 50vw"
+                  sizes="(min-width: 1280px) 547px, (min-width: 640px) 45vw, 50vw"
                   className="object-cover"
                 />
               </button>
@@ -136,7 +146,7 @@ export function ImageGallery({
                       src={supporting[2]}
                       alt={captionAt(3)}
                       fill
-                      sizes="(min-width: 640px) 22vw, 50vw"
+                      sizes="(min-width: 1280px) 270px, (min-width: 640px) 22vw, 50vw"
                       className="object-cover"
                     />
                   </button>
@@ -152,7 +162,7 @@ export function ImageGallery({
                       src={supporting[3]}
                       alt={captionAt(4)}
                       fill
-                      sizes="(min-width: 640px) 22vw, 50vw"
+                      sizes="(min-width: 1280px) 270px, (min-width: 640px) 22vw, 50vw"
                       className="object-cover"
                     />
                     <span className="absolute inset-0 flex items-end justify-end bg-black/20 p-3 transition-colors hover:bg-black/35">
@@ -191,6 +201,15 @@ export function ImageGallery({
             </span>
           )}
 
+          {/* Full-screen view: the `fill` image is absolutely positioned to
+              the dialog's padding box, so the element spans the entire
+              viewport despite the wrapper's p-4/sm:p-16. `sizes="100vw"` is
+              therefore the honest rendered width and makes the srcset span
+              640w…3840w (fallback src = 3840w), so the browser requests a
+              genuinely viewport-sized Cloudflare transform. Never narrow
+              this to a thumbnail width — that would hand a tiny variant to
+              a full-screen surface. Note Cloudflare's default fit is
+              scale-down, so a large request can't stretch a small original. */}
           <div className="relative flex h-full w-full items-center justify-center p-4 sm:p-16">
             <Image
               src={images[activeIndex]}

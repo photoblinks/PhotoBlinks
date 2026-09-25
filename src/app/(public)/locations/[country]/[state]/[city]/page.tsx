@@ -17,6 +17,7 @@ import { LocationCard } from "@/components/public/location-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { JsonLd } from "@/components/public/json-ld";
 import { LocationFactsStrip } from "@/components/public/location-facts-strip";
+import { EditorialSection } from "@/components/public/editorial-section";
 import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
 import {
   buildGeoDefaultDescription,
@@ -365,6 +366,8 @@ export default async function LocationsCityOrStateCategoryPage({ params, searchP
             </li>
           </ul>
         </div>
+
+        <EditorialSection stateId={state.id} categoryId={category.id} />
       </div>
 
       {/* Always describes this page's own canonical state+category result

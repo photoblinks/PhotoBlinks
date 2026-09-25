@@ -27,11 +27,13 @@ export function BlogContentEditor({
   slug,
   locations,
   defaultValue,
+  allowedBlockTypes,
 }: {
   name: string;
   slug: string;
   locations: { id: string; name: string }[];
   defaultValue?: import("./blog-editor/types").BlogBlockInput[];
+  allowedBlockTypes?: readonly BlockType[];
 }) {
   const [blocks, setBlocks] = useState<Block[]>(
     (defaultValue ?? []).map((b) => ({ ...(b as Block), id: crypto.randomUUID() })),
@@ -164,7 +166,7 @@ export function BlogContentEditor({
       )}
 
       <div className="flex flex-col">
-        <InsertGap onInsert={(type) => insertAt(0, type)} />
+        <InsertGap blockTypes={allowedBlockTypes} onInsert={(type) => insertAt(0, type)} />
 
         {blocks.map((block, index) => (
           <div key={block.id}>
@@ -218,13 +220,17 @@ export function BlogContentEditor({
               <BlockFields block={block} slug={slug} locations={locations} onChange={(patch) => updateBlock(block.id, patch)} />
             </div>
 
-            <InsertGap onInsert={(type) => insertAt(index + 1, type)} />
+            <InsertGap blockTypes={allowedBlockTypes} onInsert={(type) => insertAt(index + 1, type)} />
           </div>
         ))}
 
         {blocks.length === 0 && (
           <div className="flex justify-center py-8">
-            <BlockInserter variant="button" onInsert={(type) => insertAt(0, type)} />
+            <BlockInserter
+              variant="button"
+              blockTypes={allowedBlockTypes}
+              onInsert={(type) => insertAt(0, type)}
+            />
           </div>
         )}
       </div>
@@ -232,10 +238,16 @@ export function BlogContentEditor({
   );
 }
 
-function InsertGap({ onInsert }: { onInsert: (type: BlockType) => void }) {
+function InsertGap({
+  onInsert,
+  blockTypes,
+}: {
+  onInsert: (type: BlockType) => void;
+  blockTypes?: readonly BlockType[];
+}) {
   return (
     <div className="h-3">
-      <BlockInserter onInsert={onInsert} />
+      <BlockInserter onInsert={onInsert} blockTypes={blockTypes} />
     </div>
   );
 }

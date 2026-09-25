@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { uploadFileToR2 } from "@/lib/r2/upload-client";
 import { LocationPicker } from "./location-picker";
+import { LocationMultiPicker } from "./location-multi-picker";
 import type {
   Block,
   HeadingBlock,
@@ -19,6 +20,7 @@ import type {
   GalleryBlockT,
   FaqBlockT,
   LocationLinkBlock,
+  LocationInfoTableBlock,
   CtaBlock,
   SpacerBlock,
 } from "./types";
@@ -221,6 +223,26 @@ export function BlockFields({
             value={block.label}
             onChange={(e) => (onChange as Patch<LocationLinkBlock>)({ label: e.target.value })}
           />
+        </div>
+      );
+
+    case "locationInfoTable":
+      return (
+        <div className="flex flex-col gap-2">
+          <Input
+            placeholder="Table title (optional)"
+            value={block.title}
+            onChange={(e) => (onChange as Patch<LocationInfoTableBlock>)({ title: e.target.value })}
+          />
+          <LocationMultiPicker
+            locations={locations}
+            value={block.locationIds}
+            onChange={(locationIds) => (onChange as Patch<LocationInfoTableBlock>)({ locationIds })}
+          />
+          <p className="text-xs text-muted-foreground">
+            Shows the configured location information fields for each selected location. Fields are
+            read from the location itself at render time — never stored in this block.
+          </p>
         </div>
       );
 

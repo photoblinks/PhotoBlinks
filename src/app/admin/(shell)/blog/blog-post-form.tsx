@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ImageUploader } from "@/components/admin/image-uploader";
 import { FaqEditor } from "@/components/admin/faq-editor";
 import { BlogContentEditor, type BlogBlockInput } from "@/components/admin/blog-content-editor";
+import { BLOG_POST_BLOCK_TYPES } from "@/components/admin/blog-editor/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { slugify } from "@/lib/slug";
@@ -182,7 +183,13 @@ export function BlogPostForm({
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1">
-          <BlogContentEditor name="content_json" slug={slug} locations={locations} defaultValue={post?.content} />
+          <BlogContentEditor
+            name="content_json"
+            slug={slug}
+            locations={locations}
+            defaultValue={post?.content}
+            allowedBlockTypes={BLOG_POST_BLOCK_TYPES}
+          />
         </div>
 
         <aside className="flex w-full flex-col gap-4 lg:w-80 lg:shrink-0">

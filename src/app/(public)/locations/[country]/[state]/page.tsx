@@ -14,6 +14,7 @@ import {
 import { HomeFilter } from "@/components/public/home-filter";
 import { LocationCard } from "@/components/public/location-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { EditorialSection } from "@/components/public/editorial-section";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 import { hasIndexAffectingParams, isSeoEligible } from "@/lib/seo-eligibility";
 import { buildGeoDefaultDescription, extractCategoryNames } from "@/lib/seo-templates";
@@ -162,6 +163,8 @@ export default async function StateLocationsPage({ params, searchParams }: Props
         ) : (
           <BrowseState countrySlug={countrySlug} state={state} locations={locations} />
         )}
+
+        <EditorialSection stateId={state.id} categoryId={null} />
       </div>
     </div>
   );

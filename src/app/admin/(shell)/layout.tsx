@@ -30,6 +30,7 @@ const NAV_LINKS: {
   { href: "/admin/country-pages", label: "Country Pages" },
   { href: "/admin/state-pages", label: "State Pages" },
   { href: "/admin/city-pages", label: "City Pages" },
+  { href: "/admin/editorial", label: "Editorial Content" },
   { href: "/admin/seo/location-categories", label: "Location + Category SEO" },
   { href: "/admin/seo/location-state-categories", label: "State + Category SEO" },
   { href: "/admin/settings", label: "Settings" },

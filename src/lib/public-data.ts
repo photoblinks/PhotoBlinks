@@ -2,7 +2,8 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/public";
 import { haversineDistanceKm } from "@/lib/geo";
-import { blogBlockSchema, type BlogBlock } from "@/lib/blog/content-blocks";
+import { blogBlockSchema, parseEditorialBlocks, type BlogBlock, type EditorialBlock } from "@/lib/blog/content-blocks";
+import { LOCATION_INFO_FIELDS, type LocationInfoTableConfig } from "@/lib/location-info-fields";
 
 // This module is the ONLY place public pages read data from — it never
 // imports the cookie-based admin client (src/lib/supabase/server.ts), so
@@ -1393,6 +1394,121 @@ export const getPublicLocationLinksByIds = cache(
     ["getPublicLocationLinksByIds"],
     { revalidate: PUBLIC_REVALIDATE_SECONDS },
   ),
+);
+// ---------------------------------------------------------------------------
+// Hybrid editorial content (State / State + Category pages)
+// ---------------------------------------------------------------------------
+
+/** One published location's information-table fields, keyed by column code —
+ * resolved in a single batched query for every locationInfoTable /
+ * locationLink block on an editorial page. Only EXTRA_DETAIL_COLUMNS (the
+ * approved ExtraDetails set) is fetched; no other location column is
+ * exposed, and unpublished/deleted locations are absent entirely (RLS +
+ * explicit is_published filter). */
+export type PublicLocationInfoEntry = {
+  id: string;
+  name: string;
+  slug: string;
+  details: Record<string, string | null>;
+};
+
+export const getPublicLocationInfoByIds = cache(
+  unstable_cache(
+    async (ids: string[]): Promise<PublicLocationInfoEntry[]> => {
+      if (ids.length === 0) return [];
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("locations")
+        .select(`id, name, slug, ${EXTRA_DETAIL_COLUMNS}`)
+        .eq("is_published", true)
+        .in("id", ids);
+
+      return (data ?? []).map((location) => {
+        const details: Record<string, string | null> = {};
+        const locationRecord = location as unknown as Record<string, unknown>;
+        for (const code of EXTRA_DETAIL_COLUMNS.split(",").map((c) => c.trim())) {
+          const value = locationRecord[code];
+          details[code] = typeof value === "string" ? value : null;
+        }
+        return { id: location.id, name: location.name, slug: location.slug, details };
+      });
+    },
+    ["getPublicLocationInfoByIds"],
+    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  ),
+);
+
+/** Per-block fail-closed validation for location_editorial.content is
+ * provided by parseEditorialBlocks (content-blocks.ts) — see the function
+ * docstring there. */
+
+/** Published editorial content for a State page (categoryId null) or a
+ * State + Category page. Returns an empty array when none exists, is a
+ * draft, or is malformed — never exposes drafts through public reads (RLS
+ * already hides them; the explicit status filter documents that intent). */
+export const getLocationEditorial = cache(
+  unstable_cache(
+    async (stateId: string, categoryId: string | null): Promise<EditorialBlock[]> => {
+      const supabase = createPublicClient();
+      let query = supabase
+        .from("location_editorial")
+        .select("content")
+        .eq("state_id", stateId)
+        .eq("scope", categoryId ? "state_category" : "state")
+        .eq("status", "published");
+
+      if (categoryId) query = query.eq("category_id", categoryId);
+      else query = query.is("category_id", null);
+
+      const { data } = await query.maybeSingle();
+      if (!data) return [];
+      return parseEditorialBlocks(data.content);
+    },
+    ["getLocationEditorial"],
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: ["location-editorial"] },
+  ),
+);
+
+/** Admin location-information-table configuration from the single-row
+ * site_settings table. Malformed JSON fails closed to canonical defaults
+ * (empty config = all fields, canonical order, canonical labels). */
+function parseLocationInfoTableConfig(value: unknown): LocationInfoTableConfig {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  const config = value as Record<string, unknown>;
+  const result: LocationInfoTableConfig = {};
+  const validCodes = new Set(LOCATION_INFO_FIELDS.map((field) => field.code));
+
+  if (config.enabled !== undefined) {
+    if (!Array.isArray(config.enabled) || !config.enabled.every((c) => typeof c === "string")) return {};
+    result.enabled = config.enabled.filter((code): code is string => validCodes.has(code));
+  }
+  if (config.order !== undefined) {
+    if (!Array.isArray(config.order) || !config.order.every((c) => typeof c === "string")) return {};
+    result.order = config.order.filter((code): code is string => validCodes.has(code));
+  }
+  if (config.labels !== undefined) {
+    if (typeof config.labels !== "object" || config.labels === null || Array.isArray(config.labels)) return {};
+    const labels: Record<string, string> = {};
+    for (const [key, value] of Object.entries(config.labels as Record<string, unknown>)) {
+      if (validCodes.has(key) && typeof value === "string" && value.length <= 200) labels[key] = value;
+    }
+    result.labels = labels;
+  }
+  return result;
+}
+
+export const getLocationInfoTableConfig = unstable_cache(
+  async (): Promise<LocationInfoTableConfig> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("site_settings")
+      .select("location_info_table_config")
+      .eq("id", true)
+      .maybeSingle();
+    return parseLocationInfoTableConfig(data?.location_info_table_config);
+  },
+  ["getLocationInfoTableConfig"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: ["location-info-table-config"] },
 );
 // ---------------------------------------------------------------------------
 // Footer social media links (Admin → Settings → Social Media)
