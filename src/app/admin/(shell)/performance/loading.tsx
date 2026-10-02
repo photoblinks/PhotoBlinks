@@ -12,6 +12,20 @@ export default function PerformanceLoading() {
         <Skeleton className="h-14 w-40" />
         <Skeleton className="h-8 w-24" />
       </div>
+      <Skeleton className="mb-6 h-6 w-56" />
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+      <Skeleton className="mb-6 h-6 w-40" />
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
       <Skeleton className="mb-6 h-6 w-40" />
       <Skeleton className="h-40 w-full" />
       <Skeleton className="mb-6 mt-6 h-6 w-44" />

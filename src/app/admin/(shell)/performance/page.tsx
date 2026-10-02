@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { checkAdmin, requireStaffPage } from "@/lib/supabase/require-permission";
+import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -34,7 +35,31 @@ type DailyRow = {
   activity_date: string;
   locations_added: number | string | null;
   studios_added: number | string | null;
-  total_activities: number | string | null;
+  total_added: number | string | null;
+};
+
+type SummaryRow = {
+  user_id: string;
+  display_name: string;
+  range_locations_added: number | string | null;
+  range_studios_added: number | string | null;
+  range_total_added: number | string | null;
+  week_start: string;
+  week_end: string;
+  week_locations_added: number | string | null;
+  week_studios_added: number | string | null;
+  week_total_added: number | string | null;
+};
+
+type SummaryTotals = {
+  rangeLocations: number;
+  rangeStudios: number;
+  rangeTotal: number;
+  weekLocations: number;
+  weekStudios: number;
+  weekTotal: number;
+  weekStart: string;
+  weekEnd: string;
 };
 
 type RoleRow = { user_id: string; employee_roles: { name: string } | null };
@@ -72,6 +97,15 @@ function formatDay(iso: string): string {
     day: "numeric",
     month: "short",
     year: "numeric",
+  });
+}
+
+/** Weekday name for a YYYY-MM-DD IST calendar day (the date string is a plain
+ * calendar day, so it is parsed and formatted in UTC to avoid shifting it). */
+function weekdayName(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-IN", {
+    timeZone: "UTC",
+    weekday: "long",
   });
 }
 
@@ -133,6 +167,30 @@ async function fetchEmployeeRoles(
     .select("user_id, employee_roles(name)")
     .eq("is_active", true);
   return { data: (data as RoleRow[] | null) ?? null, error };
+}
+
+/** Small stat tile used by the monthly and weekly summary card rows. Reuses
+ * the existing Card primitives so the dashboard matches the rest of the admin
+ * shell; zero activity renders as "0" rather than an empty value. `value`
+ * accepts text so period-indicator cards can show a range instead of a count. */
+function SummaryCard({
+  title,
+  value,
+  hint,
+}: {
+  title: string;
+  value: ReactNode;
+  hint?: string;
+}) {
+  return (
+    <Card size="sm">
+      <CardHeader>
+        <CardDescription>{title}</CardDescription>
+        <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
+        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      </CardHeader>
+    </Card>
+  );
 }
 
 function TopCard({
@@ -206,7 +264,7 @@ export default async function EmployeePerformancePage({
   const supabase = await createClient();
   const { ok: isAdmin } = await checkAdmin(supabase);
 
-  const [statsResult, dailyResult, roleResult] = await Promise.all([
+  const [statsResult, dailyResult, summaryResult, roleResult] = await Promise.all([
     supabase.rpc("get_employee_performance_stats", {
       p_employee_id: null,
       p_from: from,
@@ -217,13 +275,20 @@ export default async function EmployeePerformancePage({
       p_from: from,
       p_to: to,
     }),
+    supabase.rpc("get_employee_period_summary", {
+      p_employee_id: employeeId,
+      p_from: from,
+      p_to: to,
+    }),
     fetchEmployeeRoles(supabase, isAdmin),
   ]);
 
   const statsError = statsResult.error;
   const dailyError = dailyResult.error;
+  const summaryError = summaryResult.error;
   const statsRows = (statsResult.data ?? []) as StatsRow[];
   const dailyRows = (dailyResult.data ?? []) as DailyRow[];
+  const summaryRows = (summaryResult.data ?? []) as SummaryRow[];
 
   const roleByUser = new Map<string, string>();
   for (const row of roleResult.data ?? []) {
@@ -248,6 +313,41 @@ export default async function EmployeePerformancePage({
     .map((row) => ({ id: row.user_id, name: row.display_name }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  // The summary RPC already returns one row per employee (or just the selected
+  // one). When a single employee is selected the totals are their own row;
+  // otherwise the per-employee rows are summed for the team view. Total Added
+  // is summed from the component counts so it can never disagree with them.
+  const summaryTotals = summaryRows.reduce<SummaryTotals>(
+    (acc, row) => ({
+      rangeLocations: acc.rangeLocations + num(row.range_locations_added),
+      rangeStudios: acc.rangeStudios + num(row.range_studios_added),
+      rangeTotal: acc.rangeTotal + num(row.range_total_added),
+      weekLocations: acc.weekLocations + num(row.week_locations_added),
+      weekStudios: acc.weekStudios + num(row.week_studios_added),
+      weekTotal: acc.weekTotal + num(row.week_total_added),
+      weekStart: row.week_start,
+      weekEnd: row.week_end,
+    }),
+    {
+      rangeLocations: 0,
+      rangeStudios: 0,
+      rangeTotal: 0,
+      weekLocations: 0,
+      weekStudios: 0,
+      weekTotal: 0,
+      weekStart: from,
+      weekEnd: to,
+    },
+  );
+
+  const weekLabel = `${formatDay(summaryTotals.weekStart)} - ${formatDay(summaryTotals.weekEnd)}`;
+  const weekDays =
+    Math.round(
+      (Date.parse(`${summaryTotals.weekEnd}T00:00:00Z`) -
+        Date.parse(`${summaryTotals.weekStart}T00:00:00Z`)) /
+        86_400_000,
+    ) + 1;
+
   return (
     <div>
       <div className="mb-6">
@@ -265,6 +365,50 @@ export default async function EmployeePerformancePage({
         initial={{ employee: employeeId ?? undefined, from, to }}
         defaults={{ from: defaultFrom, to: today }}
       />
+
+      <section className="mb-6">
+        <h2 className="mb-3 text-base font-semibold">
+          Summary - {formatDay(from)} to {formatDay(to)}
+        </h2>
+        {summaryError ? (
+          <p className="text-sm text-destructive">
+            Could not load summary totals. Please try again.
+          </p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <SummaryCard title="Total locations added" value={summaryTotals.rangeLocations} />
+            <SummaryCard title="Total studios added" value={summaryTotals.rangeStudios} />
+            <SummaryCard title="Total added" value={summaryTotals.rangeTotal} />
+            <SummaryCard
+              title="Selected period"
+              value={<span className="text-lg">{`${formatDay(from)} - ${formatDay(to)}`}</span>}
+              hint={`${num(spanDays) + 1} days`}
+            />
+          </div>
+        )}
+      </section>
+
+      <section className="mb-6">
+        <h2 className="mb-3 text-base font-semibold">
+          This week{selectedName ? ` - ${selectedName}` : " - all employees"}
+        </h2>
+        {summaryError ? (
+          <p className="text-sm text-destructive">
+            Could not load weekly totals. Please try again.
+          </p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <SummaryCard title="Locations added this week" value={summaryTotals.weekLocations} />
+            <SummaryCard title="Studios added this week" value={summaryTotals.weekStudios} />
+            <SummaryCard title="Total added this week" value={summaryTotals.weekTotal} />
+            <SummaryCard
+              title="Week"
+              value={<span className="text-lg">{weekLabel}</span>}
+              hint={`${weekDays} ${weekDays === 1 ? "day" : "days"} (Mon–Sun, IST)`}
+            />
+          </div>
+        )}
+      </section>
 
       <section className="mb-6">
         <h2 className="mb-3 text-base font-semibold">Employee overview</h2>
@@ -344,19 +488,23 @@ export default async function EmployeePerformancePage({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Day</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Locations added</TableHead>
                 <TableHead className="text-right">Studios added</TableHead>
-                <TableHead className="text-right">Total activities</TableHead>
+                <TableHead className="text-right">Total added</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {dailyRows.map((row) => (
                 <TableRow key={row.activity_date}>
+                  <TableCell className="text-muted-foreground">
+                    {weekdayName(row.activity_date)}
+                  </TableCell>
                   <TableCell className="font-medium">{formatDay(row.activity_date)}</TableCell>
                   <TableCell className="text-right">{num(row.locations_added)}</TableCell>
                   <TableCell className="text-right">{num(row.studios_added)}</TableCell>
-                  <TableCell className="text-right">{num(row.total_activities)}</TableCell>
+                  <TableCell className="text-right">{num(row.total_added)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

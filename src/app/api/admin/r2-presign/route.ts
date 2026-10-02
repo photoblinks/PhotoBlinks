@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
+import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
 import {
   ALLOWED_IMAGE_CONTENT_TYPES,
   MAX_UPLOAD_BYTES,
@@ -48,8 +49,17 @@ const blogFilenameSchema = z
   );
 
 export async function POST(request: Request) {
+  // First check for admin (preserves existing admin behavior for all namespaces)
   const admin = await getAuthorizedAdminUser();
+  
+  // If not admin, check for employee with appropriate permission
+  let staff = null;
   if (!admin) {
+    staff = await getAuthorizedStaffUser();
+  }
+
+  // No valid session or user is neither admin nor active employee
+  if (!admin && !staff) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -62,6 +72,32 @@ export async function POST(request: Request) {
   }
 
   const { kind, slug, filename, contentType, fileSize } = parsed.data;
+
+  // Determine required permission based on kind (server-side, never trust client)
+  let hasPermission = false;
+  if (admin) {
+    // Admins have access to all namespaces
+    hasPermission = true;
+  } else if (staff) {
+    // Employees: only locations.edit for locations, studios.edit for studios
+    // All other namespaces remain admin-only
+    switch (kind) {
+      case "locations":
+        hasPermission = staff.can(PERMISSION.LOCATIONS_EDIT);
+        break;
+      case "studios":
+        hasPermission = staff.can(PERMISSION.STUDIOS_EDIT);
+        break;
+      default:
+        // categories, countries, states, cities, site, photographers, blog - admin only
+        hasPermission = false;
+        break;
+    }
+  }
+
+  if (!hasPermission) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   // Blog uploads only: apply the stricter, kind-specific slug/filename
   // checks (the shared minimum-length checks above don't protect the R2 key
