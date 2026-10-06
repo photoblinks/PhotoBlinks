@@ -120,7 +120,7 @@ export async function Footer() {
       </div>
 
       <div className="border-t border-white/10 px-4 py-5 text-center text-xs text-white/60 sm:px-6">
-        © {new Date().getFullYear()} PhotoBlinks. All rights reserved.
+        © {new Date().getFullYear()} PhotoBlinks. All rights reserved. In ❤️ with Location
       </div>
     </footer>
   );
