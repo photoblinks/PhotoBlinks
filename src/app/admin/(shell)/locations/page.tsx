@@ -26,6 +26,7 @@ type LocationFilters = {
   state?: string;
   city?: string;
   category?: string;
+  status?: string;
 };
 
 export default async function AdminLocationsPage({
@@ -39,8 +40,9 @@ export default async function AdminLocationsPage({
   if (!staff) redirect("/admin/login");
   if (!staff.canAny([PERMISSION.LOCATIONS_EDIT, PERMISSION.LOCATIONS_PUBLISH])) redirect("/admin");
 
-  const { q, country, state, city, category, page: pageParam } = await searchParams;
-  const filters: LocationFilters = { q, country, state, city, category };
+  const { q, country, state, city, category, status: statusParam, page: pageParam } = await searchParams;
+  const status = statusParam === "draft" || statusParam === "published" ? statusParam : undefined;
+  const filters: LocationFilters = { q, country, state, city, category, status };
   const supabase = await createClient();
 
   // Count first (same filters, no columns/joins): the data query's range
@@ -53,6 +55,7 @@ export default async function AdminLocationsPage({
   if (state) countQuery = countQuery.eq("state_id", state);
   if (city) countQuery = countQuery.eq("city_id", city);
   if (category) countQuery = countQuery.eq("category_id", category);
+  if (status) countQuery = countQuery.eq("is_published", status === "published");
   const { count } = await countQuery;
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
@@ -71,9 +74,11 @@ export default async function AdminLocationsPage({
   if (state) dataQuery = dataQuery.eq("state_id", state);
   if (city) dataQuery = dataQuery.eq("city_id", city);
   if (category) dataQuery = dataQuery.eq("category_id", category);
+  if (status) dataQuery = dataQuery.eq("is_published", status === "published");
 
-  const [{ data: locations }, { data: countries }, { data: states }, { data: categories }, { data: allLocationsForFilters }] =
+  const [{ count: draftCount }, { data: locations }, { data: countries }, { data: states }, { data: categories }, { data: allLocationsForFilters }] =
     await Promise.all([
+      supabase.from("locations").select("id", { count: "exact", head: true }).eq("is_published", false),
       dataQuery,
       supabase.from("countries").select("id, name").order("name"),
       supabase.from("states").select("id, name, country_id").order("name"),
@@ -121,8 +126,30 @@ export default async function AdminLocationsPage({
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Locations</h1>
         {staff.can(PERMISSION.LOCATIONS_EDIT) && (
-          <Button render={<Link href="/admin/locations/new" />}>Add location</Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" render={<Link href="/admin/locations/bulk-import" />}>
+              Bulk import
+            </Button>
+            <Button render={<Link href="/admin/locations/new" />}>Add location</Button>
+          </div>
         )}
+      </div>
+
+      <div className="mb-4 flex gap-2">
+        {[
+          { value: undefined, label: "All" },
+          { value: "draft", label: `Drafts (${draftCount ?? 0})` },
+          { value: "published", label: "Published" },
+        ].map((tab) => (
+          <Button
+            key={tab.label}
+            variant={status === tab.value ? "default" : "outline"}
+            size="sm"
+            render={<Link href={hrefFor({ ...filters, status: tab.value }, 1)} />}
+          >
+            {tab.label}
+          </Button>
+        ))}
       </div>
 
       <AdminListFilters
@@ -132,6 +159,7 @@ export default async function AdminLocationsPage({
         cities={[...cityOptions.values()]}
         categories={categories ?? []}
         initial={{ q, country, state, city, category }}
+        keepParam={{ name: "status", value: status }}
       />
 
       <Table>
@@ -249,6 +277,7 @@ function hrefFor(filters: LocationFilters, page: number): string {
   if (filters.state) params.set("state", filters.state);
   if (filters.city) params.set("city", filters.city);
   if (filters.category) params.set("category", filters.category);
+  if (filters.status) params.set("status", filters.status);
   params.set("page", String(page));
   return `/admin/locations?${params.toString()}`;
 }

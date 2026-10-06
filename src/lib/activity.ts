@@ -54,3 +54,27 @@ export async function recordActivityFor(
   if (!user) return;
   await recordActivityEvent(user.id, input);
 }
+
+/** Batched variant of recordActivityFor for bulk operations: one insert for
+ * many events, same best-effort semantics. */
+export async function recordActivityEventsFor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  inputs: ActivityEventInput[],
+): Promise<void> {
+  if (inputs.length === 0) return;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  const admin = createAdminClient();
+  const { error } = await admin.from("activity_events").insert(
+    inputs.map((input) => ({
+      user_id: user.id,
+      module: input.module,
+      action: input.action,
+      entity_id: input.entity_id,
+      metadata: input.metadata ?? null,
+    })),
+  );
+  if (error) console.error("[activity] batch insert failed:", error.message);
+}

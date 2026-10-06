@@ -10,6 +10,7 @@ import {
   type PublicLocationDetail,
 } from "@/lib/public-data";
 import { getCategoryMarkerStyle } from "@/lib/category-style";
+import { DEFAULT_PRICE_NOTE } from "@/lib/detail-options";
 import { ImageGallery } from "@/components/public/image-gallery";
 import { ShareButton } from "@/components/public/share-button";
 import { ReportLocationButton } from "@/components/public/report-location-button";
@@ -87,6 +88,7 @@ export async function LocationDetailContent({
   // use the shorter Card Place Name — the H1 above keeps the full stored
   // Name, unaffected.
   const displayName = location.cardName || location.name;
+  const pricing = { type: location.pricing_type, price: location.price };
 
   // Quick-nav category cards at the bottom of the page — categories other
   // than this location's own (more useful for exploring something
@@ -154,22 +156,34 @@ export async function LocationDetailContent({
         {displayName} Photoshoot Details &amp; Pricing
       </h2>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-2">{hasExtraDetails(location) && <ExtraDetailsList details={location} />}</div>
+        <div className="lg:col-span-2">
+          {hasExtraDetails(location, pricing) && <ExtraDetailsList details={location} pricing={pricing} />}
+        </div>
 
         <aside className="flex flex-col gap-6">
           <div className="rounded-xl border bg-white p-4 shadow-sm">
-            <h3 className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="flex size-7 items-center justify-center rounded-full bg-pb-brand/10">
-                <Camera className="size-3.5 text-pb-brand" />
+            <div className="flex items-start gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-pb-brand/10">
+                <Camera className="size-4 text-pb-brand" />
               </span>
-              Shoot/Permit Info
-            </h3>
-            <p className="font-heading text-xl leading-snug font-semibold">
-              {location.shoot_permit_fee || "FREE"}
+              <dl className="flex flex-col gap-3">
+                <div>
+                  <dt className="text-sm text-muted-foreground">Photoshoot Charges</dt>
+                  <dd className="font-heading text-xl leading-snug font-semibold capitalize">
+                    {location.pricing_type}
+                  </dd>
+                </div>
+                {location.pricing_type === "paid" && location.price ? (
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Shoot Permit Fee</dt>
+                    <dd className="font-heading text-xl leading-snug font-semibold">₹{location.price}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+            <p className="mt-4 border-t border-border/40 pt-3 text-sm text-muted-foreground">
+              {location.price_note || DEFAULT_PRICE_NOTE}
             </p>
-            {location.price_note && (
-              <p className="mt-1.5 text-sm text-muted-foreground">{location.price_note}</p>
-            )}
             <ActionButton
               actionType={location.action_type}
               actionValue={location.action_value}

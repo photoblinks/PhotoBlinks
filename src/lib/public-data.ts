@@ -590,7 +590,7 @@ export const getPublishedStudios = unstable_cache(
 );
 
 /** Availability dropdown used by both Changing Rooms and Parking Facility. */
-export type AvailabilityStatus = "available" | "not_available";
+export type AvailabilityStatus = "available" | "limited" | "not_available";
 
 /** Optional detail fields shared by locations and studios — set by the
  * admin, shown on the public page only when present. Grouped into Shoot

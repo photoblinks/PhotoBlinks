@@ -21,6 +21,7 @@ const NAV_LINKS: {
   { href: "/admin/employees", label: "Employees" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/locations", label: "Locations", permissions: [PERMISSION.LOCATIONS_EDIT, PERMISSION.LOCATIONS_PUBLISH] },
+  { href: "/admin/locations/bulk-import", label: "Bulk Import", permissions: [PERMISSION.LOCATIONS_EDIT] },
   { href: "/admin/studios", label: "Studios", permissions: [PERMISSION.STUDIOS_EDIT, PERMISSION.STUDIOS_PUBLISH] },
   { href: "/admin/blog", label: "Blog" },
   { href: "/admin/photographers", label: "Sponsored Photographers" },

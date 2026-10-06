@@ -1,7 +1,8 @@
 import {
+  Camera,
+  Wallet,
   Heart,
   CalendarCheck,
-  Camera,
   Drone,
   Ticket,
   Sun,
@@ -20,6 +21,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ExtraDetails } from "@/lib/public-data";
+import {
+  ACCESS_OPTIONS,
+  AVAILABILITY_OPTIONS,
+  CROWD_OPTIONS,
+  formatBestSeason,
+  formatBestTime,
+  formatOption,
+} from "@/lib/detail-options";
 
 const DRONE_LABELS: Record<string, string> = {
   allowed: "🟢 Allowed",
@@ -34,14 +43,13 @@ const PRE_WEDDING_SHOOT_LABELS: Record<string, string> = {
   prohibited: "❌ Prohibited",
 };
 
-const AVAILABILITY_LABELS: Record<string, string> = {
-  available: "Available",
-  not_available: "Not Available",
-};
+
+/** Location-only pricing (Photoshoot Charges / Shoot Permit Fee). */
+export type PricingInfo = { type: "free" | "paid" | "unknown"; price: number | null };
 
 type Row = { icon: LucideIcon; label: string; value: string };
 
-function buildGroups(details: ExtraDetails): { title: string; rows: Row[] }[] {
+function buildGroups(details: ExtraDetails, pricing?: PricingInfo): { title: string; rows: Row[] }[] {
   return [
     {
       title: "Shoot Details",
@@ -82,18 +90,28 @@ function buildGroups(details: ExtraDetails): { title: string; rows: Row[] }[] {
       title: "Pricing & Timing",
       rows: [
         details.entry_fee && { icon: Ticket, label: "Entry Fee", value: details.entry_fee },
-        details.shoot_permit_fee && {
+        pricing && {
           icon: Camera,
-          label: "Shoot/Permit Info",
-          value: details.shoot_permit_fee,
+          label: "Photoshoot Charges",
+          value: pricing.type.charAt(0).toUpperCase() + pricing.type.slice(1),
         },
+        pricing?.type === "paid" &&
+          pricing.price && { icon: Wallet, label: "Shoot Permit Fee", value: `₹${pricing.price}` },
         details.vehicle_parking_fee && {
           icon: Car,
           label: "Vehicle Parking",
           value: details.vehicle_parking_fee,
         },
-        details.best_season && { icon: Sun, label: "Best Season", value: details.best_season },
-        details.best_time && { icon: Clock, label: "Best Time of Day", value: details.best_time },
+        details.best_season && {
+          icon: Sun,
+          label: "Best Season",
+          value: formatBestSeason(details.best_season),
+        },
+        details.best_time && {
+          icon: Clock,
+          label: "Best Time of Day",
+          value: formatBestTime(details.best_time),
+        },
       ].filter(Boolean) as Row[],
     },
     {
@@ -107,7 +125,7 @@ function buildGroups(details: ExtraDetails): { title: string; rows: Row[] }[] {
         details.parking_facility && {
           icon: SquareParking,
           label: "Vehicle Parking Availability",
-          value: AVAILABILITY_LABELS[details.parking_facility] ?? details.parking_facility,
+          value: formatOption(AVAILABILITY_OPTIONS, details.parking_facility),
         },
         details.boating_available && {
           icon: Waves,
@@ -117,17 +135,29 @@ function buildGroups(details: ExtraDetails): { title: string; rows: Row[] }[] {
         details.changing_rooms && {
           icon: Shirt,
           label: "Changing Facilities",
-          value: AVAILABILITY_LABELS[details.changing_rooms] ?? details.changing_rooms,
+          value: formatOption(AVAILABILITY_OPTIONS, details.changing_rooms),
         },
-        details.restrooms && { icon: Bath, label: "Restrooms", value: details.restrooms },
+        details.restrooms && {
+          icon: Bath,
+          label: "Restrooms",
+          value: formatOption(AVAILABILITY_OPTIONS, details.restrooms),
+        },
         details.facilities && { icon: Sofa, label: "Facilities", value: details.facilities },
       ].filter(Boolean) as Row[],
     },
     {
       title: "Environment",
       rows: [
-        details.access && { icon: DoorOpen, label: "Access Level", value: details.access },
-        details.crowd && { icon: Users, label: "Crowd Level", value: details.crowd },
+        details.access && {
+          icon: DoorOpen,
+          label: "Access Level",
+          value: formatOption(ACCESS_OPTIONS, details.access),
+        },
+        details.crowd && {
+          icon: Users,
+          label: "Crowd Level",
+          value: formatOption(CROWD_OPTIONS, details.crowd),
+        },
         details.privacy && { icon: Lock, label: "Privacy Score", value: details.privacy },
         details.weather_lighting && {
           icon: CloudSun,
@@ -141,16 +171,22 @@ function buildGroups(details: ExtraDetails): { title: string; rows: Row[] }[] {
 
 /** Whether any extra-detail field is set — use to decide whether to show
  * the "About This Location/Studio" heading at all. */
-export function hasExtraDetails(details: ExtraDetails): boolean {
-  return buildGroups(details).some((group) => group.rows.length > 0);
+export function hasExtraDetails(details: ExtraDetails, pricing?: PricingInfo): boolean {
+  return buildGroups(details, pricing).some((group) => group.rows.length > 0);
 }
 
 /** Optional extra-detail rows shared by location and studio detail pages,
  * grouped into Shoot Details, Pricing & Timing, Amenities, and Environment.
  * Renders nothing if none of the fields are set; a group is only shown if
  * at least one of its fields is set. */
-export function ExtraDetailsList({ details }: { details: ExtraDetails }) {
-  const groups = buildGroups(details).filter((group) => group.rows.length > 0);
+export function ExtraDetailsList({
+  details,
+  pricing,
+}: {
+  details: ExtraDetails;
+  pricing?: PricingInfo;
+}) {
+  const groups = buildGroups(details, pricing).filter((group) => group.rows.length > 0);
 
   if (groups.length === 0) return null;
 

@@ -2,6 +2,7 @@ import type { ExtraDetails, PublicLocationDetail, PublicStudioDetail, PublicBlog
 import type { BlogBlock } from "./blog/content-blocks";
 import { getValidatedYouTubeVideo, type ValidatedYouTubeVideo } from "./youtube";
 import { SITE_URL } from "./site-url";
+import { ACCESS_OPTIONS, AVAILABILITY_OPTIONS, CROWD_OPTIONS, optionLabel } from "./detail-options";
 
 export function absoluteUrl(path: string) {
   return `${SITE_URL}${path}`;
@@ -71,8 +72,9 @@ const PRE_WEDDING_SHOOT_SCHEMA_LABELS: Record<NonNullable<ExtraDetails["pre_wedd
   prohibited: "Prohibited",
 };
 
-const AVAILABILITY_BOOLEAN: Record<NonNullable<ExtraDetails["changing_rooms"]>, boolean> = {
+const AVAILABILITY_BOOLEAN: Record<NonNullable<ExtraDetails["changing_rooms"]>, boolean | string> = {
   available: true,
+  limited: "Limited",
   not_available: false,
 };
 
@@ -111,10 +113,10 @@ function buildAmenityFeatures(details: ExtraDetails): LocationFeature[] {
   add("Vehicle Parking Availability", details.parking_facility ? AVAILABILITY_BOOLEAN[details.parking_facility] : null);
   add("Boating Available for Shoot", details.boating_available);
   add("Changing Facilities", details.changing_rooms ? AVAILABILITY_BOOLEAN[details.changing_rooms] : null);
-  add("Restrooms", details.restrooms);
+  add("Restrooms", optionLabel(AVAILABILITY_OPTIONS, details.restrooms));
   add("Facilities", details.facilities);
-  add("Access Level", details.access);
-  add("Crowd Level", details.crowd);
+  add("Access Level", optionLabel(ACCESS_OPTIONS, details.access));
+  add("Crowd Level", optionLabel(CROWD_OPTIONS, details.crowd));
   add("Privacy Score", details.privacy);
   add("Weather & Lighting Considerations", details.weather_lighting);
 

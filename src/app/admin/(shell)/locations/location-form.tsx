@@ -175,7 +175,7 @@ export function LocationForm({
 
         <Field>
           <FieldLabel htmlFor="pricing_type">
-            Pricing
+            Photoshoot Charges
             <FieldRequiredMark />
           </FieldLabel>
           <Select
@@ -203,7 +203,7 @@ export function LocationForm({
         {pricingType === "paid" && (
           <Field>
             <FieldLabel htmlFor="price">
-              Price (₹)
+              Shoot Permit Fee (₹)
               <FieldRequiredMark />
             </FieldLabel>
             <Input

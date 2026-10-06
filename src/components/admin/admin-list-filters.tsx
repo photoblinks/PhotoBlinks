@@ -31,6 +31,7 @@ export function AdminListFilters({
   cities,
   categories,
   initial,
+  keepParam,
 }: {
   basePath: string;
   countries: Option[];
@@ -38,6 +39,8 @@ export function AdminListFilters({
   cities: CityOption[];
   categories?: Option[];
   initial: { q?: string; country?: string; state?: string; city?: string; category?: string };
+  /** Extra query param carried through filter changes (e.g. the Drafts tab). */
+  keepParam?: { name: string; value?: string };
 }) {
   const router = useRouter();
   const [q, setQ] = useState(initial.q ?? "");
@@ -74,6 +77,7 @@ export function AdminListFilters({
     if (stateId !== ALL) params.set("state", stateId);
     if (cityId !== ALL) params.set("city", cityId);
     if (categories !== undefined && categoryId !== ALL) params.set("category", categoryId);
+    if (keepParam?.value) params.set(keepParam.name, keepParam.value);
     // A filter change can leave a previously-valid page past the new,
     // smaller result set — always land back on page 1.
     params.set("page", "1");

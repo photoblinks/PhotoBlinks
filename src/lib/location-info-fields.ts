@@ -1,7 +1,6 @@
 import {
   Heart,
   CalendarCheck,
-  Camera,
   Drone,
   Ticket,
   Sun,
@@ -19,6 +18,12 @@ import {
   CloudSun,
   type LucideIcon,
 } from "lucide-react";
+import {
+  DETAIL_OPTIONS_BY_FIELD,
+  formatBestSeason,
+  formatBestTime,
+  formatOption,
+} from "@/lib/detail-options";
 
 /**
  * Canonical registry of the location information-table fields — the single
@@ -58,7 +63,6 @@ export const LOCATION_INFO_FIELDS: LocationInfoField[] = [
   { code: "recommended_outfits", label: "Recommended Outfits", group: "Shoot Details", icon: Shirt },
   // Pricing & Timing
   { code: "entry_fee", label: "Entry Fee", group: "Pricing & Timing", icon: Ticket },
-  { code: "shoot_permit_fee", label: "Shoot/Permit Info", group: "Pricing & Timing", icon: Camera },
   { code: "vehicle_parking_fee", label: "Vehicle Parking", group: "Pricing & Timing", icon: Car },
   { code: "best_season", label: "Best Season", group: "Pricing & Timing", icon: Sun },
   { code: "best_time", label: "Best Time of Day", group: "Pricing & Timing", icon: Clock },
@@ -89,11 +93,6 @@ const PRE_WEDDING_SHOOT_LABELS: Record<string, string> = {
   prohibited: "❌ Prohibited",
 };
 
-const AVAILABILITY_LABELS: Record<string, string> = {
-  available: "Available",
-  not_available: "Not Available",
-};
-
 /** Maps a stored enum value to its display label; free-text fields pass
  * through unchanged. Mirrors the label maps in extra-details-list.tsx. */
 export function formatLocationInfoValue(code: string, value: string | null): string {
@@ -103,9 +102,16 @@ export function formatLocationInfoValue(code: string, value: string | null): str
       return DRONE_LABELS[value] ?? value;
     case "pre_wedding_shoot":
       return PRE_WEDDING_SHOOT_LABELS[value] ?? value;
+    case "best_season":
+      return formatBestSeason(value);
+    case "best_time":
+      return formatBestTime(value);
     case "parking_facility":
     case "changing_rooms":
-      return AVAILABILITY_LABELS[value] ?? value;
+    case "restrooms":
+    case "access":
+    case "crowd":
+      return formatOption(DETAIL_OPTIONS_BY_FIELD[code], value);
     default:
       return value;
   }

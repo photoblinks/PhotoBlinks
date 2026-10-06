@@ -11,18 +11,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { AvailabilityStatus } from "@/lib/public-data";
+import {
+  ACCESS_OPTIONS,
+  AVAILABILITY_OPTIONS,
+  CROWD_OPTIONS,
+  DEFAULT_PRICE_NOTE,
+  type DetailOption,
+} from "@/lib/detail-options";
 
 // Sentinel item value that lets an admin explicitly clear a dropdown back
 // to "not specified" — a plain Select can't be deselected once a real item
 // has been picked, so this is a real, selectable item rather than an empty
 // value. The server strips it back to `undefined` (see actions.ts).
 export const UNSET = "unspecified";
-
-const AVAILABILITY_ITEMS = [
-  { value: UNSET, label: "Not specified" },
-  { value: "available", label: "Available" },
-  { value: "not_available", label: "Not Available" },
-];
 
 const DRONE_STATUS_ITEMS = [
   { value: UNSET, label: "Not specified" },
@@ -67,19 +68,25 @@ export type ExtraDetailsValue = {
   weather_lighting?: string | null;
 };
 
-function AvailabilityField({
+function OptionField({
   name,
   label,
+  options,
   defaultValue,
 }: {
   name: string;
   label: string;
-  defaultValue?: AvailabilityStatus | null;
+  options: readonly DetailOption[];
+  defaultValue?: string | null;
 }) {
+  const items = [
+    { value: UNSET, label: "Not specified" },
+    ...options.map((o) => ({ value: o.value, label: `${o.emoji} ${o.label}` })),
+  ];
   return (
     <Field>
       <FieldLabel htmlFor={name}>{label}</FieldLabel>
-      <Select name={name} items={AVAILABILITY_ITEMS} defaultValue={defaultValue ?? undefined}>
+      <Select name={name} items={items} defaultValue={defaultValue ?? undefined}>
         <SelectTrigger id={name} className="w-full">
           <SelectValue placeholder="Not specified" />
         </SelectTrigger>
@@ -87,8 +94,11 @@ function AvailabilityField({
           <SelectItem value={UNSET} className="text-muted-foreground">
             Not specified
           </SelectItem>
-          <SelectItem value="available">Available</SelectItem>
-          <SelectItem value="not_available">Not Available</SelectItem>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.emoji} {o.label}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </Field>
@@ -223,7 +233,7 @@ export function ExtraDetailFields({
           <Input
             id="price_note"
             name="price_note"
-            defaultValue={priceNote.defaultValue ?? ""}
+            defaultValue={priceNote.defaultValue || DEFAULT_PRICE_NOTE}
             placeholder="e.g. Photoshoot Price"
           />
         </Field>
@@ -268,9 +278,10 @@ export function ExtraDetailFields({
         />
       </Field>
 
-      <AvailabilityField
+      <OptionField
         name="parking_facility"
         label="Vehicle Parking Availability"
+        options={AVAILABILITY_OPTIONS}
         defaultValue={defaultValue?.parking_facility}
       />
 
@@ -283,16 +294,19 @@ export function ExtraDetailFields({
         />
       </Field>
 
-      <AvailabilityField
+      <OptionField
         name="changing_rooms"
         label="Changing Facilities"
+        options={AVAILABILITY_OPTIONS}
         defaultValue={defaultValue?.changing_rooms}
       />
 
-      <Field>
-        <FieldLabel htmlFor="restrooms">Restrooms</FieldLabel>
-        <Input id="restrooms" name="restrooms" defaultValue={defaultValue?.restrooms ?? ""} />
-      </Field>
+      <OptionField
+        name="restrooms"
+        label="Restrooms"
+        options={AVAILABILITY_OPTIONS}
+        defaultValue={defaultValue?.restrooms}
+      />
 
       <Field>
         <FieldLabel htmlFor="facilities">Facilities</FieldLabel>
@@ -301,15 +315,19 @@ export function ExtraDetailFields({
 
       <FieldSeparator>Environment</FieldSeparator>
 
-      <Field>
-        <FieldLabel htmlFor="access">Access Level</FieldLabel>
-        <Input id="access" name="access" defaultValue={defaultValue?.access ?? ""} />
-      </Field>
+      <OptionField
+        name="access"
+        label="Access Level"
+        options={ACCESS_OPTIONS}
+        defaultValue={defaultValue?.access}
+      />
 
-      <Field>
-        <FieldLabel htmlFor="crowd">Crowd Level</FieldLabel>
-        <Input id="crowd" name="crowd" defaultValue={defaultValue?.crowd ?? ""} />
-      </Field>
+      <OptionField
+        name="crowd"
+        label="Crowd Level"
+        options={CROWD_OPTIONS}
+        defaultValue={defaultValue?.crowd}
+      />
 
       <Field>
         <FieldLabel htmlFor="privacy">Privacy Score</FieldLabel>
