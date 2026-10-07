@@ -18,7 +18,7 @@ import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { JsonLd } from "@/components/public/json-ld";
 import { LocationFactsStrip } from "@/components/public/location-facts-strip";
 import { EditorialSection } from "@/components/public/editorial-section";
-import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
+import { DEFAULT_OG_IMAGE, buildItemListJsonLd, socialImageUrl } from "@/lib/jsonld";
 import {
   buildGeoDefaultDescription,
   buildStateCategoryDefaultDescription,
@@ -102,7 +102,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
         url: path,
         siteName: "PhotoBlinks",
         type: "website",
-        images: [data.city.image_url ?? DEFAULT_OG_IMAGE],
+        images: [data.city.image_url ? socialImageUrl(data.city.image_url) : DEFAULT_OG_IMAGE],
       },
       // Below the SEO eligibility threshold the page still renders for
       // product/UX purposes but shouldn't be indexed — see

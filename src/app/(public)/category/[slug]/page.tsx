@@ -13,7 +13,7 @@ import { HomeFilter } from "@/components/public/home-filter";
 import { LocationCard } from "@/components/public/location-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { JsonLd } from "@/components/public/json-ld";
-import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
+import { DEFAULT_OG_IMAGE, buildItemListJsonLd, socialImageUrl } from "@/lib/jsonld";
 import { hasIndexAffectingParams, isSeoEligible } from "@/lib/seo-eligibility";
 
 type Props = {
@@ -49,7 +49,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       url: path,
       siteName: "PhotoBlinks",
       type: "website",
-      images: [category.image_url ?? DEFAULT_OG_IMAGE],
+      images: [category.image_url ? socialImageUrl(category.image_url) : DEFAULT_OG_IMAGE],
     },
     // Below the SEO eligibility threshold the page still renders for
     // product/UX purposes but shouldn't be indexed — see seo-eligibility.ts.

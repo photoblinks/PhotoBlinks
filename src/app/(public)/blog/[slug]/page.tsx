@@ -11,6 +11,7 @@ import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { BlogPostingJsonLd } from "@/components/public/blog-posting-json-ld";
 import { BlogContentRenderer } from "@/components/public/blog-content-renderer";
 import { isAllowedR2ImageUrl } from "@/lib/r2/upload";
+import { socialImageUrl } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -55,7 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       publishedTime: post.publishedAt,
       modifiedTime: post.updatedAt,
       authors: [post.authorName],
-      images: ogImage ? [ogImage] : undefined,
+      images: ogImage ? [socialImageUrl(ogImage)] : undefined,
     },
   };
 }

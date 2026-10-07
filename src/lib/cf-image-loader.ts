@@ -30,25 +30,33 @@ const DEFAULT_QUALITY = 85;
 const R2_DEV_HOSTNAME_SUFFIX = ".r2.dev";
 const CDN_CGI_IMAGE_PREFIX = "/cdn-cgi/image/";
 
-export default function cfImageLoader({ src, width, quality }: ImageLoaderProps): string {
+/** Rewrites an R2-hosted image URL to its Cloudflare transform URL at the
+ * given width. Anything else (relative, non-R2, already transformed) is
+ * returned untouched. Also used for OG/Twitter/JSON-LD image URLs so raw
+ * pub-*.r2.dev originals are never exposed in public metadata. */
+export function toTransformUrl(rawUrl: string, width: number, quality?: number): string {
   let url: URL;
   try {
-    url = new URL(src);
+    url = new URL(rawUrl);
   } catch {
     // Not an absolute URL (shouldn't happen for R2-hosted images) — return
     // untouched rather than guessing, so the <img> still gets a usable src.
-    return src;
+    return rawUrl;
   }
 
   const isKnownR2Host = url.hostname.endsWith(R2_DEV_HOSTNAME_SUFFIX) || url.hostname === CF_IMAGE_DOMAIN;
-  if (!isKnownR2Host) return src;
+  if (!isKnownR2Host) return rawUrl;
 
   // Already a transform URL (e.g. a stored src somehow already went
   // through this loader) — don't wrap it a second time.
-  if (url.pathname.startsWith(CDN_CGI_IMAGE_PREFIX)) return src;
+  if (url.pathname.startsWith(CDN_CGI_IMAGE_PREFIX)) return rawUrl;
 
   const objectPath = url.pathname; // e.g. "/locations/example-slug/photo.webp"
   const resolvedQuality = quality ?? DEFAULT_QUALITY;
 
   return `https://${CF_IMAGE_DOMAIN}${CDN_CGI_IMAGE_PREFIX}width=${width},quality=${resolvedQuality},format=auto${objectPath}`;
+}
+
+export default function cfImageLoader({ src, width, quality }: ImageLoaderProps): string {
+  return toTransformUrl(src, width, quality);
 }

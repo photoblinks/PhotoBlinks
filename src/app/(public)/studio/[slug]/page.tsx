@@ -14,7 +14,7 @@ import { ActionButton } from "@/components/public/action-button";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { ExtraDetailsList, hasExtraDetails } from "@/components/public/extra-details-list";
 import { StudioJsonLd } from "@/components/public/studio-json-ld";
-import { absoluteUrl } from "@/lib/jsonld";
+import { absoluteUrl, socialImageUrl } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `/studio/${studio.slug}`,
       siteName: "PhotoBlinks",
       type: "website",
-      images: studio.images[0] ? [studio.images[0]] : undefined,
+      images: studio.images[0] ? [socialImageUrl(studio.images[0])] : undefined,
       videos: video
         ? [{ url: video.embedUrl, width: 640, height: 360, type: "text/html" }]
         : undefined,

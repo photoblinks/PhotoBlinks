@@ -2,10 +2,19 @@ import type { ExtraDetails, PublicLocationDetail, PublicStudioDetail, PublicBlog
 import type { BlogBlock } from "./blog/content-blocks";
 import { getValidatedYouTubeVideo, type ValidatedYouTubeVideo } from "./youtube";
 import { SITE_URL } from "./site-url";
+import { toTransformUrl } from "./cf-image-loader";
 import { ACCESS_OPTIONS, AVAILABILITY_OPTIONS, CROWD_OPTIONS, optionLabel } from "./detail-options";
 
 export function absoluteUrl(path: string) {
   return `${SITE_URL}${path}`;
+}
+
+const SOCIAL_IMAGE_WIDTH = 1200;
+
+/** Transform-endpoint URL for OG/Twitter/JSON-LD images, so public metadata
+ * never exposes the raw R2 original. */
+export function socialImageUrl(rawUrl: string) {
+  return toTransformUrl(rawUrl, SOCIAL_IMAGE_WIDTH);
 }
 
 /** Branded default social-share image for pages without their own
@@ -196,7 +205,7 @@ export function buildLocationJsonLd(
     name: location.name,
     url: canonicalUrl,
     description: location.description ?? undefined,
-    image: location.images.length > 0 ? location.images : undefined,
+    image: location.images.length > 0 ? location.images.map(socialImageUrl) : undefined,
     address: buildAddress(location),
     geo:
       location.latitude != null && location.longitude != null
@@ -284,7 +293,7 @@ export function buildStudioJsonLd(
     name: studio.name,
     url: canonicalUrl,
     description: studio.description ?? undefined,
-    image: studio.images.length > 0 ? studio.images : undefined,
+    image: studio.images.length > 0 ? studio.images.map(socialImageUrl) : undefined,
     address: buildAddress(studio),
     geo:
       studio.latitude != null && studio.longitude != null
@@ -351,7 +360,7 @@ export function buildBlogPostingJsonLd(
     "@id": `${canonicalUrl}#article`,
     headline: post.title,
     description: post.excerpt ?? undefined,
-    image: post.featuredImageUrl ? [post.featuredImageUrl] : undefined,
+    image: post.featuredImageUrl ? [socialImageUrl(post.featuredImageUrl)] : undefined,
     datePublished: post.publishedAt,
     dateModified: post.updatedAt,
     author: { "@type": "Person", name: post.authorName },

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublishedLocationBySlug } from "@/lib/public-data";
 import { getValidatedYouTubeVideo } from "@/lib/youtube";
+import { socialImageUrl } from "@/lib/jsonld";
 import { LocationDetailContent } from "@/components/public/location-detail-content";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -48,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `/location/${location.slug}`,
       siteName: "PhotoBlinks",
       type: "website",
-      images: location.images[0] ? [location.images[0]] : undefined,
+      images: location.images[0] ? [socialImageUrl(location.images[0])] : undefined,
       videos: video
         ? [{ url: video.embedUrl, width: 640, height: 360, type: "text/html" }]
         : undefined,
