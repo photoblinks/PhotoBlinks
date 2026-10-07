@@ -4,12 +4,15 @@ import { createPublicClient } from "@/lib/supabase/public";
 
 // Public-facing tracking action for Phase 19A's sponsored-photographer
 // analytics (see supabase/migrations/20260905000000_sponsored_photographer_events.sql).
-// Uses the same cookie-free public client as every other anonymous read in
-// this app (src/lib/public-data.ts) — no session, no service-role key.
-// RLS's sponsored_photographer_events_insert_public policy is the actual
-// gate (requires a real photographer/location id); this union type is a
-// second, cheap layer that stops the client from sending anything other
-// than one of the three defined event types.
+// Uses the same cookie-free public client as the rest of this app's
+// server-side data reads (src/lib/public-data.ts). Phase 1
+// (20261007000000_close_anon_bulk_exposure.sql) revoked the anon role's
+// INSERT grant on sponsored_photographer_events, so this action runs through
+// the service-role client (createPublicClient is server-only and never
+// reaches the browser). This union type is a second, cheap layer that stops
+// the client from sending anything other than one of the three defined event
+// types; the RLS policy that previously gated the insert was removed along
+// with the anon insert path.
 export type SponsoredPhotographerEventType = "impression" | "call_click" | "whatsapp_click";
 
 const VALID_EVENT_TYPES: SponsoredPhotographerEventType[] = [

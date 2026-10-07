@@ -1,6 +1,8 @@
+import "server-only";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/public";
+import { LOCATION_COMMENTS_PAGE_SIZE } from "@/lib/comment-page-size";
 import { haversineDistanceKm } from "@/lib/geo";
 import { blogBlockSchema, parseEditorialBlocks, type BlogBlock, type EditorialBlock } from "@/lib/blog/content-blocks";
 import { LOCATION_INFO_FIELDS, type LocationInfoTableConfig } from "@/lib/location-info-fields";
@@ -448,7 +450,10 @@ export async function sharedLocationCollectionHasLocation(token: string, slug: s
   return data === true;
 }
 
-export const LOCATION_COMMENTS_PAGE_SIZE = 10;
+// Re-exported for compatibility with callers that imported it from this
+// module historically; the value itself lives in comment-page-size.ts so
+// client components can import it without bundling this server-only module.
+export { LOCATION_COMMENTS_PAGE_SIZE };
 
 export type PublicLocationComment = {
   id: string;

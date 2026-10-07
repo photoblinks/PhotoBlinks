@@ -3,10 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Permanent (301) redirects for published location/studio URLs that changed
 // slug or were deleted — see 20260914010000_location_studio_slug_redirects.sql.
-// A DB trigger is the only writer of these tables; this is their sole
-// reader. Scoped to exactly one path segment so it never touches the
-// country/state/city/category aggregation routes, and only queries when
-// the path actually looks like a location/studio detail page.
+// A DB trigger is the only writer of these tables; they are read here through
+// single-slug SECURITY DEFINER RPCs (get_location_slug_redirect /
+// get_studio_slug_redirect, added in 20261007000000_close_anon_bulk_exposure.sql)
+// because Phase 1 revoked the anon role's table-level SELECT. Scoped to exactly
+// one path segment so it never touches the country/state/city/category
+// aggregation routes, and only queries when the path actually looks like a
+// location/studio detail page.
 const LOCATION_SLUG_RE = /^\/location\/([^/]+)\/?$/;
 const STUDIO_SLUG_RE = /^\/studio\/([^/]+)\/?$/;
 
@@ -39,16 +42,15 @@ export async function proxy(request: NextRequest) {
   const match = locationMatch ?? studioMatch;
 
   if (match) {
-    const table = locationMatch ? "location_slug_redirects" : "studio_slug_redirects";
+    const rpcName = locationMatch ? "get_location_slug_redirect" : "get_studio_slug_redirect";
     const oldSlug = match[1];
     const { data: redirectRow } = await supabase
-      .from(table)
-      .select("redirect_to")
-      .eq("old_slug", oldSlug)
+      .rpc(rpcName, { p_old_slug: oldSlug })
       .maybeSingle();
 
-    if (redirectRow) {
-      return NextResponse.redirect(new URL(redirectRow.redirect_to, request.url), 301);
+    const redirectTo = (redirectRow as { redirect_to?: string } | null)?.redirect_to;
+    if (redirectTo) {
+      return NextResponse.redirect(new URL(redirectTo, request.url), 301);
     }
   }
 

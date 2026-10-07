@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const REPORT_TYPES = [
   "incorrect_information",
@@ -37,10 +38,10 @@ type SubmitResult =
 /** Submits a location report as the current session (signed-in user or
  * anonymous). reporter_user_id is always derived server-side from
  * auth.uid() — never taken from the client — and status, reviewed_by,
- * reviewed_at, admin_note are all omitted so the column defaults (and the
- * RLS WITH CHECK, which pins them to NULL/'pending' a second time) are
- * what actually land. Approving/rejecting the resulting row never touches
- * the locations table — this is intake only. */
+ * reviewed_at, admin_note are all omitted so the column defaults are what
+ * actually land. (Phase 1 removed the anon insert path; this action is now
+ * the sole writer, via the service-role client.) Approving/rejecting the
+ * resulting row never touches the locations table — this is intake only. */
 export async function reportLocation(locationId: string, formData: FormData): Promise<SubmitResult> {
   const parsed = reportSchema.safeParse({
     report_type: formData.get("report_type"),
@@ -58,12 +59,19 @@ export async function reportLocation(locationId: string, formData: FormData): Pr
     data: { user },
   } = await supabase.auth.getUser();
 
+  // The session above is read from the request cookies; the actual reads
+  // and the insert below go through the service-role client. Phase 1
+  // (20261007000000_close_anon_bulk_exposure.sql) revoked the anon role's
+  // table grants, and the anon role is what `createClient()` resolves to
+  // for an anonymous reporter — so DB access here must use the privileged
+  // server client while the user's identity still comes from the session.
+  const db = createAdminClient();
+
   // Server-side location validation: must exist and be published. The
   // browser only ever supplies the location's own id from the page it's
   // already on — this confirms that id still names a real, live location
-  // rather than trusting it outright (also re-enforced by the RLS WITH
-  // CHECK's own EXISTS clause as a second, independent layer).
-  const { data: location } = await supabase
+  // rather than trusting it outright.
+  const { data: location } = await db
     .from("locations")
     .select("id")
     .eq("id", locationId)
@@ -72,14 +80,14 @@ export async function reportLocation(locationId: string, formData: FormData): Pr
   if (!location) return { error: "location_not_found" };
 
   if (user) {
-    const { count } = await supabase
+    const { count } = await db
       .from("location_reports")
       .select("id", { count: "exact", head: true })
       .eq("reporter_user_id", user.id)
       .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
     if ((count ?? 0) >= AUTH_DAILY_LIMIT) return { error: "rate_limited" };
   } else {
-    const { count } = await supabase
+    const { count } = await db
       .from("location_reports")
       .select("id", { count: "exact", head: true })
       .is("reporter_user_id", null)
@@ -94,7 +102,7 @@ export async function reportLocation(locationId: string, formData: FormData): Pr
   // it's scoped to the location + content instead, which is a strictly
   // narrower (and therefore safe) match than the rate limit above.
   const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
-  let duplicateQuery = supabase
+  let duplicateQuery = db
     .from("location_reports")
     .select("id")
     .eq("location_id", locationId)
@@ -105,7 +113,7 @@ export async function reportLocation(locationId: string, formData: FormData): Pr
   const { data: recentDuplicate } = await duplicateQuery.maybeSingle();
   if (recentDuplicate) return { ok: true };
 
-  const { error } = await supabase.from("location_reports").insert({
+  const { error } = await db.from("location_reports").insert({
     location_id: locationId,
     reporter_user_id: user?.id ?? null,
     report_type,

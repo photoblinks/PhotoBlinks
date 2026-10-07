@@ -10,7 +10,7 @@ import { StarRatingInput } from "./star-rating-input";
 import { StarRatingDisplay } from "./star-rating-display";
 import { createLocationComment, loadMoreLocationComments } from "@/app/(public)/location/[slug]/comment-actions";
 import type { LocationRatingSummary, PublicLocationComment } from "@/lib/public-data";
-import { LOCATION_COMMENTS_PAGE_SIZE } from "@/lib/public-data";
+import { LOCATION_COMMENTS_PAGE_SIZE } from "@/lib/comment-page-size";
 
 const MAX_COMMENT_LENGTH = 1000;
 
