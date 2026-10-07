@@ -233,17 +233,6 @@ export default async function AdminLocationsPage({
                   )}
                 </TableCell>
                 <TableCell className="flex justify-end gap-2">
-                  {location.is_published && (
-                    <Button
-                      render={
-                        <a href={`/location/${location.slug}`} target="_blank" rel="noopener noreferrer" />
-                      }
-                      variant="outline"
-                      size="sm"
-                    >
-                      View
-                    </Button>
-                  )}
                   {staff.can(PERMISSION.LOCATIONS_EDIT) && (
                     <Button
                       render={<Link href={`/admin/locations/${location.id}/edit`} />}

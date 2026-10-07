@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
+import { Button } from "@/components/ui/button";
 import { LocationForm } from "../../location-form";
 import { updateLocation } from "../../actions";
 
@@ -40,7 +41,18 @@ export default async function EditLocationPage({
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold">Edit location</h1>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold">Edit location</h1>
+        {location.is_published && (
+          <Button
+            render={<a href={`/location/${location.slug}`} target="_blank" rel="noopener noreferrer" />}
+            variant="outline"
+            size="sm"
+          >
+            View page
+          </Button>
+        )}
+      </div>
       <LocationForm
         action={updateLocation.bind(null, id)}
         location={{ ...location, images, faqs, city_name: cityRef?.name }}
