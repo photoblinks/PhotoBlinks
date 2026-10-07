@@ -14,6 +14,8 @@ import {
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
 import { LocationCard } from "@/components/public/location-card";
+import { ListingPagination } from "@/components/public/listing-pagination";
+import { pagedPath, paginateListing } from "@/lib/listing-pagination";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { JsonLd } from "@/components/public/json-ld";
 import { LocationFactsStrip } from "@/components/public/location-facts-strip";
@@ -37,7 +39,7 @@ type Props = {
   // this position to share one dynamic segment name, so State + Category
   // could not live in a sibling [category] folder alongside [city]; the two
   // page types are resolved from the same segment here instead.
-  searchParams: Promise<{ q?: string; city?: string; category?: string; pricing?: string; drone?: string }>;
+  searchParams: Promise<{ q?: string; city?: string; category?: string; pricing?: string; drone?: string; page?: string }>;
 };
 
 // Cities are checked first: they're the larger, free-form namespace and
@@ -95,7 +97,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     return {
       title,
       description,
-      alternates: { canonical: path },
+      alternates: { canonical: pagedPath(path, query.page, data.locations.length) },
       openGraph: {
         title,
         description,
@@ -126,7 +128,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title,
     description,
-    alternates: { canonical: path },
+    alternates: { canonical: pagedPath(path, query.page, data.locations.length) },
     openGraph: {
       title: `${title} | PhotoBlinks`,
       description,
@@ -234,9 +236,18 @@ export default async function LocationsCityOrStateCategoryPage({ params, searchP
               pricingType={pricingType}
               droneStatus={droneStatus}
               search={search}
+              basePath={`/locations/${countrySlug}/${state.slug}/${city.slug}`}
+              query={query}
             />
           ) : (
-            <BrowseCity countrySlug={countrySlug} state={state} city={city} locations={locations} />
+            <BrowseCity
+              countrySlug={countrySlug}
+              state={state}
+              city={city}
+              locations={locations}
+              basePath={`/locations/${countrySlug}/${state.slug}/${city.slug}`}
+              query={query}
+            />
           )}
         </div>
       </div>
@@ -272,6 +283,7 @@ export default async function LocationsCityOrStateCategoryPage({ params, searchP
   // interactive filter preview below, so it stays consistent with the H1
   // regardless of what the user is currently previewing (see Phase 5/9).
   const facts = summarizeLocationFacts(locations);
+  const paged = paginateListing(locations, query.page);
 
   return (
     <div>
@@ -322,6 +334,8 @@ export default async function LocationsCityOrStateCategoryPage({ params, searchP
             pricingType={pricingType}
             droneStatus={droneStatus}
             search={search}
+            basePath={`/locations/${countrySlug}/${state.slug}/${category.slug}`}
+            query={query}
           />
         ) : (
           <>
@@ -330,10 +344,16 @@ export default async function LocationsCityOrStateCategoryPage({ params, searchP
               {state.name}
             </h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {locations.map((location) => (
+              {paged.items.map((location) => (
                 <LocationCard key={location.id} location={location} />
               ))}
             </div>
+            <ListingPagination
+              page={paged.page}
+              totalPages={paged.totalPages}
+              basePath={`/locations/${countrySlug}/${state.slug}/${category.slug}`}
+              query={query}
+            />
           </>
         )}
 
@@ -389,6 +409,8 @@ async function FilteredResults({
   pricingType,
   droneStatus,
   search,
+  basePath,
+  query,
 }: {
   stateId: string;
   cityId: string;
@@ -396,8 +418,10 @@ async function FilteredResults({
   pricingType?: "free" | "paid" | "unknown";
   droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
   search?: string;
+  basePath: string;
+  query: Record<string, string | undefined>;
 }) {
-  const results = await getPublishedLocations({
+  const all = await getPublishedLocations({
     stateId,
     cityId,
     categoryId,
@@ -405,11 +429,12 @@ async function FilteredResults({
     droneStatus,
     search,
   });
+  const { items: results, page, totalPages, total } = paginateListing(all, query.page);
 
   return (
     <>
       <h2 className="font-heading mb-6 text-xl font-semibold">
-        {results.length} location{results.length === 1 ? "" : "s"} found
+        {total} location{total === 1 ? "" : "s"} found
       </h2>
       {results.length === 0 ? (
         <p className="text-muted-foreground">
@@ -422,6 +447,7 @@ async function FilteredResults({
           ))}
         </div>
       )}
+      <ListingPagination page={page} totalPages={totalPages} basePath={basePath} query={query} />
     </>
   );
 }
@@ -431,18 +457,23 @@ function BrowseCity({
   state,
   city,
   locations,
+  basePath,
+  query,
 }: {
   countrySlug: string;
   state: { id: string; slug: string; name: string };
   city: { id: string; slug: string; name: string };
   locations: PublicLocationCard[];
+  basePath: string;
+  query: Record<string, string | undefined>;
 }) {
   const categoryMap = new Map<string, { name: string; slug: string }>();
   for (const location of locations) {
     if (location.category) categoryMap.set(location.category.slug, location.category);
   }
   const categories = [...categoryMap.values()].sort((a, b) => a.name.localeCompare(b.name));
-  const grouped = groupLocationsByCategory(locations);
+  const { items: pageItems, page, totalPages } = paginateListing(locations, query.page);
+  const grouped = groupLocationsByCategory(pageItems);
   const categoryNames = extractCategoryNames(locations);
 
   return (
@@ -478,6 +509,7 @@ function BrowseCity({
           );
         })}
       </div>
+      <ListingPagination page={page} totalPages={totalPages} basePath={basePath} query={query} />
     </>
   );
 }
@@ -491,6 +523,8 @@ async function StateCategoryFilteredResults({
   pricingType,
   droneStatus,
   search,
+  basePath,
+  query,
 }: {
   stateId: string;
   cityId?: string;
@@ -500,8 +534,10 @@ async function StateCategoryFilteredResults({
   pricingType?: "free" | "paid" | "unknown";
   droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
   search?: string;
+  basePath: string;
+  query: Record<string, string | undefined>;
 }) {
-  const results = await getPublishedLocations({
+  const all = await getPublishedLocations({
     stateId,
     cityId,
     categoryId,
@@ -509,11 +545,12 @@ async function StateCategoryFilteredResults({
     droneStatus,
     search,
   });
+  const { items: results, page, totalPages, total } = paginateListing(all, query.page);
 
   return (
     <>
       <h2 className="font-heading mb-6 text-xl font-semibold">
-        {results.length} {categoryName} Pre-Wedding Location{results.length === 1 ? "" : "s"} in {areaName}
+        {total} {categoryName} Pre-Wedding Location{total === 1 ? "" : "s"} in {areaName}
       </h2>
       {results.length === 0 ? (
         <p className="text-muted-foreground">
@@ -526,6 +563,7 @@ async function StateCategoryFilteredResults({
           ))}
         </div>
       )}
+      <ListingPagination page={page} totalPages={totalPages} basePath={basePath} query={query} />
     </>
   );
 }

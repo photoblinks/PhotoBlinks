@@ -27,6 +27,8 @@ const CF_IMAGE_DOMAIN = process.env.NEXT_PUBLIC_R2_IMAGE_DOMAIN || "images.photo
 // value, so the unique-transformation quota behavior is unchanged.
 const DEFAULT_QUALITY = 85;
 
+const ADMIN_PREVIEW_WIDTH = 400;
+
 const R2_DEV_HOSTNAME_SUFFIX = ".r2.dev";
 const CDN_CGI_IMAGE_PREFIX = "/cdn-cgi/image/";
 
@@ -55,6 +57,14 @@ export function toTransformUrl(rawUrl: string, width: number, quality?: number):
   const resolvedQuality = quality ?? DEFAULT_QUALITY;
 
   return `https://${CF_IMAGE_DOMAIN}${CDN_CGI_IMAGE_PREFIX}width=${width},quality=${resolvedQuality},format=auto${objectPath}`;
+}
+
+/** Thumbnail URL for admin/photographer previews. The raw R2 public-dev
+ * URL is no longer fetchable, so previews go through the same Cloudflare
+ * transform endpoint as public pages — one fixed width, so each image costs
+ * a single transformation variant. */
+export function adminPreviewUrl(rawUrl: string): string {
+  return toTransformUrl(rawUrl, ADMIN_PREVIEW_WIDTH);
 }
 
 export default function cfImageLoader({ src, width, quality }: ImageLoaderProps): string {

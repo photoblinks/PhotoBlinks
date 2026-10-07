@@ -13,6 +13,8 @@ import {
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
 import { LocationCard } from "@/components/public/location-card";
+import { ListingPagination } from "@/components/public/listing-pagination";
+import { pagedPath, paginateListing } from "@/lib/listing-pagination";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DEFAULT_OG_IMAGE, socialImageUrl } from "@/lib/jsonld";
 import { hasIndexAffectingParams, isSeoEligible } from "@/lib/seo-eligibility";
@@ -26,6 +28,7 @@ type Props = {
     category?: string;
     pricing?: string;
     drone?: string;
+    page?: string;
   }>;
 };
 
@@ -54,7 +57,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title,
     description,
-    alternates: { canonical: `/locations/${data.country.slug}` },
+    alternates: { canonical: pagedPath(`/locations/${data.country.slug}`, query.page, data.locations.length) },
     openGraph: {
       title,
       description,
@@ -70,7 +73,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     // (?state=, ?city=, ?category=, ?pricing=, ?drone=, ?q=) are noindexed
     // too, since they canonicalize to this same clean URL and aren't meant
     // to be standalone landing pages.
-    ...(isSeoEligible(data.locations.length) && !hasIndexAffectingParams(query)
+    ...(isSeoEligible(data.locations.length) && !hasIndexAffectingParams({ ...query, page: undefined })
       ? {}
       : { robots: { index: false, follow: true } }),
   };
@@ -171,6 +174,8 @@ export default async function CountryLocationsPage({ params, searchParams }: Pro
             pricingType={pricingType}
             droneStatus={droneStatus}
             search={search}
+            basePath={`/locations/${country.slug}`}
+            query={query}
           />
         ) : (
           <BrowseByState country={country} locations={locations} />
@@ -188,6 +193,8 @@ async function FilteredResults({
   pricingType,
   droneStatus,
   search,
+  basePath,
+  query,
 }: {
   countryId: string;
   stateId?: string;
@@ -196,8 +203,10 @@ async function FilteredResults({
   pricingType?: "free" | "paid" | "unknown";
   droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
   search?: string;
+  basePath: string;
+  query: Record<string, string | undefined>;
 }) {
-  const results = await getPublishedLocations({
+  const all = await getPublishedLocations({
     countryId,
     stateId,
     cityId,
@@ -206,11 +215,12 @@ async function FilteredResults({
     droneStatus,
     search,
   });
+  const { items: results, page, totalPages, total } = paginateListing(all, query.page);
 
   return (
     <>
       <h2 className="font-heading mb-6 text-xl font-semibold">
-        {results.length} location{results.length === 1 ? "" : "s"} found
+        {total} location{total === 1 ? "" : "s"} found
       </h2>
       {results.length === 0 ? (
         <p className="text-muted-foreground">
@@ -223,6 +233,7 @@ async function FilteredResults({
           ))}
         </div>
       )}
+      <ListingPagination page={page} totalPages={totalPages} basePath={basePath} query={query} />
     </>
   );
 }

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { adminPreviewUrl } from "@/lib/cf-image-loader";
 import { uploadFileToR2 } from "@/lib/r2/upload-client";
 
 type GalleryUploaderProps = {
@@ -80,7 +81,7 @@ export function GalleryUploader({ kind, slug, name, defaultValue }: GalleryUploa
           {images.map((url, index) => (
             <div key={url} className="flex flex-col gap-1">
               <div className="relative aspect-square overflow-hidden rounded-md border">
-                <Image src={url} alt="" fill className="object-cover" unoptimized />
+                <Image src={adminPreviewUrl(url)} alt="" fill className="object-cover" unoptimized />
                 {index === 0 && (
                   <Badge className="absolute top-1 left-1" variant="default">
                     Primary

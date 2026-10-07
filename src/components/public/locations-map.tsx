@@ -1,21 +1,37 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Map, { Marker, NavigationControl, Popup } from "react-map-gl/mapbox";
+import Map, { Marker, NavigationControl, Popup, type MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { LocationPopupCard } from "@/components/public/location-popup-card";
 import { getCategoryMarkerStyle } from "@/lib/category-style";
-import type { PublicLocationCard } from "@/lib/public-data";
+import type { MapLocation } from "@/lib/public-data";
+import { loadMapLocations } from "@/app/(public)/locations/map/actions";
+import type { MapFilterParams } from "@/app/(public)/locations/map/map-filters";
 
 const DEFAULT_VIEW = { longitude: 76.3, latitude: 11.5, zoom: 6.2 };
+const VIEWPORT_RELOAD_DELAY_MS = 400;
 
-type MappableLocation = PublicLocationCard & { latitude: number; longitude: number };
-
-export function LocationsMap({ locations }: { locations: PublicLocationCard[] }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+/** `locations`/`total` are the server-rendered initial set (capped); the map
+ * then reloads markers for the visible viewport as it loads and moves. */
+export function LocationsMap({
+  locations,
+  total,
+  filterParams,
+}: {
+  locations: MapLocation[];
+  total: number;
+  filterParams: MapFilterParams;
+}) {
+  const [markers, setMarkers] = useState(locations);
+  const [inViewTotal, setInViewTotal] = useState(total);
+  const [selected, setSelected] = useState<MapLocation | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapRef>(null);
+  const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reloadSeq = useRef(0);
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   useEffect(() => {
@@ -26,6 +42,13 @@ export function LocationsMap({ locations }: { locations: PublicLocationCard[] })
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
+  useEffect(
+    () => () => {
+      if (reloadTimer.current) clearTimeout(reloadTimer.current);
+    },
+    [],
+  );
+
   function toggleFullscreen() {
     if (document.fullscreenElement) {
       document.exitFullscreen();
@@ -34,22 +57,31 @@ export function LocationsMap({ locations }: { locations: PublicLocationCard[] })
     }
   }
 
-  const mappable = useMemo(
-    () =>
-      locations.filter(
-        (l): l is MappableLocation => l.latitude != null && l.longitude != null,
-      ),
-    [locations],
-  );
+  function scheduleViewportReload(delay: number) {
+    if (reloadTimer.current) clearTimeout(reloadTimer.current);
+    reloadTimer.current = setTimeout(async () => {
+      const bounds = mapRef.current?.getBounds();
+      if (!bounds) return;
+      const seq = ++reloadSeq.current;
+      const result = await loadMapLocations(filterParams, {
+        west: bounds.getWest(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        north: bounds.getNorth(),
+      });
+      // Ignore a response that a newer pan/zoom has already superseded.
+      if (seq !== reloadSeq.current) return;
+      setMarkers(result.locations);
+      setInViewTotal(result.total);
+    }, delay);
+  }
 
   const initialViewState = useMemo(() => {
-    if (mappable.length === 0) return DEFAULT_VIEW;
-    const avgLat = mappable.reduce((sum, l) => sum + l.latitude, 0) / mappable.length;
-    const avgLng = mappable.reduce((sum, l) => sum + l.longitude, 0) / mappable.length;
-    return { longitude: avgLng, latitude: avgLat, zoom: mappable.length === 1 ? 11 : 6.5 };
-  }, [mappable]);
-
-  const selected = mappable.find((l) => l.id === selectedId) ?? null;
+    if (locations.length === 0) return DEFAULT_VIEW;
+    const avgLat = locations.reduce((sum, l) => sum + l.latitude, 0) / locations.length;
+    const avgLng = locations.reduce((sum, l) => sum + l.longitude, 0) / locations.length;
+    return { longitude: avgLng, latitude: avgLat, zoom: total === 1 ? 11 : 6.5 };
+  }, [locations, total]);
 
   if (!token) {
     return (
@@ -62,24 +94,26 @@ export function LocationsMap({ locations }: { locations: PublicLocationCard[] })
   return (
     <div ref={containerRef} className="relative h-full w-full bg-background">
       <Map
-        key={mappable.map((l) => l.id).join(",")}
+        ref={mapRef}
         mapboxAccessToken={token}
         initialViewState={initialViewState}
         mapStyle="mapbox://styles/mapbox/streets-v12"
         style={{ width: "100%", height: "100%" }}
+        onLoad={() => scheduleViewportReload(0)}
+        onMoveEnd={() => scheduleViewportReload(VIEWPORT_RELOAD_DELAY_MS)}
       >
         <NavigationControl position="bottom-right" showCompass={false} />
-        {mappable.map((location) => {
+        {markers.map((location) => {
           const { color, icon: Icon } = getCategoryMarkerStyle(location.category?.slug);
           return (
             <Marker
-              key={location.id}
+              key={location.slug}
               longitude={location.longitude}
               latitude={location.latitude}
               anchor="bottom"
               onClick={(e) => {
                 e.originalEvent.stopPropagation();
-                setSelectedId(location.id);
+                setSelected(location);
               }}
             >
               <button
@@ -99,13 +133,19 @@ export function LocationsMap({ locations }: { locations: PublicLocationCard[] })
             longitude={selected.longitude}
             latitude={selected.latitude}
             anchor="top"
-            onClose={() => setSelectedId(null)}
+            onClose={() => setSelected(null)}
             closeOnClick={false}
           >
             <LocationPopupCard location={selected} />
           </Popup>
         )}
       </Map>
+
+      {inViewTotal > markers.length && (
+        <p className="absolute top-4 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-xs font-medium shadow-md">
+          Showing {markers.length} of {inViewTotal} locations in this area — zoom in to see more
+        </p>
+      )}
 
       <button
         type="button"

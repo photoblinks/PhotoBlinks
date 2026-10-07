@@ -5,10 +5,11 @@ import {
   getActiveCategories,
   getActiveCities,
   getActiveStates,
-  getPublishedLocations,
+  getMapLocations,
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
 import { LocationsMap } from "@/components/public/locations-map";
+import { resolveMapFilters, type MapFilterParams } from "./map-filters";
 import { MapFiltersDrawer } from "@/components/public/map-filters-drawer";
 import { getCategoryMarkerStyle } from "@/lib/category-style";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
@@ -18,16 +19,7 @@ const TITLE = "Pre-Wedding Photoshoot Locations Map";
 const DESCRIPTION =
   "Browse pre-wedding photoshoot locations on an interactive map — filter by state, city, category, and pricing to find your next shoot location.";
 
-type MapSearchParams = Promise<{
-  q?: string;
-  state?: string;
-  city?: string;
-  category?: string;
-  pricing?: string;
-  drone?: string;
-  lat?: string;
-  lng?: string;
-}>;
+type MapSearchParams = Promise<MapFilterParams>;
 
 export async function generateMetadata({
   searchParams,
@@ -66,34 +58,9 @@ export default async function LocationsMapPage({
     getActiveCategories(),
   ]);
 
-  const selectedState = states.find((s) => s.slug === params.state);
-  const selectedCity = cities.find((c) => c.slug === params.city);
-  const selectedCategory = categories.find((c) => c.slug === params.category);
-  const pricingType =
-    params.pricing === "free" || params.pricing === "paid" || params.pricing === "unknown"
-      ? params.pricing
-      : undefined;
-  const droneStatus =
-    params.drone === "allowed" || params.drone === "allowed_with_permission" || params.drone === "not_allowed"
-      ? params.drone
-      : undefined;
-  const near =
-    params.lat && params.lng
-      ? { latitude: Number(params.lat), longitude: Number(params.lng) }
-      : undefined;
-
-  const search = params.q?.trim() || undefined;
-  const locations = await getPublishedLocations({
-    categoryId: selectedCategory?.id,
-    stateId: selectedState?.id,
-    cityId: selectedCity?.id,
-    pricingType,
-    droneStatus,
-    near,
-    search,
-  });
-
-  const mappableCount = locations.filter((l) => l.latitude != null && l.longitude != null).length;
+  const { locations, total } = await getMapLocations(
+    resolveMapFilters(params, { states, cities, categories }),
+  );
 
   function pillHref(categorySlug?: string) {
     const query = new URLSearchParams();
@@ -155,12 +122,12 @@ export default async function LocationsMapPage({
       </div>
 
       <div className="relative h-[calc(100vh-4rem)] w-full sm:h-[78vh] sm:min-h-[520px]">
-        {mappableCount === 0 ? (
+        {total === 0 ? (
           <div className="flex h-full items-center justify-center text-center text-muted-foreground">
             No published locations match these filters yet.
           </div>
         ) : (
-          <LocationsMap locations={locations} />
+          <LocationsMap key={JSON.stringify(params)} locations={locations} total={total} filterParams={params} />
         )}
 
         <MapFiltersDrawer
@@ -187,7 +154,7 @@ export default async function LocationsMapPage({
           List View
         </Link>
 
-        {mappableCount > 0 && (
+        {total > 0 && (
           <div className="absolute inset-x-0 bottom-4 z-10 flex justify-center px-4">
             <div className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-white p-1.5 shadow-md">
               <Link href={pillHref(undefined)} className={pillClass(!params.category)}>

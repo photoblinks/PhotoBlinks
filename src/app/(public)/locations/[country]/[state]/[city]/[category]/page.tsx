@@ -10,6 +10,8 @@ import {
   getPublishedLocations,
 } from "@/lib/public-data";
 import { LocationCard } from "@/components/public/location-card";
+import { ListingPagination } from "@/components/public/listing-pagination";
+import { pagedPath, paginateListing } from "@/lib/listing-pagination";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { HomeFilter } from "@/components/public/home-filter";
 import { JsonLd } from "@/components/public/json-ld";
@@ -28,7 +30,7 @@ type Props = {
   // page's `?category=` filter). Reading searchParams makes this route
   // dynamic instead of ISR — same tradeoff already accepted on the City
   // page and homepage for the same reason.
-  searchParams: Promise<{ q?: string; city?: string; category?: string; pricing?: string; drone?: string }>;
+  searchParams: Promise<{ q?: string; city?: string; category?: string; pricing?: string; drone?: string; page?: string }>;
 };
 
 const loadCategoryPage = cache(
@@ -74,7 +76,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title,
     description,
-    alternates: { canonical: path },
+    alternates: { canonical: pagedPath(path, query.page, data.locations.length) },
     openGraph: {
       title: `${title} | PhotoBlinks`,
       description,
@@ -139,6 +141,7 @@ export default async function CategoryLocationsPage({ params, searchParams }: Pr
   // interactive filter preview below, so it stays consistent with the H1
   // regardless of what the user is currently previewing (see Phase 5/9).
   const facts = summarizeLocationFacts(locations);
+  const paged = paginateListing(locations, query.page);
 
   return (
     <div>
@@ -193,6 +196,8 @@ export default async function CategoryLocationsPage({ params, searchParams }: Pr
             pricingType={pricingType}
             droneStatus={droneStatus}
             search={search}
+            basePath={`/locations/${countrySlug}/${state.slug}/${city.slug}/${category.slug}`}
+            query={query}
           />
         ) : (
           <>
@@ -201,10 +206,16 @@ export default async function CategoryLocationsPage({ params, searchParams }: Pr
               {city.name}
             </h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {locations.map((location) => (
+              {paged.items.map((location) => (
                 <LocationCard key={location.id} location={location} />
               ))}
             </div>
+            <ListingPagination
+              page={paged.page}
+              totalPages={paged.totalPages}
+              basePath={`/locations/${countrySlug}/${state.slug}/${city.slug}/${category.slug}`}
+              query={query}
+            />
           </>
         )}
 
@@ -261,6 +272,8 @@ async function FilteredResults({
   pricingType,
   droneStatus,
   search,
+  basePath,
+  query,
 }: {
   stateId: string;
   cityId: string;
@@ -270,8 +283,10 @@ async function FilteredResults({
   pricingType?: "free" | "paid" | "unknown";
   droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
   search?: string;
+  basePath: string;
+  query: Record<string, string | undefined>;
 }) {
-  const results = await getPublishedLocations({
+  const all = await getPublishedLocations({
     stateId,
     cityId,
     categoryId,
@@ -279,11 +294,12 @@ async function FilteredResults({
     droneStatus,
     search,
   });
+  const { items: results, page, totalPages, total } = paginateListing(all, query.page);
 
   return (
     <>
       <h2 className="font-heading mb-6 text-xl font-semibold">
-        {results.length} {categoryName} Pre-Wedding Location{results.length === 1 ? "" : "s"} in {cityName}
+        {total} {categoryName} Pre-Wedding Location{total === 1 ? "" : "s"} in {cityName}
       </h2>
       {results.length === 0 ? (
         <p className="text-muted-foreground">
@@ -296,6 +312,7 @@ async function FilteredResults({
           ))}
         </div>
       )}
+      <ListingPagination page={page} totalPages={totalPages} basePath={basePath} query={query} />
     </>
   );
 }

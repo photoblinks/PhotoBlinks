@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/public";
 import { LOCATION_COMMENTS_PAGE_SIZE } from "@/lib/comment-page-size";
 import { haversineDistanceKm } from "@/lib/geo";
+import { toTransformUrl } from "@/lib/cf-image-loader";
 import { blogBlockSchema, parseEditorialBlocks, type BlogBlock, type EditorialBlock } from "@/lib/blog/content-blocks";
 import { LOCATION_INFO_FIELDS, type LocationInfoTableConfig } from "@/lib/location-info-fields";
 
@@ -334,6 +335,76 @@ export const getPublishedLocations = unstable_cache(
   ["getPublishedLocations"],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 );
+
+/** Only what a map marker + popup renders — no ids, timestamps or other
+ * internal fields reach the client. `primaryImageUrl` is already a
+ * Cloudflare transform URL, never the raw R2 original. */
+export type MapLocation = {
+  slug: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  category: { name: string; slug: string } | null;
+  place: string;
+  pricing_type: PricingType;
+  primaryImageUrl: string | null;
+  distanceKm: number | null;
+};
+
+export type MapBounds = { west: number; south: number; east: number; north: number };
+
+/** Most markers ever sent to the client in one response. */
+export const MAP_MAX_MARKERS = 150;
+
+const MAP_POPUP_IMAGE_WIDTH = 160;
+
+/** Mappable published locations matching `filters`, optionally limited to a
+ * viewport. Reuses the cached getPublishedLocations result (server-side
+ * only); when more than MAP_MAX_MARKERS match, keeps those nearest the
+ * viewport centre and reports the full match count in `total`. */
+export async function getMapLocations(
+  filters: Parameters<typeof getPublishedLocations>[0],
+  bounds?: MapBounds,
+): Promise<{ locations: MapLocation[]; total: number }> {
+  const all = await getPublishedLocations(filters);
+  const inView = all.filter(
+    (l) =>
+      l.latitude != null &&
+      l.longitude != null &&
+      (!bounds ||
+        (l.latitude >= bounds.south &&
+          l.latitude <= bounds.north &&
+          l.longitude >= bounds.west &&
+          l.longitude <= bounds.east)),
+  );
+
+  let picked = inView;
+  if (inView.length > MAP_MAX_MARKERS) {
+    if (bounds) {
+      const centerLat = (bounds.north + bounds.south) / 2;
+      const centerLng = (bounds.east + bounds.west) / 2;
+      const distance = (l: PublicLocationCard) =>
+        (l.latitude! - centerLat) ** 2 + (l.longitude! - centerLng) ** 2;
+      picked = [...inView].sort((a, b) => distance(a) - distance(b));
+    }
+    picked = picked.slice(0, MAP_MAX_MARKERS);
+  }
+
+  return {
+    total: inView.length,
+    locations: picked.map((l) => ({
+      slug: l.slug,
+      name: l.name,
+      latitude: l.latitude!,
+      longitude: l.longitude!,
+      category: l.category ? { name: l.category.name, slug: l.category.slug } : null,
+      place: [l.city?.name, l.state?.name].filter(Boolean).join(", "),
+      pricing_type: l.pricing_type,
+      primaryImageUrl: l.primaryImageUrl ? toTransformUrl(l.primaryImageUrl, MAP_POPUP_IMAGE_WIDTH) : null,
+      distanceKm: l.distanceKm,
+    })),
+  };
+}
 
 /** Count of currently published locations — used for the homepage's
  * SEO/GEO "about" copy so the active-location figure stays accurate

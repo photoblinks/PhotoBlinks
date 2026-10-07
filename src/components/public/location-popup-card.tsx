@@ -3,10 +3,10 @@ import Image from "next/image";
 import { Navigation } from "lucide-react";
 import { formatPricingLabel } from "@/lib/format";
 import { formatDistanceKm } from "@/lib/geo";
-import type { PublicLocationCard } from "@/lib/public-data";
+import type { MapLocation } from "@/lib/public-data";
 
 /** Compact preview card shown inside a map marker's popup. */
-export function LocationPopupCard({ location }: { location: PublicLocationCard }) {
+export function LocationPopupCard({ location }: { location: MapLocation }) {
   return (
     <div className="flex w-60 gap-3 p-1">
       <div className="relative aspect-square w-20 shrink-0 overflow-hidden rounded-lg bg-muted">
@@ -15,6 +15,7 @@ export function LocationPopupCard({ location }: { location: PublicLocationCard }
             src={location.primaryImageUrl}
             alt={location.name}
             fill
+            unoptimized
             sizes="80px"
             className="object-cover"
           />
@@ -27,7 +28,7 @@ export function LocationPopupCard({ location }: { location: PublicLocationCard }
       <div className="flex min-w-0 flex-col gap-0.5">
         <p className="truncate font-heading text-sm font-semibold">{location.name}</p>
         <p className="truncate text-xs text-muted-foreground">
-          {[location.city?.name, location.state?.name].filter(Boolean).join(", ")}
+          {location.place}
         </p>
         {location.distanceKm != null && (
           <p className="flex items-center gap-1 text-xs text-muted-foreground">

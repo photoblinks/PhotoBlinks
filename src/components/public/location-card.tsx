@@ -3,8 +3,14 @@ import Image from "next/image";
 import { Globe, ArrowRight } from "lucide-react";
 import { formatPricingLabel } from "@/lib/format";
 import { formatDistanceKm } from "@/lib/geo";
+import { toTransformUrl } from "@/lib/cf-image-loader";
 import type { PublicLocationCard } from "@/lib/public-data";
 import { FavouriteButton } from "./favourite-button";
+
+// Pre-transformed here (server-side) so the raw R2 original URL never enters
+// the page payload; 2x the largest rendered card width (~320px). `unoptimized`
+// because the URL is already a final transform URL (no per-width srcset).
+const CARD_IMAGE_WIDTH = 640;
 
 /** Optional props are only used by the photographer share feature; omitted
  * everywhere else, where the card renders exactly as before.
@@ -31,9 +37,10 @@ export function LocationCard({
         <FavouriteButton locationId={location.id} className="absolute top-3 right-3 z-10" />
         {location.primaryImageUrl ? (
           <Image
-            src={location.primaryImageUrl}
+            src={toTransformUrl(location.primaryImageUrl, CARD_IMAGE_WIDTH)}
             alt={location.name}
             fill
+            unoptimized
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />

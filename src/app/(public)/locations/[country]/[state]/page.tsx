@@ -13,6 +13,8 @@ import {
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
 import { LocationCard } from "@/components/public/location-card";
+import { ListingPagination } from "@/components/public/listing-pagination";
+import { pagedPath, paginateListing } from "@/lib/listing-pagination";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { EditorialSection } from "@/components/public/editorial-section";
 import { DEFAULT_OG_IMAGE, socialImageUrl } from "@/lib/jsonld";
@@ -21,7 +23,7 @@ import { buildGeoDefaultDescription, extractCategoryNames } from "@/lib/seo-temp
 
 type Props = {
   params: Promise<{ country: string; state: string }>;
-  searchParams: Promise<{ q?: string; city?: string; category?: string; pricing?: string; drone?: string }>;
+  searchParams: Promise<{ q?: string; city?: string; category?: string; pricing?: string; drone?: string; page?: string }>;
 };
 
 const loadStatePage = cache(async (countrySlug: string, stateSlug: string) => {
@@ -50,7 +52,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title,
     description,
-    alternates: { canonical: path },
+    alternates: { canonical: pagedPath(path, query.page, data.locations.length) },
     openGraph: {
       title,
       description,
@@ -65,7 +67,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     // indexable when published. Filter/search query variants (?city=,
     // ?category=, ?pricing=, ?drone=, ?q=) are noindexed too, since they
     // canonicalize to this same clean URL.
-    ...(isSeoEligible(data.locations.length) && !hasIndexAffectingParams(query)
+    ...(isSeoEligible(data.locations.length) && !hasIndexAffectingParams({ ...query, page: undefined })
       ? {}
       : { robots: { index: false, follow: true } }),
   };
@@ -159,9 +161,17 @@ export default async function StateLocationsPage({ params, searchParams }: Props
             pricingType={pricingType}
             droneStatus={droneStatus}
             search={search}
+            basePath={`/locations/${countrySlug}/${state.slug}`}
+            query={query}
           />
         ) : (
-          <BrowseState countrySlug={countrySlug} state={state} locations={locations} />
+          <BrowseState
+            countrySlug={countrySlug}
+            state={state}
+            locations={locations}
+            basePath={`/locations/${countrySlug}/${state.slug}`}
+            query={query}
+          />
         )}
 
         <EditorialSection stateId={state.id} categoryId={null} />
@@ -177,6 +187,8 @@ async function FilteredResults({
   pricingType,
   droneStatus,
   search,
+  basePath,
+  query,
 }: {
   stateId: string;
   cityId?: string;
@@ -184,8 +196,10 @@ async function FilteredResults({
   pricingType?: "free" | "paid" | "unknown";
   droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
   search?: string;
+  basePath: string;
+  query: Record<string, string | undefined>;
 }) {
-  const results = await getPublishedLocations({
+  const all = await getPublishedLocations({
     stateId,
     cityId,
     categoryId,
@@ -193,11 +207,12 @@ async function FilteredResults({
     droneStatus,
     search,
   });
+  const { items: results, page, totalPages, total } = paginateListing(all, query.page);
 
   return (
     <>
       <h2 className="font-heading mb-6 text-xl font-semibold">
-        {results.length} location{results.length === 1 ? "" : "s"} found
+        {total} location{total === 1 ? "" : "s"} found
       </h2>
       {results.length === 0 ? (
         <p className="text-muted-foreground">
@@ -210,6 +225,7 @@ async function FilteredResults({
           ))}
         </div>
       )}
+      <ListingPagination page={page} totalPages={totalPages} basePath={basePath} query={query} />
     </>
   );
 }
@@ -218,10 +234,14 @@ function BrowseState({
   countrySlug,
   state,
   locations,
+  basePath,
+  query,
 }: {
   countrySlug: string;
   state: { id: string; slug: string; name: string };
   locations: PublicLocationCard[];
+  basePath: string;
+  query: Record<string, string | undefined>;
 }) {
   const cityMap = new Map<string, { name: string; slug: string; count: number }>();
   const categoryMap = new Map<string, { name: string; slug: string }>();
@@ -235,7 +255,8 @@ function BrowseState({
   }
   const cities = [...cityMap.values()].sort((a, b) => a.name.localeCompare(b.name));
   const categories = [...categoryMap.values()].sort((a, b) => a.name.localeCompare(b.name));
-  const grouped = groupLocationsByCategory(locations);
+  const { items: pageItems, page, totalPages } = paginateListing(locations, query.page);
+  const grouped = groupLocationsByCategory(pageItems);
   const categoryNames = extractCategoryNames(locations);
 
   return (
@@ -288,6 +309,7 @@ function BrowseState({
           );
         })}
       </div>
+      <ListingPagination page={page} totalPages={totalPages} basePath={basePath} query={query} />
     </>
   );
 }

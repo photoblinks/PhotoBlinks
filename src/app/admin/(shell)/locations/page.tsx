@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { adminPreviewUrl } from "@/lib/cf-image-loader";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
@@ -198,7 +199,7 @@ export default async function AdminLocationsPage({
                 <TableCell>
                   {primaryImage ? (
                     <div className="relative h-10 w-10 overflow-hidden rounded">
-                      <Image src={primaryImage} alt="" fill className="object-cover" unoptimized />
+                      <Image src={adminPreviewUrl(primaryImage)} alt="" fill className="object-cover" unoptimized />
                     </div>
                   ) : (
                     <div className="h-10 w-10 rounded bg-muted" />

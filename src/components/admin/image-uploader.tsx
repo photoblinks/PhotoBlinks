@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { adminPreviewUrl } from "@/lib/cf-image-loader";
 import { uploadFileToR2 } from "@/lib/r2/upload-client";
 
 type ImageUploaderProps = {
@@ -56,7 +57,7 @@ export function ImageUploader({
       <input type="hidden" name={name} value={url ?? ""} />
       {url && (
         <div className={`relative overflow-hidden rounded-md border ${previewClassName}`}>
-          <Image src={url} alt="" fill className="object-cover" unoptimized />
+          <Image src={adminPreviewUrl(url)} alt="" fill className="object-cover" unoptimized />
         </div>
       )}
       <Input type="file" accept="image/*" onChange={handleFileChange} disabled={uploading} />

@@ -3,6 +3,7 @@
 import { useState, useActionState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { adminPreviewUrl } from "@/lib/cf-image-loader";
 import { submitPhoto } from "./actions";
 import { uploadPhotographerFileToR2 } from "@/lib/r2/upload-client";
 import { Input } from "@/components/ui/input";
@@ -154,7 +155,7 @@ export function SubmitPhotoForm({ locations, defaultPhone }: Props) {
           {imageUrl ? (
             <div className="flex flex-col gap-2">
               <div className="relative h-48 w-full overflow-hidden rounded-md border">
-                <Image src={imageUrl} alt="Preview" fill className="object-cover" unoptimized />
+                <Image src={adminPreviewUrl(imageUrl)} alt="Preview" fill className="object-cover" unoptimized />
               </div>
               <Button type="button" variant="outline" size="sm" className="w-fit" onClick={clearPhoto} disabled={isPending}>
                 Remove photo

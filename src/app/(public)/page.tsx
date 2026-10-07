@@ -15,6 +15,8 @@ import {
 import { HomeFilter } from "@/components/public/home-filter";
 import { HeroBannerSlider } from "@/components/public/hero-banner-slider";
 import { LocationCard } from "@/components/public/location-card";
+import { ListingPagination } from "@/components/public/listing-pagination";
+import { paginateListing } from "@/lib/listing-pagination";
 import { StudioCard } from "@/components/public/studio-card";
 import { AboutSection } from "@/components/public/about-section";
 import { JsonLd } from "@/components/public/json-ld";
@@ -30,6 +32,7 @@ type HomeSearchParams = Promise<{
   drone?: string;
   lat?: string;
   lng?: string;
+  page?: string;
 }>;
 
 export async function generateMetadata({
@@ -160,6 +163,7 @@ export default async function HomePage({
             droneStatus={droneStatus}
             near={near}
             search={search}
+            query={params}
           />
         ) : (
           <BrowseByCategory categories={categories} />
@@ -200,6 +204,7 @@ async function FilteredResults({
   droneStatus,
   near,
   search,
+  query,
 }: {
   categoryId?: string;
   stateId?: string;
@@ -208,8 +213,9 @@ async function FilteredResults({
   droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
   near?: { latitude: number; longitude: number };
   search?: string;
+  query: Record<string, string | undefined>;
 }) {
-  const results = await getPublishedLocations({
+  const all = await getPublishedLocations({
     categoryId,
     stateId,
     cityId,
@@ -218,11 +224,12 @@ async function FilteredResults({
     near,
     search,
   });
+  const { items: results, page, totalPages, total } = paginateListing(all, query.page);
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
       <h2 className="font-heading mb-6 text-xl font-semibold">
-        {results.length} location{results.length === 1 ? "" : "s"} found
+        {total} location{total === 1 ? "" : "s"} found
         {near && " · sorted by distance"}
       </h2>
       {results.length === 0 ? (
@@ -236,6 +243,7 @@ async function FilteredResults({
           ))}
         </div>
       )}
+      <ListingPagination page={page} totalPages={totalPages} basePath="/" query={query} />
     </section>
   );
 }

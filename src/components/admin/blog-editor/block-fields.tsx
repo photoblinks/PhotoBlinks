@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { adminPreviewUrl } from "@/lib/cf-image-loader";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -334,7 +335,7 @@ function ImageBlockFields({
     <div className="flex flex-col gap-2">
       {block.url ? (
         <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted">
-          <Image src={block.url} alt="" fill className="object-cover" unoptimized />
+          <Image src={adminPreviewUrl(block.url)} alt="" fill className="object-cover" unoptimized />
         </div>
       ) : (
         <div className="flex aspect-video w-full items-center justify-center rounded-md border border-dashed bg-muted/40 text-sm text-muted-foreground">
@@ -400,7 +401,7 @@ function GalleryBlockFields({
           {block.images.map((img, index) => (
             <div key={index} className="flex flex-col gap-1.5 rounded-md border p-2">
               <div className="relative aspect-square w-full overflow-hidden rounded bg-muted">
-                <Image src={img.url} alt="" fill className="object-cover" unoptimized />
+                <Image src={adminPreviewUrl(img.url)} alt="" fill className="object-cover" unoptimized />
               </div>
               <Input
                 placeholder="Alt text (required)"

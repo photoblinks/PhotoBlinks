@@ -11,6 +11,8 @@ import {
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
 import { LocationCard } from "@/components/public/location-card";
+import { ListingPagination } from "@/components/public/listing-pagination";
+import { pagedPath, paginateListing } from "@/lib/listing-pagination";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { JsonLd } from "@/components/public/json-ld";
 import { DEFAULT_OG_IMAGE, buildItemListJsonLd, socialImageUrl } from "@/lib/jsonld";
@@ -18,7 +20,7 @@ import { hasIndexAffectingParams, isSeoEligible } from "@/lib/seo-eligibility";
 
 type Props = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ q?: string; state?: string; city?: string; pricing?: string; drone?: string }>;
+  searchParams: Promise<{ q?: string; state?: string; city?: string; pricing?: string; drone?: string; page?: string }>;
 };
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
@@ -42,7 +44,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title,
     description,
-    alternates: { canonical: path },
+    alternates: { canonical: pagedPath(path, query.page, locations.length) },
     openGraph: {
       title,
       description,
@@ -55,7 +57,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     // product/UX purposes but shouldn't be indexed — see seo-eligibility.ts.
     // Filter/search query variants (?state=, ?city=, ?pricing=, ?drone=,
     // ?q=) are noindexed too, since they canonicalize to this same clean URL.
-    ...(isSeoEligible(locations.length) && !hasIndexAffectingParams(query)
+    ...(isSeoEligible(locations.length) && !hasIndexAffectingParams({ ...query, page: undefined })
       ? {}
       : { robots: { index: false, follow: true } }),
   };
@@ -90,6 +92,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     droneStatus,
     search,
   });
+
+  const paged = paginateListing(locations, query.page);
 
   const heading = category.h1_title || `${category.name} Pre-Wedding Photoshoot Locations`;
 
@@ -160,11 +164,17 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-            {locations.map((location) => (
+            {paged.items.map((location) => (
               <LocationCard key={location.id} location={location} />
             ))}
           </div>
         )}
+        <ListingPagination
+          page={paged.page}
+          totalPages={paged.totalPages}
+          basePath={`/category/${category.slug}`}
+          query={query}
+        />
 
         {/* Only shown for the default (unfiltered) national view — `locations`
             here is the full nationwide result set, so the state breakdown is

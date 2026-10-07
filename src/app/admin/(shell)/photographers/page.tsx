@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { adminPreviewUrl } from "@/lib/cf-image-loader";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,7 @@ export default async function AdminPhotographersPage({
                   {photographer.image_url ? (
                     <div className="relative h-10 w-10 overflow-hidden rounded">
                       <Image
-                        src={photographer.image_url}
+                        src={adminPreviewUrl(photographer.image_url)}
                         alt=""
                         fill
                         className="object-cover"
