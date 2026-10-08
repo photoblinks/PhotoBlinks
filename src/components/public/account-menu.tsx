@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
+import { AUTH_CHANGED_EVENT, getInitialUser, hasAuthCookie, loadSupabaseClient } from "@/lib/supabase/auth-cookie";
 import { signOut } from "@/lib/auth-actions";
 import {
   DropdownMenu,
@@ -23,23 +23,41 @@ export function AccountMenu({ light }: { light?: boolean }) {
   const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
     let cancelled = false;
+    let started = false;
+    let unsubscribe: (() => void) | undefined;
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!cancelled) {
-        setSignedIn(!!user);
+    function start() {
+      // No auth cookie → definitely anonymous; skip loading Supabase.
+      if (started) return;
+      if (!hasAuthCookie()) {
         setReady(true);
+        return;
       }
-    });
+      started = true;
+      loadSupabaseClient().then((supabase) => {
+        if (cancelled) return;
+        getInitialUser().then((user) => {
+          if (!cancelled) {
+            setSignedIn(!!user);
+            setReady(true);
+          }
+        });
+        const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (!cancelled) setSignedIn(!!session?.user);
+        });
+        unsubscribe = () => subscription.subscription.unsubscribe();
+      });
+    }
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!cancelled) setSignedIn(!!session?.user);
-    });
+    start();
+    // An in-page sign-in (AuthDialog) creates the session after mount.
+    window.addEventListener(AUTH_CHANGED_EVENT, start);
 
     return () => {
       cancelled = true;
-      subscription.subscription.unsubscribe();
+      window.removeEventListener(AUTH_CHANGED_EVENT, start);
+      unsubscribe?.();
     };
   }, []);
 

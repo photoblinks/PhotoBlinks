@@ -280,7 +280,7 @@ export const getPublishedLocations = unstable_cache(
     let query = supabase
       .from("locations")
       .select(
-        "id, name, card_name, slug, pricing_type, price, latitude, longitude, updated_at, drone_status, categories(name, slug, sort_order), countries(name, slug), states(name, slug), cities(name, slug), location_images(image_url, sort_order)",
+        "id, name, card_name, slug, pricing_type, price, latitude, longitude, updated_at, drone_status, categories(name, slug, sort_order), countries(name, slug), states(name, slug), cities(name, slug), location_primary_images(image_url)",
       )
       .eq("is_published", true)
       .order("created_at", { ascending: false });
@@ -298,8 +298,8 @@ export const getPublishedLocations = unstable_cache(
 
     const results = (data ?? []).map((location) => {
       const primaryImageUrl =
-        [...(location.location_images ?? [])].sort((a, b) => a.sort_order - b.sort_order)[0]
-          ?.image_url ?? null;
+        (location.location_primary_images as Array<{ image_url: string }> | null)?.[0]?.image_url ??
+        null;
 
       const distanceKm =
         filters?.near && location.latitude != null && location.longitude != null
@@ -630,7 +630,7 @@ export const getPublishedStudios = unstable_cache(
     let query = supabase
       .from("studios")
       .select(
-        "id, name, card_name, slug, updated_at, countries(name, slug), states(name, slug), cities(name, slug), studio_images(image_url, sort_order), studio_pricing_options(price)",
+        "id, name, card_name, slug, updated_at, countries(name, slug), states(name, slug), cities(name, slug), studio_primary_images(image_url), studio_pricing_options(price)",
       )
       .eq("is_published", true)
       .order("created_at", { ascending: false });
@@ -643,8 +643,8 @@ export const getPublishedStudios = unstable_cache(
 
     return (data ?? []).map((studio) => {
       const primaryImageUrl =
-        [...(studio.studio_images ?? [])].sort((a, b) => a.sort_order - b.sort_order)[0]
-          ?.image_url ?? null;
+        (studio.studio_primary_images as Array<{ image_url: string }> | null)?.[0]?.image_url ??
+        null;
       const prices = (studio.studio_pricing_options ?? []).map((o) => o.price);
 
       return {
@@ -1080,6 +1080,25 @@ export const getPublishedBlogPostsPage = unstable_cache(
     return { posts: (data ?? []).map(toBlogPostCard), total: count ?? 0 };
   },
   ["getPublishedBlogPostsPage"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
+/** Every published post's card data, newest first — the full published set
+ * (not offset-paged), so the static /blog listing can paginate client-side
+ * without a request-time DB call. Mirrors getPublishedLocations/
+ * getPublishedStudios, which fetch the full published set for the same
+ * reason. Cached for the usual 60s window. */
+export const getPublishedBlogPosts = unstable_cache(
+  async (): Promise<PublicBlogPostCard[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("blog_posts")
+      .select(BLOG_POST_CARD_COLUMNS)
+      .eq("status", "published")
+      .order("published_at", { ascending: false });
+    return (data ?? []).map(toBlogPostCard);
+  },
+  ["getPublishedBlogPosts"],
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 );
 

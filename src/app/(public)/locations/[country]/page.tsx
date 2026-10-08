@@ -1,5 +1,4 @@
-import { cache } from "react";
-import Link from "next/link";
+import { Suspense, cache } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -9,27 +8,27 @@ import {
   getActiveCountries,
   getActiveStates,
   getPublishedLocations,
-  type PublicLocationCard,
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
-import { LocationCard } from "@/components/public/location-card";
-import { ListingPagination } from "@/components/public/listing-pagination";
-import { pagedPath, paginateListing } from "@/lib/listing-pagination";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { DirectoryFilter, DirectoryResults } from "@/components/public/location-directory";
+import { CountryBrowse } from "@/components/public/location-browse-views";
 import { DEFAULT_OG_IMAGE, socialImageUrl } from "@/lib/jsonld";
-import { hasIndexAffectingParams, isSeoEligible } from "@/lib/seo-eligibility";
+import { isSeoEligible } from "@/lib/seo-eligibility";
+
+// ISR: this page no longer reads searchParams/cookies, so it is eligible for
+// the Full Route Cache with the same 60s window as the underlying cached
+// queries in public-data.ts. Filtering/pagination run client-side
+// (DirectoryFilter/DirectoryResults) so ?state=/?category=/?page= variants
+// don't force a dynamic render.
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  return [];
+}
 
 type Props = {
   params: Promise<{ country: string }>;
-  searchParams: Promise<{
-    q?: string;
-    state?: string;
-    city?: string;
-    category?: string;
-    pricing?: string;
-    drone?: string;
-    page?: string;
-  }>;
 };
 
 const loadCountryPage = cache(async (countrySlug: string) => {
@@ -43,13 +42,13 @@ const loadCountryPage = cache(async (countrySlug: string) => {
   return { country, locations };
 });
 
-export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { country: countrySlug } = await params;
-  const query = await searchParams;
   const data = await loadCountryPage(countrySlug);
   if (!data) return {};
 
-  const title = data.country.meta_title || `Pre-Wedding Photoshoot Locations in ${data.country.name}`;
+  const title =
+    data.country.meta_title || `Pre-Wedding Photoshoot Locations in ${data.country.name}`;
   const description =
     data.country.meta_description ||
     `Explore pre-wedding photoshoot locations in ${data.country.name} by state.`;
@@ -57,7 +56,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title,
     description,
-    alternates: { canonical: pagedPath(`/locations/${data.country.slug}`, query.page, data.locations.length) },
+    alternates: { canonical: `/locations/${data.country.slug}` },
     openGraph: {
       title,
       description,
@@ -69,23 +68,19 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     // Below the SEO eligibility threshold the page still renders for
     // product/UX purposes but shouldn't be indexed — see seo-eligibility.ts.
     // Never affects the country's individual location pages, which are
-    // always indexable when published. Filter/search query variants
-    // (?state=, ?city=, ?category=, ?pricing=, ?drone=, ?q=) are noindexed
-    // too, since they canonicalize to this same clean URL and aren't meant
-    // to be standalone landing pages.
-    ...(isSeoEligible(data.locations.length) && !hasIndexAffectingParams({ ...query, page: undefined })
+    // always indexable when published.
+    ...(isSeoEligible(data.locations.length)
       ? {}
       : { robots: { index: false, follow: true } }),
   };
 }
 
-export default async function CountryLocationsPage({ params, searchParams }: Props) {
+export default async function CountryLocationsPage({ params }: Props) {
   const { country: countrySlug } = await params;
   const data = await loadCountryPage(countrySlug);
   if (!data) notFound();
 
   const { country, locations } = data;
-  const query = await searchParams;
 
   const [allStates, allCities, categories] = await Promise.all([
     getActiveStates(),
@@ -95,23 +90,13 @@ export default async function CountryLocationsPage({ params, searchParams }: Pro
   const states = allStates.filter((s) => s.country_id === country.id);
   const cities = allCities.filter((c) => states.some((s) => s.id === c.state_id));
 
-  const selectedState = states.find((s) => s.slug === query.state);
-  const selectedCity = cities.find((c) => c.slug === query.city);
-  const selectedCategory = categories.find((c) => c.slug === query.category);
-  const pricingType =
-    query.pricing === "free" || query.pricing === "paid" || query.pricing === "unknown"
-      ? query.pricing
-      : undefined;
-  const droneStatus =
-    query.drone === "allowed" || query.drone === "allowed_with_permission" || query.drone === "not_allowed"
-      ? query.drone
-      : undefined;
-  const search = query.q?.trim() || undefined;
-  const hasFilters = Boolean(
-    selectedState || selectedCity || selectedCategory || pricingType || droneStatus || search,
-  );
-
   const heading = country.h1_title || `Pre-Wedding Photoshoot Locations in ${country.name}`;
+  const breadcrumbs = [
+    { name: "Home", path: "/" },
+    { name: "Locations", path: "/locations" },
+    { name: country.name, path: `/locations/${country.slug}` },
+  ];
+  const basePath = `/locations/${country.slug}`;
 
   return (
     <div>
@@ -140,141 +125,41 @@ export default async function CountryLocationsPage({ params, searchParams }: Pro
       </section>
 
       <div className="relative z-10 mx-auto -mt-8 max-w-7xl px-4 sm:-mt-10 sm:px-6">
-        <HomeFilter
-          states={states}
-          cities={cities}
-          categories={categories}
-          basePath={`/locations/${country.slug}`}
-          initial={{
-            q: query.q,
-            state: query.state,
-            city: query.city,
-            category: query.category,
-            pricing: query.pricing,
-            drone: query.drone,
-          }}
-        />
+        <Suspense
+          fallback={
+            <HomeFilter
+              states={states}
+              cities={cities}
+              categories={categories}
+              basePath={basePath}
+              initial={{}}
+            />
+          }
+        >
+          <DirectoryFilter
+            mode="country"
+            states={states}
+            cities={cities}
+            categories={categories}
+            basePath={basePath}
+          />
+        </Suspense>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <Breadcrumbs
-          items={[
-            { name: "Home", path: "/" },
-            { name: "Locations", path: "/locations" },
-            { name: country.name, path: `/locations/${country.slug}` },
-          ]}
-        />
-
-        {hasFilters ? (
-          <FilteredResults
-            countryId={country.id}
-            stateId={selectedState?.id}
-            cityId={selectedCity?.id}
-            categoryId={selectedCategory?.id}
-            pricingType={pricingType}
-            droneStatus={droneStatus}
-            search={search}
-            basePath={`/locations/${country.slug}`}
-            query={query}
+        <Breadcrumbs items={breadcrumbs} />
+        <Suspense fallback={<CountryBrowse country={country} locations={locations} />}>
+          <DirectoryResults
+            mode="country"
+            locations={locations}
+            states={states}
+            cities={cities}
+            categories={categories}
+            basePath={basePath}
+            country={{ name: country.name, slug: country.slug }}
           />
-        ) : (
-          <BrowseByState country={country} locations={locations} />
-        )}
+        </Suspense>
       </div>
     </div>
-  );
-}
-
-async function FilteredResults({
-  countryId,
-  stateId,
-  cityId,
-  categoryId,
-  pricingType,
-  droneStatus,
-  search,
-  basePath,
-  query,
-}: {
-  countryId: string;
-  stateId?: string;
-  cityId?: string;
-  categoryId?: string;
-  pricingType?: "free" | "paid" | "unknown";
-  droneStatus?: "allowed" | "allowed_with_permission" | "not_allowed";
-  search?: string;
-  basePath: string;
-  query: Record<string, string | undefined>;
-}) {
-  const all = await getPublishedLocations({
-    countryId,
-    stateId,
-    cityId,
-    categoryId,
-    pricingType,
-    droneStatus,
-    search,
-  });
-  const { items: results, page, totalPages, total } = paginateListing(all, query.page);
-
-  return (
-    <>
-      <h2 className="font-heading mb-6 text-xl font-semibold">
-        {total} location{total === 1 ? "" : "s"} found
-      </h2>
-      {results.length === 0 ? (
-        <p className="text-muted-foreground">
-          No published locations match these filters yet. Try a different combination.
-        </p>
-      ) : (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-          {results.map((location) => (
-            <LocationCard key={location.id} location={location} />
-          ))}
-        </div>
-      )}
-      <ListingPagination page={page} totalPages={totalPages} basePath={basePath} query={query} />
-    </>
-  );
-}
-
-function BrowseByState({
-  country,
-  locations,
-}: {
-  country: { id: string; slug: string; name: string };
-  locations: PublicLocationCard[];
-}) {
-  const stateCounts = new Map<string, { name: string; slug: string; count: number }>();
-  for (const location of locations) {
-    if (!location.state) continue;
-    const existing = stateCounts.get(location.state.slug);
-    if (existing) existing.count += 1;
-    else stateCounts.set(location.state.slug, { ...location.state, count: 1 });
-  }
-  const states = [...stateCounts.values()].sort((a, b) => a.name.localeCompare(b.name));
-
-  return (
-    <>
-      <p className="mb-2 max-w-2xl text-muted-foreground">
-        Explore pre-wedding photoshoot locations in {country.name} by state — beaches, waterfalls,
-        temples, hills, and more.
-      </p>
-      <h2 className="font-heading mb-3 text-lg font-semibold">Explore Locations by State</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {states.map((state) => (
-          <Link
-            key={state.slug}
-            href={`/locations/${country.slug}/${state.slug}`}
-            className="rounded-lg border p-4 transition-shadow hover:shadow-md"
-          >
-            <h2 className="text-lg font-semibold">{state.name}</h2>
-            <p className="text-sm text-muted-foreground">
-              {state.count} location{state.count === 1 ? "" : "s"}
-            </p>
-          </Link>
-        ))}
-      </div>
-    </>
   );
 }

@@ -1,18 +1,23 @@
-import { cache } from "react";
-import Link from "next/link";
+import { Suspense, cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getActiveCountries, getPublishedStudios } from "@/lib/public-data";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { StudioSearch } from "@/components/public/studio-search";
+import { StudioDirectory, CountryStudioResults } from "@/components/public/studio-directory";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
-import { hasIndexAffectingParams } from "@/lib/seo-eligibility";
+
+// ISR: no searchParams/cookies read, so the route is eligible for the Full
+// Route Cache with the same 60s window as public-data.ts. The ?q= name
+// search now runs client-side (StudioDirectory).
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  return [];
+}
 
 type Props = {
   params: Promise<{ country: string }>;
-  // Reading searchParams makes this route dynamic instead of ISR — the same
-  // tradeoff already accepted on the location directory pages.
-  searchParams: Promise<{ q?: string }>;
 };
 
 const loadCountryPage = cache(async (countrySlug: string) => {
@@ -26,9 +31,8 @@ const loadCountryPage = cache(async (countrySlug: string) => {
   return { country, studios };
 });
 
-export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { country: countrySlug } = await params;
-  const query = await searchParams;
   const data = await loadCountryPage(countrySlug);
   if (!data) return {};
 
@@ -47,32 +51,16 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       type: "website",
       images: [DEFAULT_OG_IMAGE],
     },
-    // The "?q=" search variant is noindexed since it canonicalizes to this
-    // same clean URL and isn't meant to be its own landing page.
-    ...(hasIndexAffectingParams(query) ? { robots: { index: false, follow: true } } : {}),
   };
 }
 
-export default async function CountryStudiosPage({ params, searchParams }: Props) {
+export default async function CountryStudiosPage({ params }: Props) {
   const { country: countrySlug } = await params;
   const data = await loadCountryPage(countrySlug);
   if (!data) notFound();
 
-  const { country, studios: allStudios } = data;
-  const { q } = await searchParams;
-  const search = q?.trim().toLowerCase();
-  const studios = search
-    ? allStudios.filter((s) => s.name.toLowerCase().includes(search))
-    : allStudios;
-
-  const stateCounts = new Map<string, { name: string; slug: string; count: number }>();
-  for (const studio of studios) {
-    if (!studio.state) continue;
-    const existing = stateCounts.get(studio.state.slug);
-    if (existing) existing.count += 1;
-    else stateCounts.set(studio.state.slug, { ...studio.state, count: 1 });
-  }
-  const states = [...stateCounts.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const { country, studios } = data;
+  const basePath = `/studios/${country.slug}`;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -90,28 +78,16 @@ export default async function CountryStudiosPage({ params, searchParams }: Props
         Explore pre-wedding photo studios in {country.name} by state.
       </p>
 
-      <StudioSearch basePath={`/studios/${country.slug}`} q={q} />
-
-      {states.length === 0 ? (
-        <p className="mt-8 text-muted-foreground">
-          No published studios match &ldquo;{q}&rdquo;. Try a different search.
-        </p>
-      ) : (
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {states.map((state) => (
-            <Link
-              key={state.slug}
-              href={`/studios/${country.slug}/${state.slug}${search ? `?q=${encodeURIComponent(q!)}` : ""}`}
-              className="rounded-lg border p-4 transition-shadow hover:shadow-md"
-            >
-              <h2 className="text-lg font-semibold">{state.name}</h2>
-              <p className="text-sm text-muted-foreground">
-                {state.count} studio{state.count === 1 ? "" : "s"}
-              </p>
-            </Link>
-          ))}
-        </div>
-      )}
+      <Suspense
+        fallback={
+          <>
+            <StudioSearch basePath={basePath} />
+            <CountryStudioResults studios={studios} countrySlug={country.slug} />
+          </>
+        }
+      >
+        <StudioDirectory mode="country" studios={studios} basePath={basePath} countrySlug={country.slug} />
+      </Suspense>
     </div>
   );
 }

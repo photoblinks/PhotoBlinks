@@ -1,24 +1,24 @@
-import { getActiveBlogCategories, getPublishedBlogPostsPage, getFeaturedBlogPosts, BLOG_LIST_PAGE_SIZE } from "@/lib/public-data";
+import { Suspense } from "react";
+import {
+  getActiveBlogCategories,
+  getFeaturedBlogPosts,
+  getPublishedBlogPosts,
+  BLOG_LIST_PAGE_SIZE,
+} from "@/lib/public-data";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { BlogCategoryNav } from "@/components/public/blog-category-nav";
 import { BlogPostCard } from "@/components/public/blog-post-card";
+import { BlogListing, BlogListingSection } from "@/components/public/blog-listing";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
-import Link from "next/link";
 import type { Metadata } from "next";
 
-type Props = { searchParams: Promise<{ page?: string }> };
-
-// No cookies/session here, so this route is eligible for ISR — same 60s
-// window as the underlying cached queries in public-data.ts.
+// ISR: no cookies/searchParams read, so this route is eligible for the Full
+// Route Cache with a 60s revalidate window matching public-data.ts.
+// Pagination now runs client-side (BlogListing) against the full published
+// post list, so ?page=N no longer forces a dynamic render.
 export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
-  // Plain title (no manual brand suffix) so the root layout's title template
-  // ("%s | PhotoBlinks", see src/app/layout.tsx) appends it exactly once —
-  // a manual "| PhotoBlinks" here on top of the template used to render as
-  // "Blog | PhotoBlinks | PhotoBlinks". Open Graph titles aren't run through
-  // that template, so the brand suffix there is added explicitly to keep
-  // the OG title unchanged from before this fix.
   const title = "Blog";
   const description =
     "Guides, location spotlights, and photoshoot planning tips for pre-wedding shoots across Karnataka, Kerala, and beyond.";
@@ -38,17 +38,15 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function BlogIndexPage({ searchParams }: Props) {
-  const { page: pageParam } = await searchParams;
-  const page = Math.max(1, Number(pageParam) || 1);
-
-  const [categories, featuredPosts, listing] = await Promise.all([
+export default async function BlogIndexPage() {
+  const [categories, featuredPosts, allPosts] = await Promise.all([
     getActiveBlogCategories(),
     getFeaturedBlogPosts(3),
-    getPublishedBlogPostsPage(page),
+    getPublishedBlogPosts(),
   ]);
 
-  const totalPages = Math.max(1, Math.ceil(listing.total / BLOG_LIST_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(allPosts.length / BLOG_LIST_PAGE_SIZE));
+  const pageOnePosts = allPosts.slice(0, BLOG_LIST_PAGE_SIZE);
   const breadcrumbItems = [
     { name: "Home", path: "/" },
     { name: "Blog", path: "/blog" },
@@ -76,36 +74,9 @@ export default async function BlogIndexPage({ searchParams }: Props) {
         </section>
       )}
 
-      <section className="mt-10">
-        <h2 className="font-heading mb-4 text-xl font-semibold">Recent Articles</h2>
-        {listing.posts.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {listing.posts.map((post) => (
-              <BlogPostCard key={post.id} post={post} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No articles published yet.</p>
-        )}
-      </section>
-
-      {totalPages > 1 && (
-        <nav aria-label="Pagination" className="mt-10 flex items-center justify-center gap-4">
-          {page > 1 && (
-            <Link href={page - 1 === 1 ? "/blog" : `/blog?page=${page - 1}`} className="text-sm font-medium text-pb-brand hover:underline">
-              ← Newer
-            </Link>
-          )}
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          {page < totalPages && (
-            <Link href={`/blog?page=${page + 1}`} className="text-sm font-medium text-pb-brand hover:underline">
-              Older →
-            </Link>
-          )}
-        </nav>
-      )}
+      <Suspense fallback={<BlogListingSection posts={pageOnePosts} page={1} totalPages={totalPages} />}>
+        <BlogListing posts={allPosts} />
+      </Suspense>
     </div>
   );
 }

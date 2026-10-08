@@ -1,37 +1,41 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import type { Metadata } from "next";
 import Image from "next/image";
+import type { Metadata } from "next";
 import {
   getActiveCities,
   getActiveStates,
   getCategoryBySlug,
   getPublishedLocations,
-  type PublicLocationCard,
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
-import { LocationCard } from "@/components/public/location-card";
-import { ListingPagination } from "@/components/public/listing-pagination";
-import { pagedPath, paginateListing } from "@/lib/listing-pagination";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
+import { DirectoryFilter, DirectoryResults } from "@/components/public/location-directory";
+import { CategoryExploreByState, FlatBrowse } from "@/components/public/location-browse-views";
 import { JsonLd } from "@/components/public/json-ld";
 import { DEFAULT_OG_IMAGE, buildItemListJsonLd, socialImageUrl } from "@/lib/jsonld";
-import { hasIndexAffectingParams, isSeoEligible } from "@/lib/seo-eligibility";
+import { isSeoEligible } from "@/lib/seo-eligibility";
+
+// ISR: no searchParams/cookies read, so the route is eligible for the Full
+// Route Cache with the same 60s window as public-data.ts. Filtering and
+// pagination run client-side.
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  return [];
+}
 
 type Props = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ q?: string; state?: string; city?: string; pricing?: string; drone?: string; page?: string }>;
 };
 
-export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const query = await searchParams;
   const category = await getCategoryBySlug(slug);
   if (!category) return {};
 
   // Eligibility must reflect the canonical (nationwide, unfiltered) dataset
-  // regardless of any ?state=/?city=/?pricing= query — same rule City +
-  // Category and State + Category already use.
+  // regardless of any ?state=/?city=/?pricing= query.
   const locations = await getPublishedLocations({ categoryId: category.id });
 
   const title = category.meta_title || `${category.name} Pre-Wedding Photoshoot Locations in India`;
@@ -44,7 +48,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title,
     description,
-    alternates: { canonical: pagedPath(path, query.page, locations.length) },
+    alternates: { canonical: path },
     openGraph: {
       title,
       description,
@@ -55,47 +59,32 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     },
     // Below the SEO eligibility threshold the page still renders for
     // product/UX purposes but shouldn't be indexed — see seo-eligibility.ts.
-    // Filter/search query variants (?state=, ?city=, ?pricing=, ?drone=,
-    // ?q=) are noindexed too, since they canonicalize to this same clean URL.
-    ...(isSeoEligible(locations.length) && !hasIndexAffectingParams({ ...query, page: undefined })
+    ...(isSeoEligible(locations.length)
       ? {}
       : { robots: { index: false, follow: true } }),
   };
 }
 
-export default async function CategoryPage({ params, searchParams }: Props) {
+export default async function CategoryPage({ params }: Props) {
   const { slug } = await params;
   const category = await getCategoryBySlug(slug);
   if (!category) notFound();
 
-  const query = await searchParams;
-  const [states, cities] = await Promise.all([getActiveStates(), getActiveCities()]);
-
-  const selectedState = states.find((s) => s.slug === query.state);
-  const selectedCity = cities.find((c) => c.slug === query.city);
-  const pricingType =
-    query.pricing === "free" || query.pricing === "paid" || query.pricing === "unknown"
-      ? query.pricing
-      : undefined;
-  const droneStatus =
-    query.drone === "allowed" || query.drone === "allowed_with_permission" || query.drone === "not_allowed"
-      ? query.drone
-      : undefined;
-  const search = query.q?.trim() || undefined;
-  const hasFilters = Boolean(selectedState || selectedCity || pricingType || droneStatus || search);
-
-  const locations = await getPublishedLocations({
-    categoryId: category.id,
-    stateId: selectedState?.id,
-    cityId: selectedCity?.id,
-    pricingType,
-    droneStatus,
-    search,
-  });
-
-  const paged = paginateListing(locations, query.page);
+  const [states, cities, locations] = await Promise.all([
+    getActiveStates(),
+    getActiveCities(),
+    getPublishedLocations({ categoryId: category.id }),
+  ]);
 
   const heading = category.h1_title || `${category.name} Pre-Wedding Photoshoot Locations`;
+  const listingHeading = `${locations.length} location${locations.length === 1 ? "" : "s"} found`;
+  const breadcrumbs = [
+    { name: "Home", path: "/" },
+    { name: "Locations", path: "/locations" },
+    { name: category.name, path: `/category/${category.slug}` },
+  ];
+  const basePath = `/category/${category.slug}`;
+  const fixedCategory = { name: category.name, slug: category.slug };
 
   return (
     <div>
@@ -124,64 +113,60 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       </section>
 
       <div className="relative z-10 mx-auto -mt-8 max-w-7xl px-4 sm:-mt-10 sm:px-6">
-        <HomeFilter
-          states={states}
-          cities={cities}
-          categories={[]}
-          hideCategory
-          basePath={`/category/${category.slug}`}
-          initial={{
-            q: query.q,
-            state: query.state,
-            city: query.city,
-            pricing: query.pricing,
-            drone: query.drone,
-          }}
-        />
+        <Suspense
+          fallback={
+            <HomeFilter
+              states={states}
+              cities={cities}
+              categories={[]}
+              hideCategory
+              basePath={basePath}
+              initial={{}}
+            />
+          }
+        >
+          <DirectoryFilter
+            mode="category"
+            states={states}
+            cities={cities}
+            categories={[]}
+            basePath={basePath}
+          />
+        </Suspense>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <Breadcrumbs
-          items={[
-            { name: "Home", path: "/" },
-            { name: "Locations", path: "/locations" },
-            { name: category.name, path: `/category/${category.slug}` },
-          ]}
-        />
+        <Breadcrumbs items={breadcrumbs} />
 
         {category.description && (
           <p className="mb-6 max-w-2xl text-muted-foreground">{category.description}</p>
         )}
 
-        <h2 className="font-heading mb-6 text-xl font-semibold">
-          {locations.length} location{locations.length === 1 ? "" : "s"} found
-        </h2>
-
-        {locations.length === 0 ? (
-          <p className="text-muted-foreground">
-            No published {category.name.toLowerCase()} locations match these filters yet. Try a
-            different combination.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-            {paged.items.map((location) => (
-              <LocationCard key={location.id} location={location} />
-            ))}
-          </div>
-        )}
-        <ListingPagination
-          page={paged.page}
-          totalPages={paged.totalPages}
-          basePath={`/category/${category.slug}`}
-          query={query}
-        />
-
-        {/* Only shown for the default (unfiltered) national view — `locations`
-            here is the full nationwide result set, so the state breakdown is
-            accurate. When a state/city/pricing filter is active this would
-            otherwise show a misleading subset, so it's skipped, matching the
-            same browse-vs-filtered split already used on the City/State pages. */}
-        {!hasFilters && <ExploreByState category={category} locations={locations} />}
+        <Suspense
+          fallback={
+            <>
+              <FlatBrowse
+                heading={listingHeading}
+                locations={locations}
+                page={undefined}
+                basePath={basePath}
+                query={{}}
+              />
+              <CategoryExploreByState category={fixedCategory} locations={locations} />
+            </>
+          }
+        >
+          <DirectoryResults
+            mode="category"
+            locations={locations}
+            states={states}
+            cities={cities}
+            categories={[]}
+            basePath={basePath}
+            fixedCategory={fixedCategory}
+            heading={listingHeading}
+          />
+        </Suspense>
       </div>
 
       <JsonLd
@@ -190,62 +175,6 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           locations.map((l) => ({ name: l.name, path: `/location/${l.slug}` })),
         )}
       />
-    </div>
-  );
-}
-
-/** State-level browse links for this category — reuses the already-loaded
- * nationwide `locations` result (grouped in memory, no extra query). Only
- * links to States, never individual City + Category pages, to keep this
- * page's outbound link count small and hierarchical. */
-function ExploreByState({
-  category,
-  locations,
-}: {
-  category: { name: string; slug: string };
-  locations: PublicLocationCard[];
-}) {
-  const stateCounts = new Map<
-    string,
-    { name: string; slug: string; countrySlug: string; count: number }
-  >();
-  for (const location of locations) {
-    if (!location.state || !location.country) continue;
-    const existing = stateCounts.get(location.state.slug);
-    if (existing) existing.count += 1;
-    else {
-      stateCounts.set(location.state.slug, {
-        name: location.state.name,
-        slug: location.state.slug,
-        countrySlug: location.country.slug,
-        count: 1,
-      });
-    }
-  }
-  const states = [...stateCounts.values()].sort((a, b) => a.name.localeCompare(b.name));
-  if (states.length === 0) return null;
-
-  return (
-    <div className="mt-10 border-t pt-6">
-      <h2 className="font-heading mb-3 text-lg font-semibold">
-        Explore {category.name} Locations by State
-      </h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {states.map((state) => (
-          <Link
-            key={state.slug}
-            href={`/locations/${state.countrySlug}/${state.slug}/${category.slug}`}
-            className="rounded-lg border p-4 transition-shadow hover:shadow-md"
-          >
-            <h3 className="text-lg font-semibold">
-              {category.name} locations in {state.name}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {state.count} location{state.count === 1 ? "" : "s"}
-            </p>
-          </Link>
-        ))}
-      </div>
     </div>
   );
 }

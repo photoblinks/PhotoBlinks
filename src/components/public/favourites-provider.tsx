@@ -1,9 +1,18 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
+import dynamic from "next/dynamic";
+import { AUTH_CHANGED_EVENT, getInitialUser, hasAuthCookie, loadSupabaseClient } from "@/lib/supabase/auth-cookie";
 import { toggleFavourite as toggleFavouriteAction } from "@/app/(public)/favourites/actions";
-import { AuthDialog } from "./auth-dialog";
+
+const AuthDialog = dynamic(() => import("./auth-dialog").then((m) => m.AuthDialog), { ssr: false });
+
+/** Stays true once `open` has been true, so the dialog keeps its close animation. */
+function useAuthDialogMounted(open: boolean) {
+  const [mounted, setMounted] = useState(false);
+  if (open && !mounted) setMounted(true);
+  return mounted;
+}
 
 type ToggleResult = "favourited" | "unfavourited" | "sign_in_required" | "error";
 
@@ -40,50 +49,73 @@ export function FavouritesProvider({ children }: { children: React.ReactNode }) 
   const [signedIn, setSignedIn] = useState(false);
   const [favouriteIds, setFavouriteIds] = useState<Set<string>>(new Set());
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  // Dialog code is only fetched once a guest actually needs to sign in.
+  const authDialogMounted = useAuthDialogMounted(authDialogOpen);
   const authResolverRef = useRef<((signedIn: boolean) => void) | null>(null);
 
+  const startAuthRef = useRef<() => void>(() => {});
+
   useEffect(() => {
-    const supabase = createClient();
     let cancelled = false;
+    let started = false;
+    let unsubscribe: (() => void) | undefined;
 
-    async function loadFavourites(userId: string) {
-      const { data } = await supabase.from("favourites").select("location_id").eq("user_id", userId);
-      if (cancelled) return;
-      setFavouriteIds(new Set((data ?? []).map((row) => row.location_id)));
+    // Loads Supabase on demand: on mount only when an auth cookie exists
+    // (anonymous visitors never download it), or when the sign-in dialog
+    // opens (so the resulting session is picked up).
+    function startAuth() {
+      if (started) return;
+      started = true;
+      loadSupabaseClient().then((supabase) => {
+        if (cancelled) return;
+
+        async function loadFavourites(userId: string) {
+          const { data } = await supabase.from("favourites").select("location_id").eq("user_id", userId);
+          if (cancelled) return;
+          setFavouriteIds(new Set((data ?? []).map((row) => row.location_id)));
+        }
+
+        async function init() {
+          const user = await getInitialUser();
+          if (cancelled) return;
+          setSignedIn(!!user);
+          if (user) await loadFavourites(user.id);
+          if (!cancelled) setReady(true);
+        }
+
+        init();
+
+        const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+          if (cancelled) return;
+          setSignedIn(!!session?.user);
+          if (session?.user) {
+            loadFavourites(session.user.id);
+            // A real sign-in just happened — close the dialog (if open) and
+            // tell whoever called requireAuth() they can now proceed. This
+            // fires after setSignedIn(true) above, so by the time the caller's
+            // promise resolves, signedIn is already true for its next render.
+            setAuthDialogOpen(false);
+            authResolverRef.current?.(true);
+            authResolverRef.current = null;
+            window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+          } else {
+            setFavouriteIds(new Set());
+          }
+        });
+        unsubscribe = () => subscription.subscription.unsubscribe();
+      });
     }
 
-    async function init() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (cancelled) return;
-      setSignedIn(!!user);
-      if (user) await loadFavourites(user.id);
-      if (!cancelled) setReady(true);
+    startAuthRef.current = startAuth;
+    function bootstrap() {
+      if (hasAuthCookie()) startAuth();
+      else setReady(true);
     }
-
-    init();
-
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (cancelled) return;
-      setSignedIn(!!session?.user);
-      if (session?.user) {
-        loadFavourites(session.user.id);
-        // A real sign-in just happened — close the dialog (if open) and
-        // tell whoever called requireAuth() they can now proceed. This
-        // fires after setSignedIn(true) above, so by the time the caller's
-        // promise resolves, signedIn is already true for its next render.
-        setAuthDialogOpen(false);
-        authResolverRef.current?.(true);
-        authResolverRef.current = null;
-      } else {
-        setFavouriteIds(new Set());
-      }
-    });
+    bootstrap();
 
     return () => {
       cancelled = true;
-      subscription.subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 
@@ -119,6 +151,7 @@ export function FavouritesProvider({ children }: { children: React.ReactNode }) 
     if (signedIn) return Promise.resolve(true);
     return new Promise<boolean>((resolve) => {
       authResolverRef.current = resolve;
+      startAuthRef.current();
       setAuthDialogOpen(true);
     });
   }, [signedIn]);
@@ -138,7 +171,7 @@ export function FavouritesProvider({ children }: { children: React.ReactNode }) 
   return (
     <FavouritesContext.Provider value={{ ready, signedIn, favouriteIds, toggle, requireAuth }}>
       {children}
-      <AuthDialog open={authDialogOpen} onOpenChange={handleAuthDialogOpenChange} />
+      {authDialogMounted && <AuthDialog open={authDialogOpen} onOpenChange={handleAuthDialogOpenChange} />}
     </FavouritesContext.Provider>
   );
 }
