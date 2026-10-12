@@ -4,6 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Images, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import {
+  GALLERY_PRIMARY_IMAGE_WIDTH,
+  GALLERY_SUPPORTING_IMAGE_WIDTH,
+  LIGHTBOX_IMAGE_WIDTH,
+  toTransformUrl,
+} from "@/lib/cf-image-loader";
 
 export function ImageGallery({
   images,
@@ -73,15 +79,13 @@ export function ImageGallery({
           supporting rows on the right (two full-width, one split in two).
           Every photo opens the full-size, scrollable lightbox when clicked.
 
-          The `sizes` values below mirror these real rendered widths: the
-          gallery sits inside a `max-w-7xl px-4 sm:px-6` container (at most
-          1232px of content on viewports >= 1280px), split 55%/45% with an
-          8px gap, and the 45% column stacks two full-width thumbs above a
-          row split in two again. Once the container stops growing the vw
-          values are capped at the exact px width; every value is rounded
-          up, never down, so the chosen srcset candidate is always >= the
-          displayed size (undersizing renders blurry thumbnails, mild
-          overshoot only costs bandwidth). */}
+          Every image below is pre-transformed at a fixed width through
+          toTransformUrl() and rendered with `unoptimized`, so next/image
+          emits a single Cloudflare transform URL instead of a multi-width
+          srcset (each srcset candidate is a distinct transformation variant
+          and would burn the transformation quota). The `sizes` attributes
+          are retained only as documentation of the real rendered widths the
+          fixed widths were chosen for; they no longer drive srcset. */}
       <div className="flex flex-col gap-2 sm:h-[420px] sm:flex-row lg:h-[480px]">
         <button
           type="button"
@@ -90,10 +94,11 @@ export function ImageGallery({
           className="relative aspect-4/3 shrink-0 overflow-hidden rounded-xl bg-muted sm:aspect-auto sm:h-full sm:w-[55%]"
         >
           <Image
-            src={primary}
+            src={toTransformUrl(primary, GALLERY_PRIMARY_IMAGE_WIDTH)}
             alt={captionAt(0)}
             fill
             priority
+            unoptimized
             sizes="(min-width: 1280px) 678px, (min-width: 640px) 55vw, 100vw"
             className="object-cover"
           />
@@ -109,9 +114,10 @@ export function ImageGallery({
                 className="relative aspect-4/3 overflow-hidden rounded-xl bg-muted sm:aspect-auto sm:flex-1"
               >
                 <Image
-                  src={supporting[0]}
+                  src={toTransformUrl(supporting[0], GALLERY_SUPPORTING_IMAGE_WIDTH)}
                   alt={captionAt(1)}
                   fill
+                  unoptimized
                   sizes="(min-width: 1280px) 547px, (min-width: 640px) 45vw, 50vw"
                   className="object-cover"
                 />
@@ -125,9 +131,10 @@ export function ImageGallery({
                 className="relative aspect-4/3 overflow-hidden rounded-xl bg-muted sm:aspect-auto sm:flex-1"
               >
                 <Image
-                  src={supporting[1]}
+                  src={toTransformUrl(supporting[1], GALLERY_SUPPORTING_IMAGE_WIDTH)}
                   alt={captionAt(2)}
                   fill
+                  unoptimized
                   sizes="(min-width: 1280px) 547px, (min-width: 640px) 45vw, 50vw"
                   className="object-cover"
                 />
@@ -143,9 +150,10 @@ export function ImageGallery({
                     className="relative aspect-4/3 flex-1 overflow-hidden rounded-xl bg-muted sm:aspect-auto"
                   >
                     <Image
-                      src={supporting[2]}
+                      src={toTransformUrl(supporting[2], GALLERY_SUPPORTING_IMAGE_WIDTH)}
                       alt={captionAt(3)}
                       fill
+                      unoptimized
                       sizes="(min-width: 1280px) 270px, (min-width: 640px) 22vw, 50vw"
                       className="object-cover"
                     />
@@ -159,9 +167,10 @@ export function ImageGallery({
                     className="relative aspect-4/3 flex-1 overflow-hidden rounded-xl bg-muted sm:aspect-auto"
                   >
                     <Image
-                      src={supporting[3]}
+                      src={toTransformUrl(supporting[3], GALLERY_SUPPORTING_IMAGE_WIDTH)}
                       alt={captionAt(4)}
                       fill
+                      unoptimized
                       sizes="(min-width: 1280px) 270px, (min-width: 640px) 22vw, 50vw"
                       className="object-cover"
                     />
@@ -203,18 +212,17 @@ export function ImageGallery({
 
           {/* Full-screen view: the `fill` image is absolutely positioned to
               the dialog's padding box, so the element spans the entire
-              viewport despite the wrapper's p-4/sm:p-16. `sizes="100vw"` is
-              therefore the honest rendered width and makes the srcset span
-              640w…3840w (fallback src = 3840w), so the browser requests a
-              genuinely viewport-sized Cloudflare transform. Never narrow
-              this to a thumbnail width — that would hand a tiny variant to
-              a full-screen surface. Note Cloudflare's default fit is
-              scale-down, so a large request can't stretch a small original. */}
+              viewport despite the wrapper's p-4/sm:p-16. It renders at a
+              fixed 1920px transform (`unoptimized`, single URL). Note
+              Cloudflare's default fit is scale-down, so a large request
+              can't stretch a small original. `sizes="100vw"` is retained
+              only as documentation of the rendered width. */}
           <div className="relative flex h-full w-full items-center justify-center p-4 sm:p-16">
             <Image
-              src={images[activeIndex]}
+              src={toTransformUrl(images[activeIndex], LIGHTBOX_IMAGE_WIDTH)}
               alt={captionAt(activeIndex)}
               fill
+              unoptimized
               sizes="100vw"
               className="object-contain"
             />

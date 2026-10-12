@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Phone, MessageCircle } from "lucide-react";
 import { buildWhatsAppLink } from "@/lib/format";
+import { PHOTOGRAPHER_PHOTO_WIDTH, toTransformUrl } from "@/lib/cf-image-loader";
 import type { PublicPhotographerPhoto } from "@/lib/public-data";
 
 type Props = {
@@ -25,11 +26,12 @@ export function PhotographerPhotoSection({ photos, locationName }: Props) {
           <div key={photo.id} className="overflow-hidden rounded-xl border bg-white shadow-sm dark:bg-card">
             <div className="relative aspect-4/3 w-full">
               <Image
-                src={photo.image_url}
+                src={toTransformUrl(photo.image_url, PHOTOGRAPHER_PHOTO_WIDTH)}
                 alt={`${photo.title} — ${locationName}`}
                 fill
-                className="object-cover"
+                unoptimized
                 sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                className="object-cover"
               />
             </div>
             <div className="p-3">

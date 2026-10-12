@@ -29,6 +29,20 @@ const DEFAULT_QUALITY = 85;
 
 const ADMIN_PREVIEW_WIDTH = 400;
 
+// Fixed render widths for the single-URL `unoptimized` transforms used
+// across the app. Each value is exactly one Cloudflare transformation
+// variant, so a given image costs one unique-transformation (see header).
+export const GALLERY_PRIMARY_IMAGE_WIDTH = 1200;
+export const GALLERY_SUPPORTING_IMAGE_WIDTH = 640;
+export const LIGHTBOX_IMAGE_WIDTH = 1920;
+export const PHOTOGRAPHER_PHOTO_WIDTH = 800;
+export const DASHBOARD_THUMBNAIL_WIDTH = 160;
+
+// TEMPORARY: Cloudflare transformations are unavailable (Free quota exhausted),
+// so serve the stored original R2 URLs untouched. Set to false to restore
+// /cdn-cgi/image/ transforms.
+const SERVE_ORIGINALS = true;
+
 const R2_DEV_HOSTNAME_SUFFIX = ".r2.dev";
 const CDN_CGI_IMAGE_PREFIX = "/cdn-cgi/image/";
 
@@ -37,6 +51,8 @@ const CDN_CGI_IMAGE_PREFIX = "/cdn-cgi/image/";
  * returned untouched. Also used for OG/Twitter/JSON-LD image URLs so raw
  * pub-*.r2.dev originals are never exposed in public metadata. */
 export function toTransformUrl(rawUrl: string, width: number, quality?: number): string {
+  if (SERVE_ORIGINALS) return rawUrl;
+
   let url: URL;
   try {
     url = new URL(rawUrl);

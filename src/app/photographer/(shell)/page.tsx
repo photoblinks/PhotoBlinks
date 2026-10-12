@@ -22,6 +22,7 @@ import { RealtimeRefresh } from "@/components/realtime/realtime-refresh";
 import { AuthSubmitButton } from "@/components/public/auth-submit-button";
 import { FieldError } from "@/components/ui/field";
 import { getActiveCountries, getActiveStates } from "@/lib/public-data";
+import { DASHBOARD_THUMBNAIL_WIDTH, toTransformUrl } from "@/lib/cf-image-loader";
 import { normalizeRelation, ensurePhotographerProfileFromMetadata } from "@/lib/supabase/require-photographer";
 
 export const metadata: Metadata = {
@@ -253,11 +254,12 @@ export default async function PhotographerDashboardPage({
                     <TableCell>
                       <div className="relative size-14 shrink-0 overflow-hidden rounded-md border">
                         <Image
-                          src={row.image_url}
+                          src={toTransformUrl(row.image_url, DASHBOARD_THUMBNAIL_WIDTH)}
                           alt={row.title}
                           fill
-                          className="object-cover"
+                          unoptimized
                           sizes="56px"
+                          className="object-cover"
                         />
                       </div>
                     </TableCell>
