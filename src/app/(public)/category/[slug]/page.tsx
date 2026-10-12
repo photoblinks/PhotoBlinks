@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import type { Metadata } from "next";
 import {
-  getActiveCities,
-  getActiveStates,
+  getFilterCities,
+  getFilterStates,
   getCategoryBySlug,
   getPublishedLocations,
 } from "@/lib/public-data";
@@ -71,8 +71,8 @@ export default async function CategoryPage({ params }: Props) {
   if (!category) notFound();
 
   const [states, cities, locations] = await Promise.all([
-    getActiveStates(),
-    getActiveCities(),
+    getFilterStates(),
+    getFilterCities(),
     getPublishedLocations({ categoryId: category.id }),
   ]);
 

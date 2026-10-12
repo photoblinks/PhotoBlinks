@@ -4,9 +4,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
   getActiveCategories,
-  getActiveCities,
+  getFilterCities,
   getActiveCountries,
-  getActiveStates,
+  getFilterStates,
   getPublishedLocations,
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
@@ -83,8 +83,8 @@ export default async function CountryLocationsPage({ params }: Props) {
   const { country, locations } = data;
 
   const [allStates, allCities, categories] = await Promise.all([
-    getActiveStates(),
-    getActiveCities(),
+    getFilterStates(),
+    getFilterCities(),
     getActiveCategories(),
   ]);
   const states = allStates.filter((s) => s.country_id === country.id);

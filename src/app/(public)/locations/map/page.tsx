@@ -3,8 +3,8 @@ import Link from "next/link";
 import { LayoutGrid, List } from "lucide-react";
 import {
   getActiveCategories,
-  getActiveCities,
-  getActiveStates,
+  getFilterCities,
+  getFilterStates,
   getMapLocations,
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
@@ -53,8 +53,8 @@ export default async function LocationsMapPage({
 }) {
   const params = await searchParams;
   const [states, cities, categories] = await Promise.all([
-    getActiveStates(),
-    getActiveCities(),
+    getFilterStates(),
+    getFilterCities(),
     getActiveCategories(),
   ]);
 

@@ -2,8 +2,8 @@
 
 import {
   getActiveCategories,
-  getActiveCities,
-  getActiveStates,
+  getFilterCities,
+  getFilterStates,
   getMapLocations,
   type MapBounds,
   type MapLocation,
@@ -43,8 +43,8 @@ export async function loadMapLocations(
   }
 
   const [states, cities, categories] = await Promise.all([
-    getActiveStates(),
-    getActiveCities(),
+    getFilterStates(),
+    getFilterCities(),
     getActiveCategories(),
   ]);
   return getMapLocations(resolveMapFilters(params, { states, cities, categories }), bounds);

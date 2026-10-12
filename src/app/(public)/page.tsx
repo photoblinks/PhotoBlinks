@@ -3,8 +3,8 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import {
   getActiveCategories,
-  getActiveCities,
-  getActiveStates,
+  getFilterCities,
+  getFilterStates,
   getFeaturedLocationImageUrl,
   getPublishedLocationCount,
   getPublishedLocations,
@@ -74,8 +74,8 @@ export default async function HomePage({
   const params = await searchParams;
   const [states, cities, categories, siteSettings, locationCount, featuredImageUrl] =
     await Promise.all([
-      getActiveStates(),
-      getActiveCities(),
+      getFilterStates(),
+      getFilterCities(),
       getActiveCategories(),
       getSiteSettings(),
       getPublishedLocationCount(),

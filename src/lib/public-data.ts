@@ -161,6 +161,35 @@ export const getActiveCities = unstable_cache(
   { revalidate: PUBLIC_REVALIDATE_SECONDS },
 );
 
+const getPublishedLocationGeoIds = unstable_cache(
+  async () => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("locations")
+      .select("state_id, city_id")
+      .eq("is_published", true);
+    const rows = data ?? [];
+    return {
+      stateIds: [...new Set(rows.map((r) => r.state_id).filter(Boolean))] as string[],
+      cityIds: [...new Set(rows.map((r) => r.city_id).filter(Boolean))] as string[],
+    };
+  },
+  ["getPublishedLocationGeoIds"],
+  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+);
+
+/** Active states/cities that have at least one published location — for
+ * location filter dropdowns, so users never pick an empty destination. */
+export async function getFilterStates() {
+  const [states, { stateIds }] = await Promise.all([getActiveStates(), getPublishedLocationGeoIds()]);
+  return states.filter((s) => stateIds.includes(s.id));
+}
+
+export async function getFilterCities() {
+  const [cities, { cityIds }] = await Promise.all([getActiveCities(), getPublishedLocationGeoIds()]);
+  return cities.filter((c) => cityIds.includes(c.id));
+}
+
 export const getActiveCategories = unstable_cache(
   async () => {
     const supabase = createPublicClient();

@@ -41,7 +41,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     studio.description ||
     `${studio.name}, a pre-wedding photo studio in ${place}.`;
 
-  const video = getValidatedYouTubeVideo(studio.youtube_url);
+  const image = studio.images[0]
+    ? { url: socialImageUrl(studio.images[0]), width: 1200, height: 630, alt: studio.name }
+    : undefined;
 
   return {
     title,
@@ -53,11 +55,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `/studio/${studio.slug}`,
       siteName: "PhotoBlinks",
       type: "website",
-      images: studio.images[0] ? [socialImageUrl(studio.images[0])] : undefined,
-      videos: video
-        ? [{ url: video.embedUrl, width: 640, height: 360, type: "text/html" }]
-        : undefined,
+      images: image ? [image] : undefined,
     },
+    twitter: { card: "summary_large_image", title, description, images: image ? [image.url] : undefined },
   };
 }
 
