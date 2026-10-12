@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublishedLocationBySlug } from "@/lib/public-data";
-import { getValidatedYouTubeVideo } from "@/lib/youtube";
 import { socialImageUrl } from "@/lib/jsonld";
 import { LocationDetailContent } from "@/components/public/location-detail-content";
 
@@ -37,7 +36,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? `${location.name}, a ${location.category.name.toLowerCase()} pre-wedding photoshoot location in ${place}.`
       : `${location.name}, a pre-wedding photoshoot location in ${place}.`);
 
-  const video = getValidatedYouTubeVideo(location.youtube_url);
+  const image = location.images[0]
+    ? { url: socialImageUrl(location.images[0]), width: 1200, height: 630, alt: location.name }
+    : undefined;
 
   return {
     title,
@@ -49,11 +50,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: `/location/${location.slug}`,
       siteName: "PhotoBlinks",
       type: "website",
-      images: location.images[0] ? [socialImageUrl(location.images[0])] : undefined,
-      videos: video
-        ? [{ url: video.embedUrl, width: 640, height: 360, type: "text/html" }]
-        : undefined,
+      images: image ? [image] : undefined,
     },
+    twitter: { card: "summary_large_image", title, description, images: image ? [image.url] : undefined },
   };
 }
 
