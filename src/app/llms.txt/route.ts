@@ -14,7 +14,7 @@ import { buildLocationGeoGroups, type SeoGeoGroup } from "@/lib/seo-eligibility"
 // literal here — Next statically analyzes this segment config export at
 // build time, so it can't be an imported reference (kept in sync by hand
 // with public-data.ts's PUBLIC_REVALIDATE_SECONDS).
-export const revalidate = 60;
+export const revalidate = 86400;
 
 function listEligible(groups: SeoGeoGroup[], basePath: string) {
   return groups

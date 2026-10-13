@@ -15,8 +15,8 @@ import { SITE_URL } from "@/lib/site-url";
 // effect on the sitemap until the next deploy. Must be a literal here —
 // Next statically analyzes this segment config export at build time, so it
 // can't be an imported reference. Kept in sync with public-data.ts's
-// PUBLIC_REVALIDATE_SECONDS by hand (same 60s window everything else uses).
-export const revalidate = 60;
+// PUBLIC_REVALIDATE_SECONDS by hand (same 24h window everything else uses).
+export const revalidate = 86400;
 
 function latest(dates: string[]) {
   return dates.reduce((max, d) => (d > max ? d : max), dates[0]);

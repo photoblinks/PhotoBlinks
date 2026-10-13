@@ -5,8 +5,8 @@ import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 // No searchParams/cookies here, so this route is eligible for ISR — the
-// same 60s window as the underlying cached data queries (public-data.ts).
-export const revalidate = 60;
+// same 24h window as the underlying cached data queries (public-data.ts).
+export const revalidate = 86400;
 
 export const metadata: Metadata = {
   title: "Pre-Wedding Photoshoot Locations by Country",

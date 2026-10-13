@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
@@ -43,6 +44,7 @@ export async function createBlogTag(formData: FormData) {
     redirect(`/admin/blog/tags/new?error=${encodeURIComponent(error.message)}`);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/blog/tags");
   redirect("/admin/blog/tags");
 }
@@ -66,6 +68,7 @@ export async function updateBlogTag(id: string, formData: FormData) {
     redirect(`/admin/blog/tags/${id}/edit?error=${encodeURIComponent(error.message)}`);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/blog/tags");
   redirect("/admin/blog/tags");
 }
@@ -76,6 +79,7 @@ export async function toggleBlogTagActive(id: string, nextValue: boolean) {
 
   const supabase = await createClient();
   await supabase.from("blog_tags").update({ is_active: nextValue }).eq("id", id);
+  revalidatePublicContent();
   revalidatePath("/admin/blog/tags");
 }
 
@@ -86,5 +90,6 @@ export async function deleteBlogTag(id: string) {
   const supabase = await createClient();
   // blog_post_tags.tag_id cascades on delete, so no "in use" guard needed.
   await supabase.from("blog_tags").delete().eq("id", id);
+  revalidatePublicContent();
   revalidatePath("/admin/blog/tags");
 }

@@ -17,7 +17,11 @@ import { LOCATION_INFO_FIELDS, type LocationInfoTableConfig } from "@/lib/locati
 // in the admin panel becomes visible on the public site within this
 // window (or immediately, on routes that can't be statically cached at
 // all because they read searchParams, e.g. the homepage and map filters).
-export const PUBLIC_REVALIDATE_SECONDS = 60;
+export const PUBLIC_REVALIDATE_SECONDS = 86400;
+
+/** Tag on every cached public read; admin writes invalidate it on demand
+ * (src/lib/revalidate-public.ts), so the long window never serves stale edits. */
+export const PUBLIC_CACHE_TAG = "public-content";
 
 export type PricingType = "free" | "paid" | "unknown";
 
@@ -94,7 +98,7 @@ export const getSiteSettings = unstable_cache(
     return { bannerImages: (data ?? []).map((row) => row.image_url) };
   },
   ["getSiteSettings"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Optional per-record overrides for a country/state/city SEO landing
@@ -118,7 +122,7 @@ export const getActiveCountries = unstable_cache(
     return data ?? [];
   },
   ["getActiveCountries"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export const getActiveStates = unstable_cache(
@@ -144,7 +148,7 @@ export const getActiveStates = unstable_cache(
     }));
   },
   ["getActiveStates"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export const getActiveCities = unstable_cache(
@@ -158,7 +162,7 @@ export const getActiveCities = unstable_cache(
     return data ?? [];
   },
   ["getActiveCities"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 const getPublishedLocationGeoIds = unstable_cache(
@@ -175,7 +179,7 @@ const getPublishedLocationGeoIds = unstable_cache(
     };
   },
   ["getPublishedLocationGeoIds"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Active states/cities that have at least one published location — for
@@ -201,7 +205,7 @@ export const getActiveCategories = unstable_cache(
     return data ?? [];
   },
   ["getActiveCategories"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export type PublicCategoryDetail = {
@@ -230,7 +234,7 @@ export const getCategoryBySlug = cache(
       return data ?? null;
     },
     ["getCategoryBySlug"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -256,7 +260,7 @@ export const getLocationCategorySeo = unstable_cache(
     return data ?? null;
   },
   ["getLocationCategorySeo"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: ["location-category-seo"] },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-category-seo"] },
 );
 
 export type LocationStateCategorySeo = {
@@ -279,7 +283,7 @@ export const getLocationStateCategorySeo = unstable_cache(
     return data ?? null;
   },
   ["getLocationStateCategorySeo"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: ["location-state-category-seo"] },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-state-category-seo"] },
 );
 
 /** All published locations matching the given filters, newest first. Each
@@ -362,7 +366,7 @@ export const getPublishedLocations = unstable_cache(
     return results;
   },
   ["getPublishedLocations"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Only what a map marker + popup renders — no ids, timestamps or other
@@ -448,7 +452,7 @@ export const getPublishedLocationCount = unstable_cache(
     return count ?? 0;
   },
   ["getPublishedLocationCount"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** First image of the most recently published location — fallback art for
@@ -469,7 +473,7 @@ export const getFeaturedLocationImageUrl = unstable_cache(
     );
   },
   ["getFeaturedLocationImageUrl"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Resolves a share token to the ids of that owner's currently-published
@@ -576,7 +580,7 @@ export type LocationRatingSummary = { average: number; count: number };
 /** Approved comments for a location, newest first — pending/rejected rows
  * are never reachable here (RLS + the get_approved_location_comments()
  * function's own hardcoded `status = 'approved'` filter, doubly enforced).
- * Same 60s revalidate window as every other public read, so a freshly
+ * Same 24h revalidate window as every other public read, so a freshly
  * admin-approved comment appears within that window, not instantly, and a
  * pending one can never leak through a stale cache (it's simply never part
  * of this result set until approved). */
@@ -597,7 +601,7 @@ export const getApprovedLocationComments = unstable_cache(
     }));
   },
   ["getApprovedLocationComments"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export const getApprovedLocationCommentCount = unstable_cache(
@@ -611,7 +615,7 @@ export const getApprovedLocationCommentCount = unstable_cache(
     return count ?? 0;
   },
   ["getApprovedLocationCommentCount"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Average + count of a location's approved ratings — only ever computed
@@ -629,7 +633,7 @@ export const getLocationRatingSummary = unstable_cache(
     return { average: row?.average ?? 0, count: row?.count ?? 0 };
   },
   ["getLocationRatingSummary"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export type PublicStudioCard = {
@@ -691,7 +695,7 @@ export const getPublishedStudios = unstable_cache(
     });
   },
   ["getPublishedStudios"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Availability dropdown used by both Changing Rooms and Parking Facility. */
@@ -833,7 +837,7 @@ export const getPublishedLocationBySlug = cache(
   };
     },
     ["getPublishedLocationBySlug"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -851,7 +855,7 @@ export type PublicSponsoredPhotographer = {
  * none is assigned / the assignment has expired. RLS already restricts the
  * public-read policy to `expiry_date >= current_date` and the DB enforces
  * at most one active row per state, so this is a single unfiltered lookup —
- * no client-side date filtering. Shares the same 60s revalidate window as
+ * no client-side date filtering. Shares the same 24h revalidate window as
  * the location detail page it's rendered on, so an expiring card disappears
  * within that window like every other public data change. */
 export const getActiveSponsoredPhotographerByState = cache(
@@ -867,7 +871,7 @@ export const getActiveSponsoredPhotographerByState = cache(
       return data;
     },
     ["getActiveSponsoredPhotographerByState"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -898,7 +902,7 @@ export const getActiveSponsoredPhotographers = unstable_cache(
     }));
   },
   ["getActiveSponsoredPhotographers"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export type PublicStudioDetail = ExtraDetails & {
@@ -996,7 +1000,7 @@ export const getPublishedStudioBySlug = cache(
   };
     },
     ["getPublishedStudioBySlug"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1027,7 +1031,7 @@ export const getApprovedPhotographerPhotos = cache(
       return (data as PublicPhotographerPhoto[]) ?? [];
     },
     ["getApprovedPhotographerPhotos"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1109,14 +1113,14 @@ export const getPublishedBlogPostsPage = unstable_cache(
     return { posts: (data ?? []).map(toBlogPostCard), total: count ?? 0 };
   },
   ["getPublishedBlogPostsPage"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Every published post's card data, newest first — the full published set
  * (not offset-paged), so the static /blog listing can paginate client-side
  * without a request-time DB call. Mirrors getPublishedLocations/
  * getPublishedStudios, which fetch the full published set for the same
- * reason. Cached for the usual 60s window. */
+ * reason. Cached for the usual 24h window. */
 export const getPublishedBlogPosts = unstable_cache(
   async (): Promise<PublicBlogPostCard[]> => {
     const supabase = createPublicClient();
@@ -1128,7 +1132,7 @@ export const getPublishedBlogPosts = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getPublishedBlogPosts"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Featured published posts for the /blog hero rail. Bounded to `limit`. */
@@ -1145,7 +1149,7 @@ export const getFeaturedBlogPosts = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getFeaturedBlogPosts"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Active blog categories for /blog's category navigation. */
@@ -1160,7 +1164,7 @@ export const getActiveBlogCategories = unstable_cache(
     return data ?? [];
   },
   ["getActiveBlogCategories"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export type PublicBlogCategoryDetail = {
@@ -1187,7 +1191,7 @@ export const getBlogCategoryBySlug = cache(
       return data ?? null;
     },
     ["getBlogCategoryBySlug"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1206,7 +1210,7 @@ export const getBlogPostsByCategorySlug = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getBlogPostsByCategorySlug"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Published posts carrying one tag, newest first. Returns an empty array
@@ -1224,7 +1228,7 @@ export const getBlogPostsByTagSlug = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getBlogPostsByTagSlug"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Published posts linked to a given location (blog_post_locations), newest
@@ -1243,7 +1247,7 @@ export const getBlogPostsForLocation = cache(
       return (data ?? []).map(toBlogPostCard);
     },
     ["getBlogPostsForLocation"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1262,7 +1266,7 @@ export const getPublishedBlogPostsForSitemap = unstable_cache(
     return (data ?? []).map((row) => ({ slug: row.slug, updatedAt: row.updated_at }));
   },
   ["getPublishedBlogPostsForSitemap"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export type PublicBlogPostForLlms = {
@@ -1295,7 +1299,7 @@ export const getPublishedBlogPostsForLlms = unstable_cache(
     }));
   },
   ["getPublishedBlogPostsForLlms"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export type PublicBlogPostDetail = {
@@ -1402,7 +1406,7 @@ export const getPublishedBlogPostBySlug = cache(
       };
     },
     ["getPublishedBlogPostBySlug"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1494,7 +1498,7 @@ export const getRelatedBlogPosts = cache(
         .map(({ row }) => toBlogPostCard(row));
     },
     ["getRelatedBlogPosts"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1516,7 +1520,7 @@ export const getPublicLocationLinksByIds = cache(
       return data ?? [];
     },
     ["getPublicLocationLinksByIds"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 // ---------------------------------------------------------------------------
@@ -1558,7 +1562,7 @@ export const getPublicLocationInfoByIds = cache(
       });
     },
     ["getPublicLocationInfoByIds"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1589,7 +1593,7 @@ export const getLocationEditorial = cache(
       return parseEditorialBlocks(data.content);
     },
     ["getLocationEditorial"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: ["location-editorial"] },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-editorial"] },
   ),
 );
 
@@ -1632,7 +1636,7 @@ export const getLocationInfoTableConfig = unstable_cache(
     return parseLocationInfoTableConfig(data?.location_info_table_config);
   },
   ["getLocationInfoTableConfig"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: ["location-info-table-config"] },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-info-table-config"] },
 );
 // ---------------------------------------------------------------------------
 // Footer social media links (Admin → Settings → Social Media)
@@ -1683,5 +1687,5 @@ export const getSocialMediaLinks = unstable_cache(
     return links;
   },
   ["getSocialMediaLinks"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
@@ -47,6 +48,7 @@ export async function createBlogCategory(formData: FormData) {
     redirect(`/admin/blog/categories/new?error=${encodeURIComponent(error.message)}`);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/blog/categories");
   redirect("/admin/blog/categories");
 }
@@ -70,6 +72,7 @@ export async function updateBlogCategory(id: string, formData: FormData) {
     redirect(`/admin/blog/categories/${id}/edit?error=${encodeURIComponent(error.message)}`);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/blog/categories");
   redirect("/admin/blog/categories");
 }
@@ -80,6 +83,7 @@ export async function toggleBlogCategoryActive(id: string, nextValue: boolean) {
 
   const supabase = await createClient();
   await supabase.from("blog_categories").update({ is_active: nextValue }).eq("id", id);
+  revalidatePublicContent();
   revalidatePath("/admin/blog/categories");
 }
 
@@ -102,5 +106,6 @@ export async function deleteBlogCategory(id: string) {
     await supabase.from("blog_categories").delete().eq("id", id);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/blog/categories");
 }

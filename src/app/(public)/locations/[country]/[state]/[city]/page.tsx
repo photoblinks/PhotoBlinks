@@ -28,11 +28,11 @@ import { isSeoEligible } from "@/lib/seo-eligibility";
 import { summarizeLocationFacts } from "@/lib/location-facts";
 
 // ISR: no searchParams/cookies read, so the route is eligible for the Full
-// Route Cache with the same 60s window as public-data.ts. The third path
+// Route Cache with the same 24h window as public-data.ts. The third path
 // segment resolves to a real city or (falling back) a state+category page,
 // exactly as before — only the interactive filter/pagination moved client-
 // side.
-export const revalidate = 60;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   return [];

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
 import { deletePhotographerSubmissionObject } from "@/lib/r2/upload";
 
@@ -40,6 +41,7 @@ export async function approveSubmission(id: string) {
     .eq("id", id)
     .eq("status", current.status);
 
+  revalidatePublicContent();
   revalidatePath("/admin/photographer-photos");
 }
 
@@ -97,6 +99,7 @@ export async function rejectSubmission(id: string, formData: FormData) {
     .update({ r2_deletion_status: result.ok ? "deleted" : "failed" })
     .eq("id", id);
 
+  revalidatePublicContent();
   revalidatePath("/admin/photographer-photos");
 }
 
@@ -136,5 +139,6 @@ export async function retryCleanup(id: string) {
     .eq("id", id)
     .eq("status", "rejected");
 
+  revalidatePublicContent();
   revalidatePath("/admin/photographer-photos");
 }

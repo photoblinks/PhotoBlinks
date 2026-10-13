@@ -13,10 +13,10 @@ import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 // ISR: no cookies/searchParams read, so this route is eligible for the Full
-// Route Cache with a 60s revalidate window matching public-data.ts.
+// Route Cache with a 24h revalidate window matching public-data.ts.
 // Pagination now runs client-side (BlogListing) against the full published
 // post list, so ?page=N no longer forces a dynamic render.
-export const revalidate = 60;
+export const revalidate = 86400;
 
 export async function generateMetadata(): Promise<Metadata> {
   const title = "Blog";

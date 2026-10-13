@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
@@ -165,6 +166,7 @@ export async function createBlogPost(formData: FormData) {
   await replaceBlogPostTags(supabase, data.id, tag_ids);
   await replaceBlogPostLocations(supabase, data.id, location_ids);
 
+  revalidatePublicContent();
   revalidatePath("/admin/blog");
   redirect("/admin/blog");
 }
@@ -220,6 +222,7 @@ export async function updateBlogPost(id: string, formData: FormData) {
   await replaceBlogPostTags(supabase, id, tag_ids);
   await replaceBlogPostLocations(supabase, id, location_ids);
 
+  revalidatePublicContent();
   revalidatePath("/admin/blog");
   redirect("/admin/blog");
 }
@@ -231,6 +234,7 @@ export async function deleteBlogPost(id: string) {
   const supabase = await createClient();
   // blog_faqs / blog_post_tags / blog_post_locations all cascade on delete.
   await supabase.from("blog_posts").delete().eq("id", id);
+  revalidatePublicContent();
   revalidatePath("/admin/blog");
 }
 
@@ -248,6 +252,7 @@ export async function toggleBlogPostStatus(id: string, nextStatus: unknown) {
   // by the DB, never by this action.
   const { error } = await supabase.from("blog_posts").update({ status }).eq("id", id);
   if (error) throw new Error(error.message);
+  revalidatePublicContent();
   revalidatePath("/admin/blog");
 }
 
@@ -263,5 +268,6 @@ export async function toggleBlogPostFeatured(id: string, nextValue: unknown) {
   const supabase = await createClient();
   const { error } = await supabase.from("blog_posts").update({ is_featured: isFeatured }).eq("id", id);
   if (error) throw new Error(error.message);
+  revalidatePublicContent();
   revalidatePath("/admin/blog");
 }

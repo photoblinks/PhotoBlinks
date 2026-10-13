@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicContentFromRoute } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
 import { recordActivityEventsFor } from "@/lib/activity";
@@ -112,7 +113,10 @@ export async function POST(request: Request) {
     })),
   );
 
-  if (outcome.created.length > 0) revalidatePath("/admin/locations");
+  if (outcome.created.length > 0) {
+    revalidatePath("/admin/locations");
+    revalidatePublicContentFromRoute();
+  }
 
   return NextResponse.json({
     requested: result.summary.totalRows,

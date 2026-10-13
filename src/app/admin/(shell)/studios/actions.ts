@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { checkAdmin, checkModulePermission, hasPermission, PERMISSION } from "@/lib/supabase/require-permission";
@@ -347,6 +348,7 @@ export async function createStudio(
     },
   });
 
+  revalidatePublicContent();
   revalidatePath("/admin/studios");
   redirect("/admin/studios");
 }
@@ -452,6 +454,7 @@ export async function updateStudio(
     });
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/studios");
   redirect("/admin/studios");
 }
@@ -485,6 +488,7 @@ export async function toggleStudioPublished(id: string, nextValue: boolean): Pro
     entity_id: id,
   });
 
+  revalidatePublicContent();
   revalidatePath("/admin/studios");
   return { ok: true };
 }
@@ -509,6 +513,7 @@ export async function deleteStudio(id: string): Promise<StudioRowResult> {
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "This studio no longer exists." };
 
+  revalidatePublicContent();
   revalidatePath("/admin/studios");
   return { ok: true };
 }

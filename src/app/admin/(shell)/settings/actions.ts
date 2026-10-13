@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
@@ -18,6 +19,7 @@ export async function updateBannerImages(formData: FormData) {
     redirect(`/admin/settings?error=${encodeURIComponent(error.message)}`);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/settings");
   revalidatePath("/");
   redirect("/admin/settings?saved=1");
@@ -110,6 +112,7 @@ export async function updateSocialMediaLinks(formData: FormData) {
 
   // The footer lives in the public root layout; the settings page itself
   // must reflect the saved values immediately as well.
+  revalidatePublicContent();
   revalidatePath("/admin/settings");
   revalidatePath("/", "layout");
   redirect("/admin/settings?saved=social");

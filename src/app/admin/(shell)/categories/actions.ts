@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/slug";
 
@@ -39,6 +40,7 @@ export async function createCategory(formData: FormData) {
     redirect(`/admin/categories/new?error=${encodeURIComponent(error.message)}`);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/categories");
   redirect("/admin/categories");
 }
@@ -53,6 +55,7 @@ export async function updateCategory(id: string, formData: FormData) {
     redirect(`/admin/categories/${id}/edit?error=${encodeURIComponent(error.message)}`);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/categories");
   redirect("/admin/categories");
 }
@@ -60,6 +63,7 @@ export async function updateCategory(id: string, formData: FormData) {
 export async function toggleCategoryActive(id: string, nextValue: boolean) {
   const supabase = await createClient();
   await supabase.from("categories").update({ is_active: nextValue }).eq("id", id);
+  revalidatePublicContent();
   revalidatePath("/admin/categories");
 }
 
@@ -78,5 +82,6 @@ export async function deleteCategory(id: string) {
     await supabase.from("categories").delete().eq("id", id);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/categories");
 }

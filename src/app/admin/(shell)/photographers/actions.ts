@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -56,6 +57,7 @@ export async function createPhotographer(formData: FormData) {
     redirect(`/admin/photographers/new?error=${encodeURIComponent(error.message)}`);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/photographers");
   redirect("/admin/photographers");
 }
@@ -77,6 +79,7 @@ export async function updatePhotographer(id: string, formData: FormData) {
     redirect(`/admin/photographers/${id}/edit?error=${encodeURIComponent(error.message)}`);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/photographers");
   redirect("/admin/photographers");
 }
@@ -87,5 +90,6 @@ export async function deletePhotographer(id: string) {
   // safe (same reasoning as deleteLocation) — historical/expired records
   // are kept intentionally (see the admin list), deletion is opt-in only.
   await supabase.from("sponsored_photographers").delete().eq("id", id);
+  revalidatePublicContent();
   revalidatePath("/admin/photographers");
 }

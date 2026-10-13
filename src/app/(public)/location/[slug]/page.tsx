@@ -7,14 +7,14 @@ import { LocationDetailContent } from "@/components/public/location-detail-conte
 type Props = { params: Promise<{ slug: string }> };
 
 // No searchParams/cookies here, so this route is eligible for ISR — the
-// same 60s window as the underlying cached data queries (public-data.ts).
+// same 24h window as the underlying cached data queries (public-data.ts).
 // generateStaticParams is required (even empty) for a dynamic segment to
 // use ISR at all — without it Next renders it fully dynamic on every
 // request regardless of `revalidate` (see Next's generateStaticParams
 // docs: "you must always return an array... otherwise the route will be
 // dynamically rendered"). An empty array means every slug is generated
 // on-demand on first visit, then served from cache until revalidation.
-export const revalidate = 60;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   return [];

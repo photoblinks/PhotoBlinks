@@ -18,9 +18,9 @@ import { isSeoEligible } from "@/lib/seo-eligibility";
 import { buildGeoDefaultDescription, extractCategoryNames } from "@/lib/seo-templates";
 
 // ISR: no searchParams/cookies read, so the route is eligible for the Full
-// Route Cache with the same 60s window as public-data.ts. Filtering and
+// Route Cache with the same 24h window as public-data.ts. Filtering and
 // pagination run client-side (DirectoryFilter/DirectoryResults).
-export const revalidate = 60;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   return [];

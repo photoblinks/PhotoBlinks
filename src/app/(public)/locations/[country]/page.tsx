@@ -17,11 +17,11 @@ import { DEFAULT_OG_IMAGE, socialImageUrl } from "@/lib/jsonld";
 import { isSeoEligible } from "@/lib/seo-eligibility";
 
 // ISR: this page no longer reads searchParams/cookies, so it is eligible for
-// the Full Route Cache with the same 60s window as the underlying cached
+// the Full Route Cache with the same 24h window as the underlying cached
 // queries in public-data.ts. Filtering/pagination run client-side
 // (DirectoryFilter/DirectoryResults) so ?state=/?category=/?page= variants
 // don't force a dynamic render.
-export const revalidate = 60;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   return [];

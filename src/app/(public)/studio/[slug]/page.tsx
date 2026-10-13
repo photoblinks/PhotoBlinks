@@ -19,10 +19,10 @@ import { absoluteUrl, socialImageUrl } from "@/lib/jsonld";
 type Props = { params: Promise<{ slug: string }> };
 
 // No searchParams/cookies here, so this route is eligible for ISR — the
-// same 60s window as the underlying cached data queries (public-data.ts).
+// same 24h window as the underlying cached data queries (public-data.ts).
 // generateStaticParams is required (even empty) for a dynamic segment to
 // use ISR at all — see the matching comment in location/[slug]/page.tsx.
-export const revalidate = 60;
+export const revalidate = 86400;
 
 export async function generateStaticParams() {
   return [];

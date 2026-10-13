@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
 
 function parseGeoPageForm(formData: FormData) {
@@ -23,6 +24,7 @@ export async function updateStatePage(id: string, formData: FormData) {
     redirect(`/admin/state-pages/${id}/edit?error=${encodeURIComponent(error.message)}`);
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/state-pages");
   redirect("/admin/state-pages");
 }

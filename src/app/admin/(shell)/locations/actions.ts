@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { checkAdmin, checkModulePermission, hasPermission, PERMISSION } from "@/lib/supabase/require-permission";
@@ -282,6 +283,7 @@ export async function createLocation(
     metadata: { name: locationValues.name, images: images.length, faqs: faqs.length },
   });
 
+  revalidatePublicContent();
   revalidatePath("/admin/locations");
   redirect("/admin/locations");
 }
@@ -379,6 +381,7 @@ export async function updateLocation(
     });
   }
 
+  revalidatePublicContent();
   revalidatePath("/admin/locations");
   redirect("/admin/locations");
 }
@@ -412,6 +415,7 @@ export async function toggleLocationPublished(id: string, nextValue: boolean): P
     entity_id: id,
   });
 
+  revalidatePublicContent();
   revalidatePath("/admin/locations");
   return { ok: true };
 }
@@ -437,6 +441,7 @@ export async function deleteLocation(id: string): Promise<LocationRowResult> {
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "This location no longer exists." };
 
+  revalidatePublicContent();
   revalidatePath("/admin/locations");
   return { ok: true };
 }
