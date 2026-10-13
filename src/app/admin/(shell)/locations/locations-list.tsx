@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
 import { LocationRowActions } from "@/components/admin/location-row-actions";
-import { formatPricing } from "@/lib/format";
+import { formatDateTime, formatPricing } from "@/lib/format";
 import { isSeoEligible, seoEligibilityLabel } from "@/lib/seo-eligibility";
 import { AdminListFilters } from "@/components/admin/admin-list-filters";
 import { AdminPagination } from "@/components/admin/pagination";
@@ -172,6 +172,8 @@ export default async function AdminLocationsPage({
             <TableHead>City</TableHead>
             <TableHead>Pricing</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Created</TableHead>
+            <TableHead>Last updated</TableHead>
             <TableHead>SEO</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -219,6 +221,12 @@ export default async function AdminLocationsPage({
                   <Badge variant={location.is_published ? "default" : "secondary"}>
                     {location.is_published ? "Published" : "Unpublished"}
                   </Badge>
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-muted-foreground">
+                  {formatDateTime(location.created_at)}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-muted-foreground">
+                  {formatDateTime(location.updated_at)}
                 </TableCell>
                 <TableCell className="whitespace-nowrap">
                   {seoCount === null ? (
