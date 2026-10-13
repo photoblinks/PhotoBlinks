@@ -1,10 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { checkAdmin, requireStaffPage } from "@/lib/supabase/require-permission";
+import { requireStaffPage } from "@/lib/supabase/require-permission";
 import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -19,16 +17,9 @@ import {
 } from "@/components/ui/table";
 import { DashboardFilters } from "./dashboard-filters";
 
-type TopEntry = { entity_id: string; name: string; count: number };
-
 type StatsRow = {
   user_id: string;
   display_name: string;
-  total_locations_added: number | string | null;
-  total_studios_added: number | string | null;
-  total_activity_days: number | string | null;
-  top_locations: unknown;
-  top_studios: unknown;
 };
 
 type DailyRow = {
@@ -61,8 +52,6 @@ type SummaryTotals = {
   weekStart: string;
   weekEnd: string;
 };
-
-type RoleRow = { user_id: string; employee_roles: { name: string } | null };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -109,66 +98,6 @@ function weekdayName(iso: string): string {
   });
 }
 
-/** Normalizes one jsonb entry of the stats RPC's top_locations/top_studios
- * lists. The RPC falls back to the raw entity id as the name when the event
- * metadata carried none (e.g. deleted or never-named entities). */
-function parseTopEntries(raw: unknown): TopEntry[] {
-  if (!Array.isArray(raw)) return [];
-  const entries: TopEntry[] = [];
-  for (const item of raw) {
-    if (!item || typeof item !== "object") continue;
-    const record = item as Record<string, unknown>;
-    if (typeof record.entity_id !== "string") continue;
-    entries.push({
-      entity_id: record.entity_id,
-      name:
-        typeof record.name === "string" && record.name.trim() && record.name !== record.entity_id
-          ? record.name
-          : "Unnamed entry",
-      count: num(record.count as number | string | null | undefined),
-    });
-  }
-  return entries;
-}
-
-/** Team-wide top 5 when no single employee is selected: merges each employee's
- * per-entity counts from the stats RPC's existing top lists - no second
- * backend aggregation is added. */
-function aggregateTopEntries(
-  rows: StatsRow[],
-  key: "top_locations" | "top_studios",
-): TopEntry[] {
-  const totals = new Map<string, TopEntry>();
-  for (const row of rows) {
-    for (const entry of parseTopEntries(row[key])) {
-      const prev = totals.get(entry.entity_id);
-      totals.set(entry.entity_id, {
-        entity_id: entry.entity_id,
-        name: entry.name,
-        count: (prev?.count ?? 0) + entry.count,
-      });
-    }
-  }
-  return [...totals.values()]
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-    .slice(0, 5);
-}
-
-/** The performance RPCs return names only. Roles live in the employees table,
- * whose SELECT policy is admin-only, so the lookup runs for admin viewers -
- * employee viewers simply get "-" instead of a query RLS will reject. */
-async function fetchEmployeeRoles(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  isAdmin: boolean,
-): Promise<{ data: RoleRow[] | null; error: { message: string } | null }> {
-  if (!isAdmin) return { data: null, error: null };
-  const { data, error } = await supabase
-    .from("employees")
-    .select("user_id, employee_roles(name)")
-    .eq("is_active", true);
-  return { data: (data as RoleRow[] | null) ?? null, error };
-}
-
 /** Small stat tile used by the monthly and weekly summary card rows. Reuses
  * the existing Card primitives so the dashboard matches the rest of the admin
  * shell; zero activity renders as "0" rather than an empty value. `value`
@@ -189,44 +118,6 @@ function SummaryCard({
         <CardTitle className="text-2xl tabular-nums">{value}</CardTitle>
         {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
       </CardHeader>
-    </Card>
-  );
-}
-
-function TopCard({
-  title,
-  description,
-  entries,
-  emptyLabel,
-}: {
-  title: string;
-  description?: string;
-  entries: TopEntry[];
-  emptyLabel: string;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
-      </CardHeader>
-      <CardContent>
-        {entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{emptyLabel}</p>
-        ) : (
-          <ol className="flex flex-col gap-2">
-            {entries.map((entry, index) => (
-              <li key={entry.entity_id} className="flex items-center justify-between gap-3">
-                <span className="min-w-0 truncate text-sm">
-                  <span className="mr-1.5 text-xs text-muted-foreground">{index + 1}.</span>
-                  {entry.name}
-                </span>
-                <Badge variant="secondary">{entry.count}</Badge>
-              </li>
-            ))}
-          </ol>
-        )}
-      </CardContent>
     </Card>
   );
 }
@@ -262,9 +153,8 @@ export default async function EmployeePerformancePage({
   const employeeId = employeeParam && UUID_RE.test(employeeParam) ? employeeParam : null;
 
   const supabase = await createClient();
-  const { ok: isAdmin } = await checkAdmin(supabase);
 
-  const [statsResult, dailyResult, summaryResult, roleResult] = await Promise.all([
+  const [statsResult, dailyResult, summaryResult] = await Promise.all([
     supabase.rpc("get_employee_performance_stats", {
       p_employee_id: null,
       p_from: from,
@@ -280,34 +170,20 @@ export default async function EmployeePerformancePage({
       p_from: from,
       p_to: to,
     }),
-    fetchEmployeeRoles(supabase, isAdmin),
   ]);
 
-  const statsError = statsResult.error;
   const dailyError = dailyResult.error;
   const summaryError = summaryResult.error;
   const statsRows = (statsResult.data ?? []) as StatsRow[];
   const dailyRows = (dailyResult.data ?? []) as DailyRow[];
   const summaryRows = (summaryResult.data ?? []) as SummaryRow[];
 
-  const roleByUser = new Map<string, string>();
-  for (const row of roleResult.data ?? []) {
-    if (row.employee_roles?.name) roleByUser.set(row.user_id, row.employee_roles.name);
-  }
-
-  // One stats call with p_employee_id = null feeds the dropdown, the overview
-  // and the top lists; a selected employee is just filtered out of the rows.
+  // One stats call with p_employee_id = null feeds the employee dropdown; a
+  // selected employee is just filtered out of the rows.
   const selectedRows = employeeId
     ? statsRows.filter((row) => row.user_id === employeeId)
     : statsRows;
   const selectedName = selectedRows.length === 1 ? selectedRows[0].display_name : null;
-
-  const topLocations = employeeId
-    ? parseTopEntries(selectedRows[0]?.top_locations)
-    : aggregateTopEntries(statsRows, "top_locations");
-  const topStudios = employeeId
-    ? parseTopEntries(selectedRows[0]?.top_studios)
-    : aggregateTopEntries(statsRows, "top_studios");
 
   const employeeOptions = statsRows
     .map((row) => ({ id: row.user_id, name: row.display_name }))
@@ -408,70 +284,6 @@ export default async function EmployeePerformancePage({
             />
           </div>
         )}
-      </section>
-
-      <section className="mb-6">
-        <h2 className="mb-3 text-base font-semibold">Employee overview</h2>
-        {statsError ? (
-          <p className="text-sm text-destructive">
-            Could not load performance data. Please try again.
-          </p>
-        ) : selectedRows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {employeeId
-              ? "This employee has no recorded activity in the selected period, or is no longer on the active list."
-              : "No active employees yet."}
-          </p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead className="text-right">Locations added</TableHead>
-                <TableHead className="text-right">Studios added</TableHead>
-                <TableHead className="text-right">Activity days</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {selectedRows.map((row) => (
-                <TableRow key={row.user_id}>
-                  <TableCell className="font-medium">{row.display_name}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {roleByUser.get(row.user_id) ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right">{num(row.total_locations_added)}</TableCell>
-                  <TableCell className="text-right">{num(row.total_studios_added)}</TableCell>
-                  <TableCell className="text-right">{num(row.total_activity_days)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </section>
-
-      <section className="mb-6">
-        <h2 className="mb-3 text-base font-semibold">
-          Top contributions{selectedName ? ` — ${selectedName}` : " — all employees"}
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <TopCard
-            title="Top 5 locations"
-            description={
-              selectedName ? undefined : "Aggregated from each employee's top contributions."
-            }
-            entries={topLocations}
-            emptyLabel="No location activity recorded in the selected period."
-          />
-          <TopCard
-            title="Top 5 studios"
-            description={
-              selectedName ? undefined : "Aggregated from each employee's top contributions."
-            }
-            entries={topStudios}
-            emptyLabel="No studio activity recorded in the selected period."
-          />
-        </div>
       </section>
 
       <section>
