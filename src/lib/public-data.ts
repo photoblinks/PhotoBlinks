@@ -286,88 +286,103 @@ export const getLocationStateCategorySeo = unstable_cache(
   { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-state-category-seo"] },
 );
 
+type PublishedLocationFilters = {
+  categoryId?: string;
+  countryId?: string;
+  stateId?: string;
+  cityId?: string;
+  pricingType?: PricingType;
+  droneStatus?: DroneFilterOption;
+  /** Free-text search against the location name. */
+  search?: string;
+  near?: { latitude: number; longitude: number };
+  /** Fetch exactly these published locations (favourites/shared-collection
+   * card lookups) instead of filtering by geography/category. */
+  locationIds?: string[];
+};
+
 /** All published locations matching the given filters, newest first. Each
  * embeds its resolved category/state/city and primary (first) image.
  *
- * Note: when `near` (the visitor's own coordinates) is passed, it becomes
- * part of the cache key, so "near me" searches essentially never hit the
- * cache (each visitor's coordinates are unique) — an accepted MVP
- * trade-off rather than special-casing it out of the cached arguments. */
-export const getPublishedLocations = unstable_cache(
-  async (filters?: {
-    categoryId?: string;
-    countryId?: string;
-    stateId?: string;
-    cityId?: string;
-    pricingType?: PricingType;
-    droneStatus?: DroneFilterOption;
-    /** Free-text search against the location name. */
-    search?: string;
-    near?: { latitude: number; longitude: number };
-    /** Fetch exactly these published locations (favourites/shared-collection
-     * card lookups) instead of filtering by geography/category. */
-    locationIds?: string[];
-  }): Promise<PublicLocationCard[]> => {
-    const supabase = createPublicClient();
+ * Per-visitor filters (typed search, the visitor's coordinates, their own
+ * favourites) are effectively unique per request, so caching them never hits
+ * and only creates a new cache entry - a Vercel ISR write - per request. They
+ * skip the cache; every other filter shape is shared and stays cached. */
+export function getPublishedLocations(
+  filters?: PublishedLocationFilters,
+): Promise<PublicLocationCard[]> {
+  if (filters?.search || filters?.near || filters?.locationIds) {
+    return fetchPublishedLocations(filters);
+  }
+  return getPublishedLocationsCached(filters);
+}
 
-    let query = supabase
-      .from("locations")
-      .select(
-        "id, name, card_name, slug, pricing_type, price, latitude, longitude, updated_at, drone_status, categories(name, slug, sort_order), countries(name, slug), states(name, slug), cities(name, slug), location_primary_images(image_url)",
-      )
-      .eq("is_published", true)
-      .order("created_at", { ascending: false });
-
-    if (filters?.categoryId) query = query.eq("category_id", filters.categoryId);
-    if (filters?.countryId) query = query.eq("country_id", filters.countryId);
-    if (filters?.stateId) query = query.eq("state_id", filters.stateId);
-    if (filters?.cityId) query = query.eq("city_id", filters.cityId);
-    if (filters?.pricingType) query = query.eq("pricing_type", filters.pricingType);
-    if (filters?.droneStatus) query = query.eq("drone_status", droneFilterToStatus(filters.droneStatus));
-    if (filters?.search) query = query.ilike("name", `%${filters.search}%`);
-    if (filters?.locationIds) query = query.in("id", filters.locationIds);
-
-    const { data } = await query;
-
-    const results = (data ?? []).map((location) => {
-      const primaryImageUrl =
-        (location.location_primary_images as Array<{ image_url: string }> | null)?.[0]?.image_url ??
-        null;
-
-      const distanceKm =
-        filters?.near && location.latitude != null && location.longitude != null
-          ? haversineDistanceKm(filters.near, { latitude: location.latitude, longitude: location.longitude })
-          : null;
-
-      return {
-        id: location.id,
-        name: location.name,
-        cardName: location.card_name,
-        slug: location.slug,
-        pricing_type: location.pricing_type,
-        price: location.price,
-        category: Array.isArray(location.categories) ? (location.categories[0] ?? null) : location.categories,
-        country: Array.isArray(location.countries) ? (location.countries[0] ?? null) : location.countries,
-        state: Array.isArray(location.states) ? (location.states[0] ?? null) : location.states,
-        city: Array.isArray(location.cities) ? (location.cities[0] ?? null) : location.cities,
-        primaryImageUrl,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        updatedAt: location.updated_at,
-        distanceKm,
-        droneStatus: location.drone_status,
-      };
-    });
-
-    if (filters?.near) {
-      results.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
-    }
-
-    return results;
-  },
+const getPublishedLocationsCached = unstable_cache(
+  fetchPublishedLocations,
   ["getPublishedLocations"],
   { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
+
+async function fetchPublishedLocations(
+  filters?: PublishedLocationFilters,
+): Promise<PublicLocationCard[]> {
+  const supabase = createPublicClient();
+
+  let query = supabase
+    .from("locations")
+    .select(
+      "id, name, card_name, slug, pricing_type, price, latitude, longitude, updated_at, drone_status, categories(name, slug, sort_order), countries(name, slug), states(name, slug), cities(name, slug), location_primary_images(image_url)",
+    )
+    .eq("is_published", true)
+    .order("created_at", { ascending: false });
+
+  if (filters?.categoryId) query = query.eq("category_id", filters.categoryId);
+  if (filters?.countryId) query = query.eq("country_id", filters.countryId);
+  if (filters?.stateId) query = query.eq("state_id", filters.stateId);
+  if (filters?.cityId) query = query.eq("city_id", filters.cityId);
+  if (filters?.pricingType) query = query.eq("pricing_type", filters.pricingType);
+  if (filters?.droneStatus) query = query.eq("drone_status", droneFilterToStatus(filters.droneStatus));
+  if (filters?.search) query = query.ilike("name", `%${filters.search}%`);
+  if (filters?.locationIds) query = query.in("id", filters.locationIds);
+
+  const { data } = await query;
+
+  const results = (data ?? []).map((location) => {
+    const primaryImageUrl =
+      (location.location_primary_images as Array<{ image_url: string }> | null)?.[0]?.image_url ??
+      null;
+
+    const distanceKm =
+      filters?.near && location.latitude != null && location.longitude != null
+        ? haversineDistanceKm(filters.near, { latitude: location.latitude, longitude: location.longitude })
+        : null;
+
+    return {
+      id: location.id,
+      name: location.name,
+      cardName: location.card_name,
+      slug: location.slug,
+      pricing_type: location.pricing_type,
+      price: location.price,
+      category: Array.isArray(location.categories) ? (location.categories[0] ?? null) : location.categories,
+      country: Array.isArray(location.countries) ? (location.countries[0] ?? null) : location.countries,
+      state: Array.isArray(location.states) ? (location.states[0] ?? null) : location.states,
+      city: Array.isArray(location.cities) ? (location.cities[0] ?? null) : location.cities,
+      primaryImageUrl,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      updatedAt: location.updated_at,
+      distanceKm,
+      droneStatus: location.drone_status,
+    };
+  });
+
+  if (filters?.near) {
+    results.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+  }
+
+  return results;
+}
 
 /** Only what a map marker + popup renders — no ids, timestamps or other
  * internal fields reach the client. `primaryImageUrl` is already a
