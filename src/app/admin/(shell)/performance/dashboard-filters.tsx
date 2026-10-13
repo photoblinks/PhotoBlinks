@@ -24,7 +24,9 @@ export function DashboardFilters({
   employees,
   initial,
   defaults,
+  showEmployeeFilter = true,
 }: {
+  showEmployeeFilter?: boolean;
   basePath: string;
   employees: EmployeeOption[];
   initial: { employee?: string; from: string; to: string };
@@ -61,6 +63,7 @@ export function DashboardFilters({
       }}
       className="mb-6 flex flex-wrap items-end gap-3"
     >
+      {showEmployeeFilter && (
       <div className="flex w-56 flex-col gap-1.5">
         <span className="text-xs font-medium text-muted-foreground">Employee</span>
         <Select
@@ -84,6 +87,7 @@ export function DashboardFilters({
           </SelectContent>
         </Select>
       </div>
+      )}
 
       <div className="flex w-40 flex-col gap-1.5">
         <span className="text-xs font-medium text-muted-foreground">From (IST)</span>

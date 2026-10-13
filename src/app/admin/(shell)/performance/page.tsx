@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireStaffPage } from "@/lib/supabase/require-permission";
+import { getAuthorizedStaffUser } from "@/lib/supabase/require-permission";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   Card,
@@ -127,7 +128,8 @@ export default async function EmployeePerformancePage({
 }: {
   searchParams: Promise<{ employee?: string; from?: string; to?: string }>;
 }) {
-  await requireStaffPage();
+  const staff = await getAuthorizedStaffUser();
+  if (!staff) redirect("/admin/login");
 
   const { employee: employeeParam, from: fromParam, to: toParam } = await searchParams;
 
@@ -237,6 +239,7 @@ export default async function EmployeePerformancePage({
 
       <DashboardFilters
         basePath="/admin/performance"
+        showEmployeeFilter={staff.isAdmin}
         employees={employeeOptions}
         initial={{ employee: employeeId ?? undefined, from, to }}
         defaults={{ from: defaultFrom, to: today }}
