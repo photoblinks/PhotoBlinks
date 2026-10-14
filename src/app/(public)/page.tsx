@@ -19,6 +19,7 @@ import { ListingPagination } from "@/components/public/listing-pagination";
 import { paginateListing } from "@/lib/listing-pagination";
 import { StudioCard } from "@/components/public/studio-card";
 import { AboutSection } from "@/components/public/about-section";
+import { StateCountsSection } from "@/components/public/state-counts-section";
 import { JsonLd } from "@/components/public/json-ld";
 import { DEFAULT_OG_IMAGE, buildOrganizationJsonLd, buildWebSiteJsonLd } from "@/lib/jsonld";
 import { hasIndexAffectingParams } from "@/lib/seo-eligibility";
@@ -175,6 +176,10 @@ export default async function HomePage({
         categoryNames={categories.map((c) => c.name)}
         imageUrl={siteSettings.bannerImages[0] ?? featuredImageUrl}
       />
+
+      <Suspense fallback={null}>
+        <StateCountsSection />
+      </Suspense>
 
       <JsonLd data={buildWebSiteJsonLd()} />
       <JsonLd data={buildOrganizationJsonLd()} />

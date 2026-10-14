@@ -43,53 +43,43 @@ export default async function PhotographerShellLayout({
     }
   }
 
+  const navLinks = [
+    { href: "/photographer", label: "Dashboard" },
+    { href: "/photographer/profile", label: "Profile" },
+    { href: "/photographer/share-location", label: "Share Location" },
+    { href: "/", label: "Back to PhotoBlinks" },
+  ];
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="mx-auto flex h-14 w-full max-w-4xl items-center gap-4 px-4 sm:px-6">
-          <Link
-            href="/photographer"
-            className="flex items-baseline gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <span className="font-heading text-lg font-semibold">PhotoBlinks</span>
-            <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Photographer
-            </span>
-          </Link>
-          <nav className="ml-auto flex items-center gap-1">
+    <div className="flex min-h-screen flex-col md:flex-row">
+      <aside className="flex shrink-0 flex-col border-b bg-muted/20 p-4 md:w-56 md:border-r md:border-b-0">
+        <Link
+          href="/photographer"
+          className="mb-4 flex flex-col rounded-md px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:mb-6"
+        >
+          <span className="font-heading text-lg font-semibold">PhotoBlinks</span>
+          <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            Photographer
+          </span>
+        </Link>
+        <nav className="flex flex-row flex-wrap gap-1 md:flex-1 md:flex-col">
+          {navLinks.map((link) => (
             <Link
-              href="/photographer"
-              className="rounded-md px-2 py-1.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
+              key={link.href}
+              href={link.href}
+              className="rounded-md px-2 py-1.5 text-sm text-foreground/80 hover:bg-muted hover:text-foreground"
             >
-              Dashboard
+              {link.label}
             </Link>
-            <Link
-              href="/photographer/profile"
-              className="rounded-md px-2 py-1.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
-            >
-              Profile
-            </Link>
-            <Link
-              href="/photographer/share-location"
-              className="rounded-md px-2 py-1.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
-            >
-              Share Location
-            </Link>
-            <Link
-              href="/"
-              className="rounded-md px-2 py-1.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
-            >
-              Back to PhotoBlinks
-            </Link>
-            <form action={signOut}>
-              <Button type="submit" variant="outline" size="sm">
-                Log out
-              </Button>
-            </form>
-          </nav>
-        </div>
-      </header>
-      <main className="flex-1">{children}</main>
+          ))}
+        </nav>
+        <form action={signOut} className="mt-4 md:mt-auto md:border-t md:pt-4">
+          <Button type="submit" variant="outline" size="sm" className="w-full">
+            Log out
+          </Button>
+        </form>
+      </aside>
+      <main className="min-w-0 flex-1">{children}</main>
     </div>
   );
 }

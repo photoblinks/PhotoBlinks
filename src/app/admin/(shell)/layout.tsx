@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
 import { logout } from "../login/actions";
 import { Button } from "@/components/ui/button";
+import { AdminNav } from "@/components/admin/admin-nav";
 
 // Links without `permissions` are admin-only; links with them are also shown
 // to employees whose active role grants any of those permissions. `allStaff`
@@ -19,6 +19,8 @@ const NAV_LINKS: {
   { href: "/admin/activity", label: "Employee Activity", permissions: [PERMISSION.ACTIVITY_VIEW] },
   { href: "/admin/performance", label: "Employee Performance", allStaff: true },
   { href: "/admin/employees", label: "Employees" },
+  { href: "/admin/users", label: "Users" },
+  { href: "/admin/photographer-profiles", label: "Photographer Profiles" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/locations", label: "Locations", permissions: [PERMISSION.LOCATIONS_EDIT, PERMISSION.LOCATIONS_PUBLISH] },
   { href: "/admin/locations/bulk-import", label: "Bulk Import", permissions: [PERMISSION.LOCATIONS_EDIT] },
@@ -54,17 +56,10 @@ export default async function AdminShellLayout({
     <div className="flex min-h-screen">
       <aside className="flex w-56 shrink-0 flex-col border-r bg-muted/20 p-4">
         <div className="mb-6 px-2 text-lg font-semibold">PhotoBlinks</div>
-        <nav className="flex flex-1 flex-col gap-1">
-          {visibleLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="rounded-md px-2 py-1.5 text-sm text-foreground/80 hover:bg-muted hover:text-foreground"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <AdminNav
+          links={visibleLinks.map(({ href, label }) => ({ href, label }))}
+          showBadges={staff.isAdmin}
+        />
         <div className="mt-auto flex flex-col gap-2 border-t pt-4">
           <span className="truncate px-2 text-xs text-muted-foreground">{staff.user.email}</span>
           <form action={logout}>
