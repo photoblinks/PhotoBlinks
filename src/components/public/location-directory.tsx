@@ -230,12 +230,14 @@ export function DirectoryResults({
   country,
   countrySlug,
   heading,
+  description,
 }: SharedProps & {
   locations: PublicLocationCard[];
   basePath: string;
   country?: { name: string; slug: string };
   countrySlug?: string;
   heading?: string;
+  description?: string | null;
 }) {
   const searchParams = useSearchParams();
   const raw = {
@@ -334,7 +336,11 @@ export function DirectoryResults({
             query={resolved.linkQuery}
           />
           {mode === "category" && (
-            <CategoryExploreByState category={fixedCategory!} locations={locations} />
+            <CategoryExploreByState
+              category={fixedCategory!}
+              locations={locations}
+              description={description}
+            />
           )}
         </>
       );

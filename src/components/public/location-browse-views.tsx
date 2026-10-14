@@ -287,9 +287,11 @@ export function FlatBrowse({
 export function CategoryExploreByState({
   category,
   locations,
+  description,
 }: {
   category: { name: string; slug: string };
   locations: PublicLocationCard[];
+  description?: string | null;
 }) {
   const stateCounts = new Map<
     string,
@@ -309,10 +311,13 @@ export function CategoryExploreByState({
     }
   }
   const states = [...stateCounts.values()].sort((a, b) => a.name.localeCompare(b.name));
-  if (states.length === 0) return null;
+  if (states.length === 0 && !description) return null;
 
   return (
     <div className="mt-10 border-t pt-6">
+      {description && <p className="mb-8 text-muted-foreground">{description}</p>}
+      {states.length > 0 && (
+        <>
       <h2 className="font-heading mb-3 text-lg font-semibold">
         Explore {category.name} Locations by State
       </h2>
@@ -332,6 +337,8 @@ export function CategoryExploreByState({
           </Link>
         ))}
       </div>
+        </>
+      )}
     </div>
   );
 }

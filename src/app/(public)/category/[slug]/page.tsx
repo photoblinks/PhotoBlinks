@@ -138,10 +138,6 @@ export default async function CategoryPage({ params }: Props) {
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
         <Breadcrumbs items={breadcrumbs} />
 
-        {category.description && (
-          <p className="mb-6 max-w-2xl text-muted-foreground">{category.description}</p>
-        )}
-
         <Suspense
           fallback={
             <>
@@ -152,7 +148,11 @@ export default async function CategoryPage({ params }: Props) {
                 basePath={basePath}
                 query={{}}
               />
-              <CategoryExploreByState category={fixedCategory} locations={locations} />
+              <CategoryExploreByState
+                category={fixedCategory}
+                locations={locations}
+                description={category.description}
+              />
             </>
           }
         >
@@ -165,6 +165,7 @@ export default async function CategoryPage({ params }: Props) {
             basePath={basePath}
             fixedCategory={fixedCategory}
             heading={listingHeading}
+            description={category.description}
           />
         </Suspense>
       </div>
