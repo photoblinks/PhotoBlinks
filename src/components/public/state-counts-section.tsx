@@ -20,15 +20,15 @@ export async function StateCountsSection() {
   return (
     <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6">
       <h2 className="font-heading mb-4 text-2xl font-semibold">Browse by State</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {sorted.map((state) => (
           <Link
             key={state.href}
             href={state.href}
-            className="rounded-2xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
+            className="rounded-2xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-xl font-semibold">{state.name}</h3>
-            <p className="mt-1 text-muted-foreground">
+            <h3 className="text-lg font-semibold">{state.name}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
               {state.count.toLocaleString("en-IN")} location{state.count === 1 ? "" : "s"}
             </p>
           </Link>
