@@ -142,8 +142,8 @@ export default async function AdminLocationReportsPage({
               <TableCell className="text-sm">
                 {REPORT_TYPE_LABELS[row.report_type] ?? row.report_type}
               </TableCell>
-              <TableCell className="max-w-xs">
-                <p className="line-clamp-3 text-sm">{row.message}</p>
+              <TableCell className="max-w-md min-w-64 whitespace-normal">
+                <p className="text-sm break-words whitespace-pre-wrap">{row.message}</p>
                 {row.admin_note && (
                   <p className="mt-1 text-xs text-muted-foreground">Note: {row.admin_note}</p>
                 )}

@@ -60,7 +60,8 @@ export function CountryBrowse({
   );
 }
 
-/** State → city chips + per-category location sections, paginated. Matches
+/** State → per-category location sections (paginated), then the intro
+ * text and city chips below the cards. Matches
  * the original /locations/[country]/[state] browse view. */
 export function StateBrowse({
   countrySlug,
@@ -95,31 +96,6 @@ export function StateBrowse({
 
   return (
     <>
-      <p className="mb-2 max-w-2xl text-muted-foreground">
-        {categoryNames.length > 0
-          ? `Explore pre-wedding photoshoot locations in ${state.name}, including ${categoryNames
-              .map((name) => name.toLowerCase())
-              .join(", ")}.`
-          : `Explore pre-wedding photoshoot locations in ${state.name}.`}
-      </p>
-
-      {cities.length > 0 && (
-        <div className="mt-6">
-          <h2 className="font-heading mb-3 text-lg font-semibold">Explore Cities in {state.name}</h2>
-          <div className="flex flex-wrap gap-2">
-            {cities.map((city) => (
-              <Link
-                key={city.slug}
-                href={`/locations/${countrySlug}/${state.slug}/${city.slug}`}
-                className="rounded-full border px-3 py-1 text-sm hover:bg-muted"
-              >
-                {city.name} ({city.count})
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="mt-8">
         {categories.map((category) => {
           const items = grouped.get(category.slug) ?? [];
@@ -144,6 +120,31 @@ export function StateBrowse({
         })}
       </div>
       <ListingPagination page={resolvedPage} totalPages={totalPages} basePath={basePath} query={query} />
+
+      <p className="mt-10 max-w-2xl text-muted-foreground">
+        {categoryNames.length > 0
+          ? `Explore pre-wedding photoshoot locations in ${state.name}, including ${categoryNames
+              .map((name) => name.toLowerCase())
+              .join(", ")}.`
+          : `Explore pre-wedding photoshoot locations in ${state.name}.`}
+      </p>
+
+      {cities.length > 0 && (
+        <div className="mt-8">
+          <h2 className="font-heading mb-3 text-lg font-semibold">Explore Cities in {state.name}</h2>
+          <div className="flex flex-wrap gap-2">
+            {cities.map((city) => (
+              <Link
+                key={city.slug}
+                href={`/locations/${countrySlug}/${state.slug}/${city.slug}`}
+                className="rounded-full border px-3 py-1 text-sm hover:bg-muted"
+              >
+                {city.name} ({city.count})
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 }
