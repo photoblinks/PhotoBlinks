@@ -316,6 +316,7 @@ export async function updateLocation(
   // An editor cannot flip publication status through the edit form: the
   // protect_location_publish_status trigger also rejects it at the DB level,
   // but pre-checking here gives a clearer error before any write is attempted.
+  let publishChangedTo: boolean | null = null;
   if (values.is_published !== undefined) {
     const { data: existing } = await supabase
       .from("locations")
@@ -326,6 +327,7 @@ export async function updateLocation(
       if (!(await hasPermission(supabase, PERMISSION.LOCATIONS_PUBLISH))) {
         return { error: "You do not have permission to publish or unpublish locations." };
       }
+      publishChangedTo = values.is_published;
     }
   }
 
@@ -364,6 +366,14 @@ export async function updateLocation(
     entity_id: id,
     metadata: { name: locationValues.name },
   });
+  if (publishChangedTo !== null) {
+    await recordActivityFor(supabase, {
+      module: "locations",
+      action: publishChangedTo ? "published" : "unpublished",
+      entity_id: id,
+      metadata: { name: locationValues.name },
+    });
+  }
   if (imagesChanged) {
     await recordActivityFor(supabase, {
       module: "locations",

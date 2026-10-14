@@ -380,6 +380,7 @@ export async function updateStudio(
 
   // An editor cannot flip publication status through the edit form (the
   // protect_studio_publish_status trigger also rejects it at the DB level).
+  let publishChangedTo: boolean | null = null;
   if (values.is_published !== undefined) {
     const { data: existing } = await supabase
       .from("studios")
@@ -390,6 +391,7 @@ export async function updateStudio(
       if (!(await hasPermission(supabase, PERMISSION.STUDIOS_PUBLISH))) {
         return { error: "You do not have permission to publish or unpublish studios." };
       }
+      publishChangedTo = values.is_published;
     }
   }
 
@@ -429,6 +431,14 @@ export async function updateStudio(
     entity_id: id,
     metadata: { name: studioValues.name },
   });
+  if (publishChangedTo !== null) {
+    await recordActivityFor(supabase, {
+      module: "studios",
+      action: publishChangedTo ? "published" : "unpublished",
+      entity_id: id,
+      metadata: { name: studioValues.name },
+    });
+  }
   if (imagesChanged) {
     await recordActivityFor(supabase, {
       module: "studios",
