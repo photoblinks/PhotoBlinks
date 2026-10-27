@@ -5,7 +5,7 @@ import "./globals.css";
 import { SITE_URL } from "@/lib/site-url";
 
 const GA_MEASUREMENT_ID = "G-GJEBVWSMWF";
-const CLARITY_PROJECT_ID = "yi1lly61d1";
+const CLARITY_PROJECT_ID = "z4ahpoc5jj";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
