@@ -18,7 +18,7 @@ type Props = { params: Promise<{ slug: string }> };
 // Same ISR pattern as /location/[slug] — no cookies/searchParams, so this
 // route is eligible for the Full Route Cache with a 24h revalidate window
 // matching the underlying public-data.ts queries.
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export async function generateStaticParams() {
   return [];

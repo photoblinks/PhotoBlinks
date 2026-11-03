@@ -32,7 +32,7 @@ import { summarizeLocationFacts } from "@/lib/location-facts";
 // segment resolves to a real city or (falling back) a state+category page,
 // exactly as before — only the interactive filter/pagination moved client-
 // side.
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export async function generateStaticParams() {
   return [];

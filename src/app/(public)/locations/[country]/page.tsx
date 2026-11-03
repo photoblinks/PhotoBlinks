@@ -21,7 +21,7 @@ import { isSeoEligible } from "@/lib/seo-eligibility";
 // queries in public-data.ts. Filtering/pagination run client-side
 // (DirectoryFilter/DirectoryResults) so ?state=/?category=/?page= variants
 // don't force a dynamic render.
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export async function generateStaticParams() {
   return [];

@@ -12,7 +12,7 @@ type Props = { params: Promise<{ slug: string }> };
 // this route is eligible for the Full Route Cache with a 24h revalidate
 // window matching the underlying public-data.ts queries. Must be a literal
 // here — Next statically analyzes this segment config export at build time.
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export async function generateStaticParams() {
   return [];

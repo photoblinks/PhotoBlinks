@@ -10,7 +10,7 @@ import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 // ISR: no searchParams/cookies read, so the route is eligible for the Full
 // Route Cache with the same 24h window as public-data.ts. The ?q= name
 // search now runs client-side (StudioDirectory).
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export async function generateStaticParams() {
   return [];

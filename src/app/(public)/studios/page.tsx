@@ -6,7 +6,7 @@ import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 // No searchParams/cookies here, so this route is eligible for ISR — the
 // same 24h window as the underlying cached data queries (public-data.ts).
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export const metadata: Metadata = {
   title: "Pre-Wedding Photo Studios by Country",

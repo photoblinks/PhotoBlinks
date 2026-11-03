@@ -16,7 +16,7 @@ import type { Metadata } from "next";
 // Route Cache with a 24h revalidate window matching public-data.ts.
 // Pagination now runs client-side (BlogListing) against the full published
 // post list, so ?page=N no longer forces a dynamic render.
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export async function generateMetadata(): Promise<Metadata> {
   const title = "Blog";

@@ -19,6 +19,12 @@ import { LOCATION_INFO_FIELDS, type LocationInfoTableConfig } from "@/lib/locati
 // all because they read searchParams, e.g. the homepage and map filters).
 export const PUBLIC_REVALIDATE_SECONDS = 86400;
 
+// Entries whose only source of change is an admin edit (every admin action
+// invalidates PUBLIC_CACHE_TAG), so the window is just a safety net. Anything
+// that changes with the clock or without an admin action (sponsor expiry,
+// comments, photos, ratings, location/studio detail) stays on 24h above.
+export const PUBLIC_LONG_REVALIDATE_SECONDS = 604800;
+
 /** Tag on every cached public read; admin writes invalidate it on demand
  * (src/lib/revalidate-public.ts), so the long window never serves stale edits. */
 export const PUBLIC_CACHE_TAG = "public-content";
@@ -98,7 +104,7 @@ export const getSiteSettings = unstable_cache(
     return { bannerImages: (data ?? []).map((row) => row.image_url) };
   },
   ["getSiteSettings"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Optional per-record overrides for a country/state/city SEO landing
@@ -122,7 +128,7 @@ export const getActiveCountries = unstable_cache(
     return data ?? [];
   },
   ["getActiveCountries"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export const getActiveStates = unstable_cache(
@@ -148,7 +154,7 @@ export const getActiveStates = unstable_cache(
     }));
   },
   ["getActiveStates"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export const getActiveCities = unstable_cache(
@@ -162,7 +168,7 @@ export const getActiveCities = unstable_cache(
     return data ?? [];
   },
   ["getActiveCities"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 const getPublishedLocationGeoIds = unstable_cache(
@@ -179,7 +185,7 @@ const getPublishedLocationGeoIds = unstable_cache(
     };
   },
   ["getPublishedLocationGeoIds"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Active states/cities that have at least one published location — for
@@ -205,7 +211,7 @@ export const getActiveCategories = unstable_cache(
     return data ?? [];
   },
   ["getActiveCategories"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export type PublicCategoryDetail = {
@@ -234,7 +240,7 @@ export const getCategoryBySlug = cache(
       return data ?? null;
     },
     ["getCategoryBySlug"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -260,7 +266,7 @@ export const getLocationCategorySeo = unstable_cache(
     return data ?? null;
   },
   ["getLocationCategorySeo"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-category-seo"] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-category-seo"] },
 );
 
 export type LocationStateCategorySeo = {
@@ -283,7 +289,7 @@ export const getLocationStateCategorySeo = unstable_cache(
     return data ?? null;
   },
   ["getLocationStateCategorySeo"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-state-category-seo"] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-state-category-seo"] },
 );
 
 type PublishedLocationFilters = {
@@ -320,7 +326,7 @@ export function getPublishedLocations(
 const getPublishedLocationsCached = unstable_cache(
   fetchPublishedLocations,
   ["getPublishedLocations"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 async function fetchPublishedLocations(
@@ -467,7 +473,7 @@ export const getPublishedLocationCount = unstable_cache(
     return count ?? 0;
   },
   ["getPublishedLocationCount"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** First image of the most recently published location — fallback art for
@@ -488,7 +494,7 @@ export const getFeaturedLocationImageUrl = unstable_cache(
     );
   },
   ["getFeaturedLocationImageUrl"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Resolves a share token to the ids of that owner's currently-published
@@ -710,7 +716,7 @@ export const getPublishedStudios = unstable_cache(
     });
   },
   ["getPublishedStudios"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Availability dropdown used by both Changing Rooms and Parking Facility. */
@@ -1128,7 +1134,7 @@ export const getPublishedBlogPostsPage = unstable_cache(
     return { posts: (data ?? []).map(toBlogPostCard), total: count ?? 0 };
   },
   ["getPublishedBlogPostsPage"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Every published post's card data, newest first — the full published set
@@ -1147,7 +1153,7 @@ export const getPublishedBlogPosts = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getPublishedBlogPosts"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Featured published posts for the /blog hero rail. Bounded to `limit`. */
@@ -1164,7 +1170,7 @@ export const getFeaturedBlogPosts = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getFeaturedBlogPosts"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Active blog categories for /blog's category navigation. */
@@ -1179,7 +1185,7 @@ export const getActiveBlogCategories = unstable_cache(
     return data ?? [];
   },
   ["getActiveBlogCategories"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export type PublicBlogCategoryDetail = {
@@ -1206,7 +1212,7 @@ export const getBlogCategoryBySlug = cache(
       return data ?? null;
     },
     ["getBlogCategoryBySlug"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1225,7 +1231,7 @@ export const getBlogPostsByCategorySlug = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getBlogPostsByCategorySlug"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Published posts carrying one tag, newest first. Returns an empty array
@@ -1243,7 +1249,7 @@ export const getBlogPostsByTagSlug = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getBlogPostsByTagSlug"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Published posts linked to a given location (blog_post_locations), newest
@@ -1262,7 +1268,7 @@ export const getBlogPostsForLocation = cache(
       return (data ?? []).map(toBlogPostCard);
     },
     ["getBlogPostsForLocation"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1281,7 +1287,7 @@ export const getPublishedBlogPostsForSitemap = unstable_cache(
     return (data ?? []).map((row) => ({ slug: row.slug, updatedAt: row.updated_at }));
   },
   ["getPublishedBlogPostsForSitemap"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export type PublicBlogPostForLlms = {
@@ -1314,7 +1320,7 @@ export const getPublishedBlogPostsForLlms = unstable_cache(
     }));
   },
   ["getPublishedBlogPostsForLlms"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export type PublicBlogPostDetail = {
@@ -1421,7 +1427,7 @@ export const getPublishedBlogPostBySlug = cache(
       };
     },
     ["getPublishedBlogPostBySlug"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1513,7 +1519,7 @@ export const getRelatedBlogPosts = cache(
         .map(({ row }) => toBlogPostCard(row));
     },
     ["getRelatedBlogPosts"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1535,7 +1541,7 @@ export const getPublicLocationLinksByIds = cache(
       return data ?? [];
     },
     ["getPublicLocationLinksByIds"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 // ---------------------------------------------------------------------------
@@ -1577,7 +1583,7 @@ export const getPublicLocationInfoByIds = cache(
       });
     },
     ["getPublicLocationInfoByIds"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1608,7 +1614,7 @@ export const getLocationEditorial = cache(
       return parseEditorialBlocks(data.content);
     },
     ["getLocationEditorial"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-editorial"] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-editorial"] },
   ),
 );
 
@@ -1651,7 +1657,7 @@ export const getLocationInfoTableConfig = unstable_cache(
     return parseLocationInfoTableConfig(data?.location_info_table_config);
   },
   ["getLocationInfoTableConfig"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-info-table-config"] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-info-table-config"] },
 );
 // ---------------------------------------------------------------------------
 // Footer social media links (Admin → Settings → Social Media)
@@ -1702,5 +1708,5 @@ export const getSocialMediaLinks = unstable_cache(
     return links;
   },
   ["getSocialMediaLinks"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );

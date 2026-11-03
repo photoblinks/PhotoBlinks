@@ -28,7 +28,7 @@ import { summarizeLocationFacts } from "@/lib/location-facts";
 // Route Cache with the same 24h window as public-data.ts. The interactive
 // filter (city/category overrides, pricing, drone, search) and pagination
 // run client-side.
-export const revalidate = 86400;
+export const revalidate = 604800;
 
 export async function generateStaticParams() {
   return [];
