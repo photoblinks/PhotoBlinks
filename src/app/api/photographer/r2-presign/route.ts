@@ -18,6 +18,8 @@ const CONTENT_TYPE_EXT: Record<(typeof ALLOWED_IMAGE_CONTENT_TYPES)[number], str
 };
 
 const bodySchema = z.object({
+  // "package" files go to photographer-packages/ (not swept as orphans).
+  purpose: z.enum(["package"]).optional(),
   contentType: z.enum(ALLOWED_IMAGE_CONTENT_TYPES, {
     message: "Unsupported file type. Only JPEG, PNG, and WebP images are allowed.",
   }),
@@ -44,7 +46,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { contentType, fileSize } = parsed.data;
+  const { contentType, fileSize, purpose } = parsed.data;
 
   // Key is fully server-constructed:
   // - namespace ("photographers") is fixed
@@ -53,7 +55,11 @@ export async function POST(request: Request) {
   // This prevents path traversal, cross-photographer namespace access,
   // and arbitrary key injection.
   const ext = CONTENT_TYPE_EXT[contentType];
-  const storageKey = buildImageKey("photographers", photographer.id, `${Date.now()}.${ext}`);
+  const storageKey = buildImageKey(
+    purpose === "package" ? "photographer-packages" : "photographers",
+    photographer.id,
+    `${Date.now()}.${ext}`,
+  );
 
   const { uploadUrl, publicUrl } = await createPresignedUploadUrl(storageKey, contentType, fileSize);
 

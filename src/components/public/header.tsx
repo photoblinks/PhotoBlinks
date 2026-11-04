@@ -103,6 +103,7 @@ function NavMenu({ light, categories }: { light?: boolean; categories: Category[
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuItem render={<Link href="/studios" />}>Studios</DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/photographers" />}>Photographers</DropdownMenuItem>
         <DropdownMenuItem render={<Link href="/locations/map" />}>Map</DropdownMenuItem>
         <DropdownMenuItem render={<Link href="/blog" />}>Blog</DropdownMenuItem>
         <DropdownMenuItem render={<Link href="/favourites" />}>Favourites</DropdownMenuItem>
@@ -144,6 +145,9 @@ export function Header({ categories }: { categories: Category[] }) {
             <CategoryDropdown categories={categories} />
             <Link href="/studios" className="text-foreground/70 transition-colors hover:text-foreground">
               Studios
+            </Link>
+            <Link href="/photographers" className="text-foreground/70 transition-colors hover:text-foreground">
+              Photographers
             </Link>
             <Link
               href="/locations/map"

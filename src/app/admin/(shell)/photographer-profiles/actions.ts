@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { CACHE_TAGS } from "@/lib/public-data";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
 import { isValidCountryState } from "@/lib/supabase/require-photographer";
@@ -132,6 +134,7 @@ export async function setPhotographerStatus(
   if (error) return { error: "Could not update status. Please try again." };
   if (!data || data.length === 0) return { error: "This photographer no longer exists." };
 
+  revalidatePublicContent(CACHE_TAGS.photographers);
   revalidatePath("/admin/photographer-profiles");
   revalidatePath("/admin/photographer-requests");
   revalidatePath(`/admin/photographer-profiles/${id}`);

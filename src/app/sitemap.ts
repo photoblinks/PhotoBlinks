@@ -4,6 +4,7 @@ import {
   getActiveCategories,
   getPublishedLocations,
   getPublishedStudios,
+  getPublicPhotographers,
   getPublishedBlogPostsForSitemap,
 } from "@/lib/public-data";
 import { buildLocationGeoGroups } from "@/lib/seo-eligibility";
@@ -23,12 +24,13 @@ function latest(dates: string[]) {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [locations, studios, categories, blogPosts, blogCategories] = await Promise.all([
+  const [locations, studios, categories, blogPosts, blogCategories, photographers] = await Promise.all([
     getPublishedLocations(),
     getPublishedStudios(),
     getActiveCategories(),
     getPublishedBlogPostsForSitemap(),
     getActiveBlogCategories(),
+    getPublicPhotographers(),
   ]);
 
   const entries: MetadataRoute.Sitemap = [
@@ -36,6 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/locations`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/studios`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/blog`, changeFrequency: "daily", priority: 0.7 },
+    { url: `${SITE_URL}/photographers`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/locations/map`, changeFrequency: "daily", priority: 0.7 },
     // Static trust/transparency pages — not location/category SEO landing
     // pages, so they're unconditional and don't use isSeoEligible.
@@ -81,6 +84,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.6,
     });
+  }
+
+  // Photographer directory: detail pages, plus state and city landing pages
+  // (each only exists when it has at least one visible photographer).
+  const photographerPaths = new Set<string>();
+  for (const p of photographers) {
+    entries.push({
+      url: `${SITE_URL}/photographers/p/${p.slug}`,
+      lastModified: p.createdAt,
+      changeFrequency: "weekly",
+      priority: 0.6,
+    });
+    photographerPaths.add(`${p.country.slug}/${p.state.slug}`);
+    photographerPaths.add(`${p.country.slug}/${p.state.slug}/${p.citySlug}`);
+  }
+  for (const path of photographerPaths) {
+    entries.push({ url: `${SITE_URL}/photographers/${path}`, changeFrequency: "weekly", priority: 0.6 });
   }
 
   // Studio detail pages

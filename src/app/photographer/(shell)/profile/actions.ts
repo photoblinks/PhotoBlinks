@@ -3,6 +3,9 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { PHOTOGRAPHER_LANGUAGES, PHOTOGRAPHER_SERVICES } from "@/lib/photographer-options";
+import { CACHE_TAGS } from "@/lib/public-data";
+import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { isPhotographerUser, isValidCountryState } from "@/lib/supabase/require-photographer";
 
 const PHONE_REGEX = /^[\d+\s-]{7,20}$/;
@@ -36,7 +39,27 @@ const profileSchema = z.object({
     .url("Enter a valid portfolio URL.")
     .refine((v) => v.startsWith("https://"), "URL must use HTTPS.")
     .optional(),
+  starting_price: z
+    .number({ invalid_type_error: "Starting price must be a number." })
+    .int("Starting price must be a whole number.")
+    .min(0, "Starting price cannot be negative.")
+    .max(10_000_000, "Starting price is too large.")
+    .nullable(),
+  experience_years: z
+    .number({ invalid_type_error: "Experience must be a number." })
+    .int("Experience must be a whole number.")
+    .min(0, "Experience cannot be negative.")
+    .max(60, "Experience must be 60 years or fewer.")
+    .nullable(),
+  services: z.array(z.enum(PHOTOGRAPHER_SERVICES)),
+  languages: z.array(z.enum(PHOTOGRAPHER_LANGUAGES)),
+  travels_to_other_cities: z.boolean(),
 });
+
+function optionalNumber(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+  return text === "" ? null : Number(text);
+}
 
 function parseProfileForm(formData: FormData) {
   return profileSchema.parse({
@@ -50,6 +73,11 @@ function parseProfileForm(formData: FormData) {
     whatsapp_number: String(formData.get("whatsapp_number") ?? ""),
     instagram_url: String(formData.get("instagram_url") ?? "").trim() || undefined,
     portfolio_url: String(formData.get("portfolio_url") ?? "").trim() || undefined,
+    starting_price: optionalNumber(formData.get("starting_price")),
+    experience_years: optionalNumber(formData.get("experience_years")),
+    services: formData.getAll("services").map(String),
+    languages: formData.getAll("languages").map(String),
+    travels_to_other_cities: formData.get("travels_to_other_cities") === "on",
   });
 }
 
@@ -95,5 +123,6 @@ export async function updatePhotographerProfile(formData: FormData) {
     redirect(`/photographer/profile?error=${encodeURIComponent(message)}`);
   }
 
+  revalidatePublicContent(CACHE_TAGS.photographers);
   redirect("/photographer/profile?success=1");
 }

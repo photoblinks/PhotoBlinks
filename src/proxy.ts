@@ -154,8 +154,7 @@ export async function proxy(request: NextRequest) {
   // other /photographer/* route (profile, submit-photo, ...) still
   // requires a real session at the middleware level, unchanged.
   if (
-    request.nextUrl.pathname.startsWith("/photographer") &&
-    request.nextUrl.pathname !== "/photographer" &&
+    request.nextUrl.pathname.startsWith("/photographer/") &&
     !user
   ) {
     return NextResponse.redirect(new URL("/sign-in/photographer", request.url));

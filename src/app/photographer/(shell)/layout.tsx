@@ -50,6 +50,7 @@ export default async function PhotographerShellLayout({
   const navLinks = [
     { href: "/photographer", label: "Dashboard" },
     { href: "/photographer/profile", label: "Profile" },
+    { href: "/photographer/packages", label: "Packages" },
     { href: "/photographer/share-location", label: "Share Location" },
     { href: "/", label: "Back to PhotoBlinks" },
   ];

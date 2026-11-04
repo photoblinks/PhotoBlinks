@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { updatePhotographerProfile } from "./actions";
 import { getActiveCountries, getActiveStates } from "@/lib/public-data";
 import { normalizeRelation } from "@/lib/supabase/require-photographer";
+import { PHOTOGRAPHER_LANGUAGES, PHOTOGRAPHER_SERVICES } from "@/lib/photographer-options";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
@@ -116,6 +117,40 @@ export default async function PhotographerProfilePage({
             />
           </Field>
           <Field>
+            <FieldLabel htmlFor="starting_price">Starting price (₹)</FieldLabel>
+            <Input
+              id="starting_price"
+              name="starting_price"
+              type="number"
+              min={0}
+              step={500}
+              defaultValue={profile?.starting_price ?? ""}
+              placeholder="25000"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="experience_years">Years of experience</FieldLabel>
+            <Input
+              id="experience_years"
+              name="experience_years"
+              type="number"
+              min={0}
+              max={60}
+              defaultValue={profile?.experience_years ?? ""}
+            />
+          </Field>
+          <CheckboxGroup legend="Services" name="services" options={PHOTOGRAPHER_SERVICES} selected={profile?.services ?? []} />
+          <CheckboxGroup legend="Languages spoken" name="languages" options={PHOTOGRAPHER_LANGUAGES} selected={profile?.languages ?? []} />
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="travels_to_other_cities"
+              defaultChecked={profile?.travels_to_other_cities ?? false}
+              className="size-4"
+            />
+            I travel to other cities for shoots
+          </label>
+          <Field>
             <FieldLabel htmlFor="phone_number">Phone Number *</FieldLabel>
             <Input
               id="phone_number"
@@ -160,5 +195,31 @@ export default async function PhotographerProfilePage({
         </FieldGroup>
       </form>
     </div>
+  );
+}
+
+function CheckboxGroup({
+  legend,
+  name,
+  options,
+  selected,
+}: {
+  legend: string;
+  name: string;
+  options: readonly string[];
+  selected: string[];
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-1 text-sm font-medium">{legend}</legend>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {options.map((option) => (
+          <label key={option} className="flex items-center gap-2 text-sm">
+            <input type="checkbox" name={name} value={option} defaultChecked={selected.includes(option)} className="size-4" />
+            {option}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }

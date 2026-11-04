@@ -6,6 +6,7 @@ import { LOCATION_COMMENTS_PAGE_SIZE } from "@/lib/comment-page-size";
 import { haversineDistanceKm } from "@/lib/geo";
 import { toTransformUrl } from "@/lib/cf-image-loader";
 import { blogBlockSchema, parseEditorialBlocks, type BlogBlock, type EditorialBlock } from "@/lib/blog/content-blocks";
+import { PACKAGE_COLUMNS, toPhotographerPackage, type PackageRow, type PhotographerPackage } from "@/lib/photographer-options";
 import { LOCATION_INFO_FIELDS, type LocationInfoTableConfig } from "@/lib/location-info-fields";
 
 // This module is the ONLY place public pages read data from — it never
@@ -36,6 +37,7 @@ export const PUBLIC_CACHE_TAG = "public-content";
 export const CACHE_TAGS = {
   locations: "locations",
   studios: "studios",
+  photographers: "photographers",
   geo: "geo", // countries, states, cities, categories (names shown on cards/pages)
   blog: "blog",
   settings: "settings", // banners, social links
@@ -1696,6 +1698,127 @@ export const getCityEditorial = cache(
     },
     ["getCityEditorial"],
     { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-editorial"] },
+  ),
+);
+
+// ---------------------------------------------------------------------------
+// Public photographer directory
+// ---------------------------------------------------------------------------
+
+export type PublicPhotographer = {
+  id: string;
+  slug: string;
+  displayName: string;
+  studioName: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  instagramUrl: string | null;
+  portfolioUrl: string | null;
+  /** Only populated by getPublicPhotographerBySlug — never in the listing. */
+  phoneNumber: string | null;
+  whatsappNumber: string | null;
+  city: string;
+  citySlug: string;
+  state: GeoRef;
+  country: GeoRef;
+  startingPrice: number | null;
+  experienceYears: number | null;
+  services: string[];
+  languages: string[];
+  travelsToOtherCities: boolean;
+  createdAt: string;
+};
+
+type PublicPhotographerRow = {
+  id: string;
+  slug: string;
+  display_name: string;
+  studio_name: string;
+  bio: string | null;
+  avatar_url: string | null;
+  instagram_url: string | null;
+  portfolio_url: string | null;
+  phone_number: string | null;
+  whatsapp_number: string | null;
+  city: string;
+  city_slug: string;
+  state_name: string;
+  state_slug: string;
+  country_name: string;
+  country_slug: string;
+  starting_price: number | null;
+  experience_years: number | null;
+  services: string[];
+  languages: string[];
+  travels_to_other_cities: boolean;
+  created_at: string;
+};
+
+function toPublicPhotographer(row: PublicPhotographerRow): PublicPhotographer {
+  return {
+    id: row.id,
+    slug: row.slug,
+    displayName: row.display_name,
+    studioName: row.studio_name,
+    bio: row.bio,
+    avatarUrl: row.avatar_url,
+    instagramUrl: row.instagram_url,
+    portfolioUrl: row.portfolio_url,
+    phoneNumber: row.phone_number,
+    whatsappNumber: row.whatsapp_number,
+    city: row.city,
+    citySlug: row.city_slug,
+    state: { name: row.state_name, slug: row.state_slug },
+    country: { name: row.country_name, slug: row.country_slug },
+    startingPrice: row.starting_price,
+    experienceYears: row.experience_years,
+    services: row.services,
+    languages: row.languages,
+    travelsToOtherCities: row.travels_to_other_cities,
+    createdAt: row.created_at,
+  };
+}
+
+/** Every publicly visible photographer (active, not suspended, email-verified
+ * — enforced inside get_public_photographers, which is service-role only).
+ * Contact numbers are never included here. */
+export const getPublicPhotographers = unstable_cache(
+  async (): Promise<PublicPhotographer[]> => {
+    const { data } = await createPublicClient().rpc("get_public_photographers");
+    return ((data ?? []) as PublicPhotographerRow[]).map(toPublicPhotographer);
+  },
+  ["getPublicPhotographers"],
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.photographers] },
+);
+
+/** One visible photographer by slug, including contact numbers, or null. */
+export const getPublicPhotographerBySlug = cache(
+  unstable_cache(
+    async (slug: string): Promise<PublicPhotographer | null> => {
+      const { data } = await createPublicClient().rpc("get_public_photographers", { p_slug: slug });
+      const row = ((data ?? []) as PublicPhotographerRow[])[0];
+      return row ? toPublicPhotographer(row) : null;
+    },
+    ["getPublicPhotographerBySlug"],
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.photographers] },
+  ),
+);
+
+/** Visible packages for one publicly-listed photographer (profile id). The
+ * caller has already established the photographer is publicly visible. */
+export const getPublicPhotographerPackages = cache(
+  unstable_cache(
+    async (profileId: string): Promise<PhotographerPackage[]> => {
+      const { data } = await createPublicClient()
+        .from("photographer_packages")
+        .select(`${PACKAGE_COLUMNS}, photographer_profiles!inner(id)`)
+        .eq("photographer_profiles.id", profileId)
+        .eq("is_visible", true)
+        .order("created_at");
+      return ((data ?? []) as unknown as PackageRow[]).map(toPhotographerPackage);
+    },
+    ["getPublicPhotographerPackages"],
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.photographers] },
   ),
 );
 

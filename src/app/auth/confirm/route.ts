@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { CACHE_TAGS } from "@/lib/public-data";
+import { revalidatePublicContentFromRoute } from "@/lib/revalidate-public";
 import { safeNextPath } from "@/lib/safe-redirect";
 
 // Handles the link Supabase Auth's confirmation/magic-link/recovery emails
@@ -54,7 +56,10 @@ export async function GET(request: NextRequest) {
     if (!error) {
       // An email OTP link is the email-verification link: the session it just
       // created carries the proof mark_email_verified() requires.
-      if (type === "email" || type === "magiclink") await supabase.rpc("mark_email_verified");
+      if (type === "email" || type === "magiclink") {
+        await supabase.rpc("mark_email_verified");
+        revalidatePublicContentFromRoute(CACHE_TAGS.photographers);
+      }
       return redirectNoStore(`${origin}${next}`);
     }
   }
