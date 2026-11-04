@@ -8,7 +8,6 @@ import { getActiveCountries, getActiveStates } from "@/lib/public-data";
 import { signOut } from "@/lib/auth-actions";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { AuthSubmitButton } from "@/components/public/auth-submit-button";
 import { CountryStateFields } from "@/components/photographer/country-state-fields";
@@ -37,11 +36,11 @@ export default async function PhotographerSignupPage({
   // Check for any existing profile (active or suspended).
   const { data: existing } = await supabase
     .from("photographer_profiles")
-    .select("is_active")
+    .select("is_active, suspended_at")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (existing?.is_active) redirect("/photographer");
+  if (existing && !existing.suspended_at) redirect("/photographer");
 
   // Combined signup at /sign-in/photographer already collected every
   // profile field and stashed it in this user's auth metadata because
@@ -63,6 +62,7 @@ export default async function PhotographerSignupPage({
   }
 
   const suspended = existing != null && !existing.is_active;
+  const pendingApproval = suspended && existing.suspended_at == null;
   const [countries, states] = await Promise.all([getActiveCountries(), getActiveStates()]);
 
   return (
@@ -74,17 +74,22 @@ export default async function PhotographerSignupPage({
 
       {suspended ? (
         <div className="mt-6">
-          <p className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            Your photographer account is suspended. Please contact support.
-          </p>
+          {pendingApproval ? (
+            <p className="rounded-md bg-muted px-4 py-3 text-sm">
+              Your photographer profile is awaiting admin approval. You&apos;ll be able to use your
+              dashboard once it&apos;s approved.
+            </p>
+          ) : (
+            <p className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              Your photographer account is suspended. Please contact support.
+            </p>
+          )}
           <div className="mt-4 flex gap-2">
             <Link href="/" className="text-sm font-medium text-pb-brand hover:underline">
               Back to PhotoBlinks
             </Link>
             <form action={signOut} className="ml-auto">
-              <Button type="submit" variant="outline" size="sm">
-                Log out
-              </Button>
+              <AuthSubmitButton label="Log out" pendingLabel="Logging out…" variant="outline" size="sm" className="" />
             </form>
           </div>
         </div>

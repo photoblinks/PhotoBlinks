@@ -3,7 +3,11 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { absoluteUrl } from "@/lib/jsonld";
+import { CAPTCHA_FAILED_MESSAGE, verifyTurnstile } from "@/lib/turnstile";
+import { SIGNUP_RATE_LIMITED_MESSAGE, allowSignup } from "@/lib/rate-limit";
+import { sendVerificationEmail } from "@/lib/auth-verification";
 import { isValidCountryState } from "@/lib/supabase/require-photographer";
 
 // Same permissive rule used everywhere else in the app for phone numbers.
@@ -29,11 +33,13 @@ const signupSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters."),
 });
 
-const ENTRY_PATH = "/sign-in/photographer";
-
-function redirectSignupError(msg: string): never {
-  redirect(`${ENTRY_PATH}?mode=signup&error=${encodeURIComponent(msg)}`);
-}
+/** Returned (instead of redirecting) on a validation/signup failure so the
+ * form can show the error and keep what the user typed. Password is never
+ * echoed back. */
+export type PhotographerSignupState = {
+  error: string;
+  values: Record<string, string>;
+} | null;
 
 /** Combined account + photographer-profile signup, submitted from the
  * branded /sign-in/photographer page. Uses the exact same Supabase Auth
@@ -54,7 +60,16 @@ function redirectSignupError(msg: string): never {
  * the dashboard page itself renders an "email verification pending"
  * view (no real data to show yet regardless — the profile doesn't exist
  * until confirmation) instead of bouncing to a separate page. */
-export async function signUpPhotographer(formData: FormData) {
+export async function signUpPhotographer(
+  _prev: PhotographerSignupState,
+  formData: FormData,
+): Promise<PhotographerSignupState> {
+  const entered: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (typeof value === "string" && key !== "password") entered[key] = value;
+  }
+  const fail = (error: string): PhotographerSignupState => ({ error, values: entered });
+
   let values: z.infer<typeof signupSchema>;
   try {
     values = signupSchema.parse({
@@ -65,23 +80,33 @@ export async function signUpPhotographer(formData: FormData) {
       city: String(formData.get("city") ?? ""),
       phone_number: String(formData.get("phone_number") ?? ""),
       whatsapp_number: String(formData.get("whatsapp_number") ?? ""),
-      email: String(formData.get("email") ?? ""),
+      email: String(formData.get("email") ?? "").toLowerCase(),
       password: String(formData.get("password") ?? ""),
     });
   } catch (err) {
     const message = err instanceof z.ZodError ? err.issues[0].message : "Invalid form data.";
-    redirectSignupError(message);
+    return fail(message);
   }
 
+  if (!(await verifyTurnstile(formData.get("cf-turnstile-response")))) return fail(CAPTCHA_FAILED_MESSAGE);
+
   const supabase = await createClient();
+  if (!(await allowSignup(supabase))) return fail(SIGNUP_RATE_LIMITED_MESSAGE);
+
+  // Phone numbers are unique per account; checked before the auth user exists
+  // so a duplicate never leaves an orphan account behind.
+  const { data: phoneTaken } = await supabase.rpc("photographer_phone_taken", { p_phone: values.phone_number });
+  if (phoneTaken === true) return fail("An account with this phone number already exists.");
 
   // The dropdown only ever lists real, active countries/states, but the
   // submitted ids are still just form input — re-verify server-side that
   // state_id is a real, active state under the real, active country_id
   // before ever storing them (in metadata below, or directly further
-  // down). Never trust the browser's id/label pairing on its own.
-  if (!(await isValidCountryState(supabase, values.country_id, values.state_id))) {
-    redirectSignupError("Select a valid country and state.");
+  // down). Never trust the browser's id/label pairing on its own. Runs as
+  // the signed-out visitor, whose anon role cannot read `states`, so it
+  // uses the server-only public client (read-only, is_active filtered).
+  if (!(await isValidCountryState(createPublicClient(), values.country_id, values.state_id))) {
+    return fail("Select a valid country and state.");
   }
   const { data, error } = await supabase.auth.signUp({
     email: values.email,
@@ -110,7 +135,7 @@ export async function signUpPhotographer(formData: FormData) {
       error.code === "user_already_exists"
         ? "An account with this email already exists. Try signing in instead."
         : error.message;
-    redirectSignupError(message);
+    return fail(message);
   }
 
   if (!data.session || !data.user) {
@@ -130,7 +155,14 @@ export async function signUpPhotographer(formData: FormData) {
     phone_number: values.phone_number,
     whatsapp_number: values.whatsapp_number,
   });
-  if (profileError) redirectSignupError(profileError.message);
+  if (profileError) {
+    return fail(
+      profileError.code === "23505"
+        ? "An account with this phone number already exists."
+        : profileError.message,
+    );
+  }
 
+  await sendVerificationEmail(supabase, values.email, "/photographer");
   redirect("/photographer");
 }

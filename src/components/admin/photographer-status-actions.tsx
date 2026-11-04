@@ -12,6 +12,12 @@ const ACTIONS: { status: PhotographerStatus; label: string; variant: "default" |
   { status: "suspended", label: "Suspend", variant: "destructive" },
 ];
 
+// Wording for a profile still awaiting approval (on hold).
+const REQUEST_LABEL: Partial<Record<PhotographerStatus, string>> = {
+  active: "Approve",
+  suspended: "Reject",
+};
+
 /** Status controls for one photographer profile. Shows every status except
  * the current one; failures are shown inline. */
 export function PhotographerStatusActions({
@@ -49,7 +55,7 @@ export function PhotographerStatusActions({
             disabled={pending}
             onClick={() => handleClick(a.status)}
           >
-            {a.label}
+            {current === "on_hold" ? (REQUEST_LABEL[a.status] ?? a.label) : a.label}
           </Button>
         ))}
       </div>

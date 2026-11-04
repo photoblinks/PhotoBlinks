@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { revalidatePublicContent } from "@/lib/revalidate-public";
+import { CACHE_TAGS } from "@/lib/public-data";
+import { purgeAllPublicContent, revalidatePublicContent } from "@/lib/revalidate-public";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
@@ -19,7 +20,7 @@ export async function updateBannerImages(formData: FormData) {
     redirect(`/admin/settings?error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePublicContent();
+  revalidatePublicContent(CACHE_TAGS.settings);
   revalidatePath("/admin/settings");
   revalidatePath("/");
   redirect("/admin/settings?saved=1");
@@ -112,8 +113,18 @@ export async function updateSocialMediaLinks(formData: FormData) {
 
   // The footer lives in the public root layout; the settings page itself
   // must reflect the saved values immediately as well.
-  revalidatePublicContent();
+  revalidatePublicContent(CACHE_TAGS.settings);
   revalidatePath("/admin/settings");
   revalidatePath("/", "layout");
   redirect("/admin/settings?saved=social");
+}
+
+/** Invalidates every cached public read. For changes made outside the admin
+ * actions (direct SQL edits, imports), which do not invalidate on their own. */
+export async function purgePublicCache() {
+  const user = await getAuthorizedAdminUser();
+  if (!user) redirect("/admin/login");
+
+  purgeAllPublicContent();
+  redirect("/admin/settings?saved=purged");
 }

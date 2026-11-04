@@ -76,12 +76,12 @@ export async function createPhotographerProfile(formData: FormData) {
   // Check for any existing profile (active or suspended).
   const { data: existing } = await supabase
     .from("photographer_profiles")
-    .select("is_active")
+    .select("is_active, suspended_at")
     .eq("user_id", user.id)
     .maybeSingle();
 
   if (existing) {
-    if (existing.is_active) {
+    if (!existing.suspended_at) {
       redirect("/photographer");
     }
     redirect(

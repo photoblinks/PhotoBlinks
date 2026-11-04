@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { CACHE_TAGS } from "@/lib/public-data";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -283,7 +284,7 @@ export async function createLocation(
     metadata: { name: locationValues.name, images: images.length, faqs: faqs.length },
   });
 
-  revalidatePublicContent();
+  revalidatePublicContent(CACHE_TAGS.locations);
   revalidatePath("/admin/locations");
   redirect("/admin/locations");
 }
@@ -391,7 +392,7 @@ export async function updateLocation(
     });
   }
 
-  revalidatePublicContent();
+  revalidatePublicContent(CACHE_TAGS.locations);
   revalidatePath("/admin/locations");
   redirect("/admin/locations");
 }
@@ -425,7 +426,7 @@ export async function toggleLocationPublished(id: string, nextValue: boolean): P
     entity_id: id,
   });
 
-  revalidatePublicContent();
+  revalidatePublicContent(CACHE_TAGS.locations);
   revalidatePath("/admin/locations");
   return { ok: true };
 }
@@ -451,7 +452,7 @@ export async function deleteLocation(id: string): Promise<LocationRowResult> {
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "This location no longer exists." };
 
-  revalidatePublicContent();
+  revalidatePublicContent(CACHE_TAGS.locations);
   revalidatePath("/admin/locations");
   return { ok: true };
 }

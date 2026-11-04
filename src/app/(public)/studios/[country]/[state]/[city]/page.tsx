@@ -5,6 +5,7 @@ import { getActiveCities, getActiveStates, getPublishedStudios } from "@/lib/pub
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { StudioSearch } from "@/components/public/studio-search";
 import { StudioDirectory, CityStudioResults } from "@/components/public/studio-directory";
+import { EditorialSection } from "@/components/public/editorial-section";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 // ISR: no searchParams/cookies read, so the route is eligible for the Full
@@ -95,6 +96,8 @@ export default async function CityStudiosPage({ params }: Props) {
       >
         <StudioDirectory mode="city" studios={studios} basePath={basePath} />
       </Suspense>
+
+      <EditorialSection cityId={city.id} />
     </div>
   );
 }

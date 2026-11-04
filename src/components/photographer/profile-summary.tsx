@@ -21,6 +21,12 @@ type Props = {
   email?: string;
 };
 
+/** Account status label: awaiting approval is distinct from suspended. */
+export function photographerStatusLabel(profile: { is_active: boolean; suspended_at?: string | null }) {
+  if (profile.is_active) return "Active";
+  return profile.suspended_at ? "Suspended" : "Pending approval";
+}
+
 export function PhotographerProfileSummary({ profile, email }: Props) {
   return (
     <div className="space-y-4">
@@ -38,10 +44,10 @@ export function PhotographerProfileSummary({ profile, email }: Props) {
           )}
         </div>
         <Badge
-          variant={profile.is_active ? "default" : "destructive"}
+          variant={profile.is_active ? "default" : profile.suspended_at ? "destructive" : "secondary"}
           className="ml-auto shrink-0"
         >
-          {profile.is_active ? "Active" : "Suspended"}
+          {photographerStatusLabel(profile)}
         </Badge>
       </div>
 

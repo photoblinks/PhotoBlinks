@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { canSignUp, resendVerificationEmail } from "@/lib/auth-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { GoogleSignInButton } from "@/components/public/google-sign-in-button";
+import { TurnstileWidget } from "@/components/public/turnstile-widget";
 import { AuthDivider } from "@/components/public/auth-divider";
 
 type Mode = "sign-in" | "sign-up";
@@ -64,6 +66,13 @@ export function AuthDialog({
     const supabase = createClient();
 
     if (mode === "sign-up") {
+      const token = new FormData(event.currentTarget as HTMLFormElement).get("cf-turnstile-response");
+      const gate = await canSignUp(typeof token === "string" ? token : "");
+      if (gate.error) {
+        setPending(false);
+        setError(gate.error);
+        return;
+      }
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -96,6 +105,10 @@ export function AuthDialog({
         setAwaitingConfirmation(true);
         return;
       }
+
+      // Confirm-email is off: signed in at once, ownership verified later via
+      // the emailed link (VerifyEmailBanner reminds until then).
+      void resendVerificationEmail(pathname);
 
       // Session issued immediately (email confirmations off) — the auth
       // state listener in FavouritesProvider picks this up and closes the
@@ -161,6 +174,7 @@ export function AuthDialog({
                     required
                   />
                 </Field>
+                {mode === "sign-up" && <TurnstileWidget />}
                 {error && <FieldError>{error}</FieldError>}
                 <Button type="submit" className="w-full" disabled={pending}>
                   {pending

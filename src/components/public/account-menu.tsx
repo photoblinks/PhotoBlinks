@@ -72,10 +72,18 @@ export function AccountMenu({ light }: { light?: boolean }) {
 
   if (!signedIn) {
     return (
-      <Link href={`/sign-in?next=${encodeURIComponent(pathname)}`} className={iconButtonClass}>
-        <User className="size-4" />
-        <span className="sr-only">Sign In</span>
-      </Link>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<button type="button" className={iconButtonClass} />}>
+          <User className="size-4" />
+          <span className="sr-only">Sign In</span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem render={<Link href={`/sign-in?next=${encodeURIComponent(pathname)}`} />}>
+            User
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/sign-in/photographer" />}>Photographer</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   }
 

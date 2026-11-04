@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
+import { AuthSubmitButton } from "@/components/public/auth-submit-button";
 import { logout } from "../login/actions";
-import { Button } from "@/components/ui/button";
 import { AdminNav } from "@/components/admin/admin-nav";
 
 // Links without `permissions` are admin-only; links with them are also shown
@@ -20,6 +20,7 @@ const NAV_LINKS: {
   { href: "/admin/performance", label: "Employee Performance", allStaff: true },
   { href: "/admin/employees", label: "Employees" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/photographer-requests", label: "Photographer Requests" },
   { href: "/admin/photographer-profiles", label: "Photographer Profiles" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/locations", label: "Locations", permissions: [PERMISSION.LOCATIONS_EDIT, PERMISSION.LOCATIONS_PUBLISH] },
@@ -63,9 +64,7 @@ export default async function AdminShellLayout({
         <div className="mt-auto flex flex-col gap-2 border-t pt-4">
           <span className="truncate px-2 text-xs text-muted-foreground">{staff.user.email}</span>
           <form action={logout}>
-            <Button type="submit" variant="outline" size="sm" className="w-full">
-              Log out
-            </Button>
+            <AuthSubmitButton label="Log out" pendingLabel="Logging out…" variant="outline" size="sm" />
           </form>
         </div>
       </aside>

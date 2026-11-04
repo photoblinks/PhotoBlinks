@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BlockInserter } from "./blog-editor/block-inserter";
+import { BlockInserter, BLOCK_LIBRARY } from "./blog-editor/block-inserter";
 import { BlockToolbar } from "./blog-editor/block-toolbar";
 import { BlockFields } from "./blog-editor/block-fields";
 import { makeBlock, toSubmittable, blockLabel, type Block, type BlockType } from "./blog-editor/types";
+import { clipboardToBlocks } from "./blog-editor/paste-to-blocks";
+import { ClipboardPaste } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type { BlogBlockInput } from "./blog-editor/types";
@@ -42,6 +44,7 @@ export function BlogContentEditor({
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [dragEnabledId, setDragEnabledId] = useState<string | null>(null);
+  const [pasteMessage, setPasteMessage] = useState<string | null>(null);
   const [restoreDraft, setRestoreDraft] = useState<Block[] | null>(null);
 
   // Lightweight, dependency-free "autosave" — persists the in-progress
@@ -83,6 +86,12 @@ export function BlogContentEditor({
     return () => clearTimeout(timeout);
   }, [blocks, draftKey]);
 
+  // Top-toolbar insert: new block goes right after the selected one, else at the end.
+  function insertAfterSelected(type: BlockType) {
+    const index = blocks.findIndex((b) => b.id === selectedId);
+    insertAt(index === -1 ? blocks.length : index + 1, type);
+  }
+
   function insertAt(index: number, type: BlockType) {
     const block = makeBlock(type);
     setBlocks((prev) => {
@@ -91,6 +100,45 @@ export function BlogContentEditor({
       return next;
     });
     setSelectedId(block.id);
+  }
+
+  // Pasted articles (ChatGPT/Claude/web) become blocks automatically. Single
+  // block / plain snippets fall through to the normal text-field paste.
+  function insertPasted(pasted: Block[]) {
+    setBlocks((prev) => {
+      const index = prev.findIndex((b) => b.id === selectedId);
+      const sel = prev[index];
+      const isEmpty = sel && (sel.type === "paragraph" || sel.type === "heading") && !sel.text.trim();
+      const next = [...prev];
+      next.splice(index === -1 ? prev.length : isEmpty ? index : index + 1, isEmpty ? 1 : 0, ...pasted);
+      return next;
+    });
+    setSelectedId(pasted[pasted.length - 1].id);
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const pasted = clipboardToBlocks(e.clipboardData.getData("text/html"), e.clipboardData.getData("text/plain"));
+    if (!pasted.length) return;
+    e.preventDefault();
+    insertPasted(pasted);
+  }
+
+  // Toolbar "Paste article" button: reads the clipboard directly (browser
+  // asks for permission once), so no focused field is needed.
+  async function pasteFromClipboard() {
+    try {
+      let html = "";
+      let text = "";
+      for (const item of await navigator.clipboard.read()) {
+        if (item.types.includes("text/html")) html = await (await item.getType("text/html")).text();
+        if (item.types.includes("text/plain")) text = await (await item.getType("text/plain")).text();
+      }
+      const pasted = clipboardToBlocks(html, text);
+      if (pasted.length) insertPasted(pasted);
+      else setPasteMessage("Clipboard has no multi-section article text to convert.");
+    } catch {
+      setPasteMessage("Clipboard access blocked. Click inside the editor and press Ctrl+V instead.");
+    }
   }
 
   function updateBlock(id: string, patch: Partial<Block>) {
@@ -140,7 +188,7 @@ export function BlogContentEditor({
   const jsonValue = JSON.stringify(blocks.map(toSubmittable));
 
   return (
-    <div className="rounded-xl border bg-white p-4 sm:p-6">
+    <div className="rounded-xl border bg-white p-4 outline-none sm:p-6" tabIndex={-1} onPaste={handlePaste}>
       <input type="hidden" name={name} value={jsonValue} />
 
       {restoreDraft && (
@@ -164,6 +212,29 @@ export function BlogContentEditor({
           </div>
         </div>
       )}
+
+      <div className="sticky top-0 z-20 -mx-4 -mt-4 mb-4 flex flex-wrap items-center gap-0.5 rounded-t-xl border-b bg-white/95 px-3 py-2 backdrop-blur sm:-mx-6 sm:-mt-6 sm:px-5">
+        {BLOCK_LIBRARY.filter((b) => !allowedBlockTypes || allowedBlockTypes.includes(b.type)).map((item) => (
+          <Button
+            key={item.type}
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            title={item.label}
+            aria-label={`Add ${item.label}`}
+            onClick={() => insertAfterSelected(item.type)}
+          >
+            <item.icon className="size-4" />
+          </Button>
+        ))}
+        <div className="mx-1 h-5 w-px bg-border" />
+        <Button type="button" variant="ghost" size="sm" onClick={pasteFromClipboard} title="Convert copied article text into blocks">
+          <ClipboardPaste className="size-4" />
+          Paste article
+        </Button>
+      </div>
+
+      {pasteMessage && <p className="mb-3 text-sm text-amber-700">{pasteMessage}</p>}
 
       <div className="flex flex-col">
         <InsertGap blockTypes={allowedBlockTypes} onInsert={(type) => insertAt(0, type)} />
@@ -225,12 +296,16 @@ export function BlogContentEditor({
         ))}
 
         {blocks.length === 0 && (
-          <div className="flex justify-center py-8">
+          <div className="flex flex-col items-center gap-3 py-8">
             <BlockInserter
               variant="button"
               blockTypes={allowedBlockTypes}
               onInsert={(type) => insertAt(0, type)}
             />
+            <p className="text-sm text-muted-foreground">
+              Or copy a full article from ChatGPT/Claude, click here and press Ctrl+V — headings, paragraphs and
+              lists convert automatically.
+            </p>
           </div>
         )}
       </div>

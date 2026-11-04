@@ -22,9 +22,10 @@ const EDITORIAL_BLOCK_TYPES: readonly BlockType[] = [
 ];
 
 export type EditorialTarget = {
-  scope: "state" | "state_category";
-  stateId: string;
+  scope: "state" | "state_category" | "city";
+  stateId?: string;
   categoryId?: string;
+  cityId?: string;
   /** Deterministic localStorage autosave key — never sent to the server. */
   syntheticSlug: string;
   title: string;
@@ -73,8 +74,9 @@ export function EditorialForm({
 
       <form action={saveEditorial} className="flex flex-col gap-4">
         <input type="hidden" name="scope" value={target.scope} />
-        <input type="hidden" name="state_id" value={target.stateId} />
+        {target.stateId && <input type="hidden" name="state_id" value={target.stateId} />}
         {target.categoryId && <input type="hidden" name="category_id" value={target.categoryId} />}
+        {target.cityId && <input type="hidden" name="city_id" value={target.cityId} />}
 
         <BlogContentEditor
           name="content_json"

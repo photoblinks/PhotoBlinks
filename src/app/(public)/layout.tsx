@@ -1,4 +1,5 @@
 import { Header } from "@/components/public/header";
+import { VerifyEmailBanner } from "@/components/public/verify-email-banner";
 import { Footer } from "@/components/public/footer";
 import { MobileBottomNav } from "@/components/public/mobile-bottom-nav";
 import { FavouritesProvider } from "@/components/public/favourites-provider";
@@ -11,6 +12,7 @@ export default async function PublicLayout({ children }: { children: React.React
   return (
     <FavouritesProvider>
       <div className="pb-theme relative flex min-h-screen flex-col bg-pb-cream pb-16 sm:pb-0">
+        <VerifyEmailBanner />
         <Header categories={categories} />
         <main className="flex-1">{children}</main>
         <Footer />

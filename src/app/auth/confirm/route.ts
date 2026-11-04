@@ -52,6 +52,9 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
     if (!error) {
+      // An email OTP link is the email-verification link: the session it just
+      // created carries the proof mark_email_verified() requires.
+      if (type === "email" || type === "magiclink") await supabase.rpc("mark_email_verified");
       return redirectNoStore(`${origin}${next}`);
     }
   }

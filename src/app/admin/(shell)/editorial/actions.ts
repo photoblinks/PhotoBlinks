@@ -10,11 +10,30 @@ import { LOCATION_INFO_FIELDS, type LocationInfoTableConfig } from "@/lib/locati
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
-const editorTargetSchema = z.object({
-  scope: z.enum(["state", "state_category"]),
-  state_id: z.string().uuid(),
-  category_id: z.string().uuid().optional(),
-});
+type EditorialScope = "state" | "state_category" | "city";
+
+const editorTargetSchema = z.discriminatedUnion("scope", [
+  z.object({ scope: z.literal("state"), state_id: z.string().uuid() }),
+  z.object({
+    scope: z.literal("state_category"),
+    state_id: z.string().uuid(),
+    category_id: z.string().uuid(),
+  }),
+  z.object({ scope: z.literal("city"), city_id: z.string().uuid() }),
+]);
+
+type EditorTarget = z.infer<typeof editorTargetSchema>;
+
+/** Admin page the editor lives on — city scopes are edited inside the City
+ * Pages admin, so saves return there. Derived server-side, never from input. */
+function adminBackPath(target: { scope: EditorialScope; state_id?: string | null; category_id?: string | null; city_id?: string | null }) {
+  if (target.scope === "city") {
+    return `/admin/city-pages/${target.city_id}/edit`;
+  }
+  return target.scope === "state_category"
+    ? `/admin/editorial/state/${target.state_id}/${target.category_id}/edit`
+    : `/admin/editorial/state/${target.state_id}/edit`;
+}
 
 const statusSchema = z.enum(["draft", "published"]);
 
@@ -33,9 +52,10 @@ function validationMessage(error: unknown, fallback: string) {
  * in the SEO actions. */
 async function resolvePublicPath(
   supabase: SupabaseServerClient,
-  scope: "state" | "state_category",
+  scope: EditorialScope,
   stateId: string,
   categoryId?: string,
+  citySlug?: string,
 ): Promise<string | null> {
   const [{ data: state }, { data: category }] = await Promise.all([
     supabase.from("states").select("slug, countries(slug)").eq("id", stateId).maybeSingle(),
@@ -48,6 +68,10 @@ async function resolvePublicPath(
   const countrySlug = Array.isArray(state.countries) ? (state.countries[0]?.slug ?? null) : null;
   if (!countrySlug) return null;
 
+  if (scope === "city") {
+    if (!citySlug) return null;
+    return `/locations/${countrySlug}/${state.slug}/${citySlug}`;
+  }
   if (scope === "state_category") {
     if (!category?.slug) return null;
     return `/locations/${countrySlug}/${state.slug}/${category.slug}`;
@@ -55,76 +79,82 @@ async function resolvePublicPath(
   return `/locations/${countrySlug}/${state.slug}`;
 }
 
-/** Saves (creates or updates) a State or State + Category editorial row.
- * Save never changes status — publish is a separate toggle. Content is
+/** Saves (creates or updates) a State, State + Category or City editorial
+ * row. Save never changes status — publish is a separate toggle. Content is
  * validated on write with parseEditorialContent (same strict Zod/content
- * philosophy as the blog CMS). */
+ * philosophy as the blog CMS). City scopes derive state_id from the city
+ * row server-side and return to the City Pages editor. */
 export async function saveEditorial(formData: FormData) {
   const admin = await getAuthorizedAdminUser();
   if (!admin) redirect("/admin/login");
 
-  const scope = formData.get("scope");
-  const stateId = readFormString(formData, "state_id");
-  const categoryIdRaw = readFormString(formData, "category_id").trim();
-
-  let target: z.infer<typeof editorTargetSchema>;
+  let target: EditorTarget;
   try {
     target = editorTargetSchema.parse({
-      scope,
-      state_id: stateId,
-      category_id: scope === "state_category" ? categoryIdRaw : undefined,
+      scope: formData.get("scope"),
+      state_id: readFormString(formData, "state_id"),
+      category_id: readFormString(formData, "category_id").trim(),
+      city_id: readFormString(formData, "city_id"),
     });
   } catch {
     redirect(`/admin/editorial?error=${encodeURIComponent("Invalid editorial target.")}`);
   }
 
+  const supabase = await createClient();
+  const cityId = "city_id" in target ? target.city_id : undefined;
+  const isCityScope = Boolean(cityId);
+  const categoryId = target.scope === "state_category" ? target.category_id : undefined;
+
+  let stateId = target.scope === "state" || target.scope === "state_category" ? target.state_id : "";
+  let citySlug: string | undefined;
+  if (cityId) {
+    const { data: city } = await supabase.from("cities").select("slug, state_id").eq("id", cityId).maybeSingle();
+    if (!city) redirect(`/admin/city-pages?error=${encodeURIComponent("City not found.")}`);
+    stateId = city.state_id;
+    citySlug = city.slug;
+  }
+
+  const back = adminBackPath({ scope: target.scope, state_id: stateId, category_id: categoryId, city_id: cityId });
+  const doneRedirect = isCityScope ? back : "/admin/editorial";
+
   let content;
   try {
     content = parseEditorialContent(readFormString(formData, "content_json", "[]"));
   } catch (err) {
-    const message = validationMessage(err, "Invalid content.");
-    const back =
-      target.scope === "state_category"
-        ? `/admin/editorial/state/${target.state_id}/${target.category_id}/edit`
-        : `/admin/editorial/state/${target.state_id}/edit`;
-    redirect(`${back}?error=${encodeURIComponent(message)}`);
+    redirect(`${back}?error=${encodeURIComponent(validationMessage(err, "Invalid content."))}`);
   }
-
-  const supabase = await createClient();
 
   // Select-then-insert/update: the partial unique indexes can't be used as a
   // supabase upsert onConflict target (the conflict columns differ per scope).
-  let match = supabase
-    .from("location_editorial")
-    .select("id")
-    .eq("state_id", target.state_id)
-    .eq("scope", target.scope);
-  match = target.scope === "state_category" ? match.eq("category_id", target.category_id!) : match.is("category_id", null);
+  let match = supabase.from("location_editorial").select("id").eq("scope", target.scope);
+  match = cityId ? match.eq("city_id", cityId) : match.eq("state_id", stateId);
+  match = categoryId ? match.eq("category_id", categoryId) : match.is("category_id", null);
 
   const { data: existing, error: loadError } = await match.maybeSingle();
   if (loadError) {
-    redirect(`/admin/editorial?error=${encodeURIComponent("Could not load existing editorial content.")}`);
+    redirect(`${doneRedirect}?error=${encodeURIComponent("Could not load existing editorial content.")}`);
   }
 
   if (existing) {
     const { error } = await supabase.from("location_editorial").update({ content }).eq("id", existing.id);
-    if (error) redirect(`/admin/editorial?error=${encodeURIComponent(error.message)}`);
+    if (error) redirect(`${doneRedirect}?error=${encodeURIComponent(error.message)}`);
   } else {
     const { error } = await supabase.from("location_editorial").insert({
       scope: target.scope,
-      state_id: target.state_id,
-      category_id: target.scope === "state_category" ? target.category_id : null,
+      state_id: stateId,
+      category_id: categoryId ?? null,
+      city_id: cityId ?? null,
       content,
       status: "draft",
     });
-    if (error) redirect(`/admin/editorial?error=${encodeURIComponent(error.message)}`);
+    if (error) redirect(`${doneRedirect}?error=${encodeURIComponent(error.message)}`);
   }
 
   updateTag("location-editorial");
   revalidatePath("/admin/editorial");
-  const path = await resolvePublicPath(supabase, target.scope, target.state_id, target.category_id);
+  const path = await resolvePublicPath(supabase, target.scope, stateId, categoryId, citySlug);
   if (path) revalidatePath(path);
-  redirect("/admin/editorial");
+  redirect(doneRedirect);
 }
 
 /** Publishes or unpublishes an editorial row. published_at is set once by
@@ -142,19 +172,29 @@ export async function toggleEditorialStatus(formData: FormData) {
   const supabase = await createClient();
   const { data: row } = await supabase
     .from("location_editorial")
-    .select("scope, state_id, category_id")
+    .select("scope, state_id, category_id, city_id")
     .eq("id", id)
     .maybeSingle();
   if (!row) redirect(`/admin/editorial?error=${encodeURIComponent("Editorial not found.")}`);
 
+  const scope = row.scope as EditorialScope;
+  const isCityScope = scope === "city";
+  const doneRedirect = isCityScope ? adminBackPath({ ...row, scope }) : "/admin/editorial";
+
   const { error } = await supabase.from("location_editorial").update({ status: status.data }).eq("id", id);
-  if (error) redirect(`/admin/editorial?error=${encodeURIComponent(error.message)}`);
+  if (error) redirect(`${doneRedirect}?error=${encodeURIComponent(error.message)}`);
+
+  let citySlug: string | undefined;
+  if (row.city_id) {
+    const { data: city } = await supabase.from("cities").select("slug").eq("id", row.city_id).maybeSingle();
+    citySlug = city?.slug;
+  }
 
   updateTag("location-editorial");
   revalidatePath("/admin/editorial");
-  const path = await resolvePublicPath(supabase, row.scope, row.state_id, row.category_id ?? undefined);
+  const path = await resolvePublicPath(supabase, scope, row.state_id, row.category_id ?? undefined, citySlug);
   if (path) revalidatePath(path);
-  redirect("/admin/editorial");
+  redirect(doneRedirect);
 }
 
 /** Persists the centralized location-information-table configuration on the

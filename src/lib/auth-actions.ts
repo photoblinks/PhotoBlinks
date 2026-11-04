@@ -4,18 +4,48 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { safeNextPath } from "@/lib/safe-redirect";
 import { absoluteUrl } from "@/lib/jsonld";
+import { CAPTCHA_FAILED_MESSAGE, verifyTurnstile } from "@/lib/turnstile";
+import { SIGNUP_RATE_LIMITED_MESSAGE, allowAction, allowSignup } from "@/lib/rate-limit";
+import { sendVerificationEmail } from "@/lib/auth-verification";
 
 // Public account sign up/in/out — uses the same Supabase Auth user pool as
 // admin login (src/app/admin/login/actions.ts), but never checks/grants
 // is_admin(). A public account only becomes an admin by being added to the
 // admins table separately; signing up here never does that.
 
+/** Resend button on the verify-email banner. Uses the signed-in user's own
+ * address only. */
+export async function resendVerificationEmail(next: string): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { ok: false };
+  if (!(await allowAction(supabase, `resend:${user.id}`, 3, 3600))) return { ok: false };
+  return { ok: await sendVerificationEmail(supabase, user.email, safeNextPath(next)) };
+}
+
+/** Pre-check for the in-page signup dialog, which calls Supabase from the
+ * browser: applies the same per-IP signup throttle before it does. */
+export async function canSignUp(captchaToken: string): Promise<{ error?: string }> {
+  if (!(await verifyTurnstile(captchaToken))) return { error: CAPTCHA_FAILED_MESSAGE };
+  if (!(await allowSignup(await createClient()))) return { error: SIGNUP_RATE_LIMITED_MESSAGE };
+  return {};
+}
+
 export async function signUp(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const next = safeNextPath(String(formData.get("next") ?? ""));
 
+  if (!(await verifyTurnstile(formData.get("cf-turnstile-response")))) {
+    redirect(`/sign-up?error=${encodeURIComponent(CAPTCHA_FAILED_MESSAGE)}&next=${encodeURIComponent(next)}`);
+  }
+
   const supabase = await createClient();
+  if (!(await allowSignup(supabase))) {
+    redirect(`/sign-up?error=${encodeURIComponent(SIGNUP_RATE_LIMITED_MESSAGE)}&next=${encodeURIComponent(next)}`);
+  }
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -36,9 +66,11 @@ export async function signUp(formData: FormData) {
     redirect(`/sign-up?error=${encodeURIComponent(message)}&next=${encodeURIComponent(next)}`);
   }
 
-  // With email confirmations required (supabase/config.toml), signUp()
-  // succeeds but returns no session yet — the account can't sign in until
-  // the confirmation link (see /auth/confirm) is used.
+  // Confirm-email is off (supabase/config.toml), so signUp() returns a
+  // session and the user is signed in at once; ownership of the address is
+  // verified afterwards via the emailed link (banner until then).
+  if (data.session && data.user?.email) await sendVerificationEmail(supabase, data.user.email, next);
+
   if (!data.session) {
     redirect(
       `/sign-in?notice=${encodeURIComponent("Check your email to confirm your account, then sign in.")}&next=${encodeURIComponent(next)}`,
@@ -67,7 +99,7 @@ export async function signIn(formData: FormData) {
     // A photographer sign-in attempt (next targets /photographer) stays on
     // the photographer sign-in flow instead of bouncing to the generic
     // customer page — same reasoning as /auth/confirm's error path.
-    const signInPath = next.startsWith("/photographer") ? "/sign-in/photographer?mode=login" : "/sign-in";
+    const signInPath = next.startsWith("/photographer") ? "/sign-in/photographer" : "/sign-in";
     const separator = signInPath.includes("?") ? "&" : "?";
     redirect(
       `${signInPath}${separator}error=${encodeURIComponent(message)}&next=${encodeURIComponent(next)}`,

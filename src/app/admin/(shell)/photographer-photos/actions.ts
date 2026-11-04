@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { locationTag } from "@/lib/public-data";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
 import { deletePhotographerSubmissionObject } from "@/lib/r2/upload";
@@ -25,7 +26,7 @@ export async function approveSubmission(id: string) {
   // would publish a now-deleted image on the public gallery.
   const { data: current } = await supabase
     .from("photographer_photo_submissions")
-    .select("status")
+    .select("status, location_id")
     .eq("id", id)
     .maybeSingle();
   if (!current || current.status === "rejected") return;
@@ -41,7 +42,7 @@ export async function approveSubmission(id: string) {
     .eq("id", id)
     .eq("status", current.status);
 
-  revalidatePublicContent();
+  revalidatePublicContent(locationTag(current.location_id));
   revalidatePath("/admin/photographer-photos");
 }
 
@@ -63,7 +64,7 @@ export async function rejectSubmission(id: string, formData: FormData) {
   // genuinely saw at write time, not a stale one from page load.
   const { data: current } = await supabase
     .from("photographer_photo_submissions")
-    .select("status, storage_key, storage_bucket, photographer_id")
+    .select("status, storage_key, storage_bucket, photographer_id, location_id")
     .eq("id", id)
     .maybeSingle();
   if (!current || current.status === "rejected") return;
@@ -99,7 +100,7 @@ export async function rejectSubmission(id: string, formData: FormData) {
     .update({ r2_deletion_status: result.ok ? "deleted" : "failed" })
     .eq("id", id);
 
-  revalidatePublicContent();
+  revalidatePublicContent(locationTag(current.location_id));
   revalidatePath("/admin/photographer-photos");
 }
 
@@ -139,6 +140,6 @@ export async function retryCleanup(id: string) {
     .eq("id", id)
     .eq("status", "rejected");
 
-  revalidatePublicContent();
+  // Rejected rows are never public, so there is no public cache to refresh.
   revalidatePath("/admin/photographer-photos");
 }

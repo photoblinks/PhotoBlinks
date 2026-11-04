@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 /** Supabase returns an embedded to-one relation (e.g. photographer_profiles
@@ -9,7 +10,10 @@ export function normalizeRelation<T>(value: T | T[] | null | undefined): T | nul
   return value ?? null;
 }
 
-/** Whether the given user id has an active photographer profile.
+/** Whether the given user id has a photographer profile that is not
+ * suspended (approved or still awaiting approval — pending photographers can
+ * use the dashboard and submit to the moderation queue; nothing they submit is
+ * public until an admin approves it).
  * Uses the normal request-scoped client — RLS applies per-user.
  * The own_read policy allows a photographer to read their own row. */
 export async function isPhotographerUser(
@@ -20,7 +24,7 @@ export async function isPhotographerUser(
     .from("photographer_profiles")
     .select("user_id")
     .eq("user_id", userId)
-    .eq("is_active", true)
+    .is("suspended_at", null)
     .maybeSingle();
   return data != null;
 }
@@ -45,7 +49,7 @@ export async function getAuthorizedPhotographerUser() {
  * parent/child relationship between them is checked together so a
  * mismatched pair (a real state under the wrong country) is rejected too. */
 export async function isValidCountryState(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Pick<SupabaseClient, "from">,
   countryId: string,
   stateId: string,
 ): Promise<boolean> {

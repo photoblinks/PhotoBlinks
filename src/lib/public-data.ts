@@ -25,9 +25,46 @@ export const PUBLIC_REVALIDATE_SECONDS = 86400;
 // comments, photos, ratings, location/studio detail) stays on 24h above.
 export const PUBLIC_LONG_REVALIDATE_SECONDS = 604800;
 
-/** Tag on every cached public read; admin writes invalidate it on demand
- * (src/lib/revalidate-public.ts), so the long window never serves stale edits. */
+/** Tag on every cached public read. Routine admin writes invalidate the
+ * narrower tags below instead; this one is only invalidated by the admin
+ * "Purge public cache" action (direct SQL edits, imports). */
 export const PUBLIC_CACHE_TAG = "public-content";
+
+/** What a cached read depends on. A read carries every tag for the tables it
+ * selects (including joined/embedded ones); an admin action invalidates only
+ * the tag of what it changed (src/lib/revalidate-public.ts). */
+export const CACHE_TAGS = {
+  locations: "locations",
+  studios: "studios",
+  geo: "geo", // countries, states, cities, categories (names shown on cards/pages)
+  blog: "blog",
+  settings: "settings", // banners, social links
+  sponsored: "sponsored", // every sponsored photographer (llms-full.txt)
+} as const;
+
+export const locationTag = (locationId: string) => `location:${locationId}`;
+export const sponsoredStateTag = (stateId: string) => `sponsored:${stateId}`;
+
+/** unstable_cache whose tag is derived from the first argument, so an admin
+ * action can refresh one location's (or state's) entries instead of every page. */
+function cachedByTag<A extends [string, ...unknown[]], R>(
+  tagFor: (id: string) => string,
+  fn: (...args: A) => Promise<R>,
+  keyParts: string[],
+) {
+  return (...args: A): Promise<R> =>
+    unstable_cache(fn, keyParts, {
+      revalidate: PUBLIC_REVALIDATE_SECONDS,
+      tags: [PUBLIC_CACHE_TAG, tagFor(args[0])],
+    })(...args);
+}
+
+function cachedByLocation<A extends [string, ...unknown[]], R>(
+  fn: (...args: A) => Promise<R>,
+  keyParts: string[],
+) {
+  return cachedByTag(locationTag, fn, keyParts);
+}
 
 export type PricingType = "free" | "paid" | "unknown";
 
@@ -104,7 +141,7 @@ export const getSiteSettings = unstable_cache(
     return { bannerImages: (data ?? []).map((row) => row.image_url) };
   },
   ["getSiteSettings"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.settings] },
 );
 
 /** Optional per-record overrides for a country/state/city SEO landing
@@ -128,7 +165,7 @@ export const getActiveCountries = unstable_cache(
     return data ?? [];
   },
   ["getActiveCountries"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.geo] },
 );
 
 export const getActiveStates = unstable_cache(
@@ -154,8 +191,36 @@ export const getActiveStates = unstable_cache(
     }));
   },
   ["getActiveStates"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.geo] },
 );
+
+// generateStaticParams for the country/state routes, which set
+// `dynamicParams = false`: any param missing here is a 404 until the next
+// deploy, so a country or state added to the DB needs a redeploy. These read
+// the DB directly (not the cached reads above, which turn an error into an
+// empty list) and throw on an error or an empty result, so a bad build fails
+// instead of shipping a site whose geo pages all 404.
+export async function getCountryStaticParams() {
+  const { data, error } = await createPublicClient().from("countries").select("slug").eq("is_active", true);
+  if (error) throw new Error(`generateStaticParams (countries): ${error.message}`);
+  if (!data?.length) throw new Error("generateStaticParams: no active countries; refusing to pre-build the geo routes.");
+  return data.map((country) => ({ country: country.slug }));
+}
+
+export async function getStateStaticParams() {
+  const { data, error } = await createPublicClient()
+    .from("states")
+    .select("slug, countries(slug)")
+    .eq("is_active", true);
+  if (error) throw new Error(`generateStaticParams (states): ${error.message}`);
+
+  const params = (data ?? []).flatMap((state) => {
+    const country = Array.isArray(state.countries) ? state.countries[0] : state.countries;
+    return country ? [{ country: country.slug, state: state.slug }] : [];
+  });
+  if (params.length === 0) throw new Error("generateStaticParams: no active states; refusing to pre-build the geo routes.");
+  return params;
+}
 
 export const getActiveCities = unstable_cache(
   async () => {
@@ -168,7 +233,7 @@ export const getActiveCities = unstable_cache(
     return data ?? [];
   },
   ["getActiveCities"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.geo] },
 );
 
 const getPublishedLocationGeoIds = unstable_cache(
@@ -185,7 +250,7 @@ const getPublishedLocationGeoIds = unstable_cache(
     };
   },
   ["getPublishedLocationGeoIds"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.locations] },
 );
 
 /** Active states/cities that have at least one published location — for
@@ -211,7 +276,7 @@ export const getActiveCategories = unstable_cache(
     return data ?? [];
   },
   ["getActiveCategories"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.geo] },
 );
 
 export type PublicCategoryDetail = {
@@ -240,7 +305,7 @@ export const getCategoryBySlug = cache(
       return data ?? null;
     },
     ["getCategoryBySlug"],
-    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.geo] },
   ),
 );
 
@@ -326,7 +391,7 @@ export function getPublishedLocations(
 const getPublishedLocationsCached = unstable_cache(
   fetchPublishedLocations,
   ["getPublishedLocations"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.locations, CACHE_TAGS.geo] },
 );
 
 async function fetchPublishedLocations(
@@ -473,7 +538,7 @@ export const getPublishedLocationCount = unstable_cache(
     return count ?? 0;
   },
   ["getPublishedLocationCount"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.locations] },
 );
 
 /** First image of the most recently published location — fallback art for
@@ -494,7 +559,7 @@ export const getFeaturedLocationImageUrl = unstable_cache(
     );
   },
   ["getFeaturedLocationImageUrl"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.locations] },
 );
 
 /** Resolves a share token to the ids of that owner's currently-published
@@ -605,7 +670,7 @@ export type LocationRatingSummary = { average: number; count: number };
  * admin-approved comment appears within that window, not instantly, and a
  * pending one can never leak through a stale cache (it's simply never part
  * of this result set until approved). */
-export const getApprovedLocationComments = unstable_cache(
+export const getApprovedLocationComments = cachedByLocation(
   async (locationId: string, offset: number = 0): Promise<PublicLocationComment[]> => {
     const supabase = createPublicClient();
     const { data } = await supabase.rpc("get_approved_location_comments", {
@@ -622,10 +687,9 @@ export const getApprovedLocationComments = unstable_cache(
     }));
   },
   ["getApprovedLocationComments"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
-export const getApprovedLocationCommentCount = unstable_cache(
+export const getApprovedLocationCommentCount = cachedByLocation(
   async (locationId: string): Promise<number> => {
     const supabase = createPublicClient();
     const { count } = await supabase
@@ -636,7 +700,6 @@ export const getApprovedLocationCommentCount = unstable_cache(
     return count ?? 0;
   },
   ["getApprovedLocationCommentCount"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 /** Average + count of a location's approved ratings — only ever computed
@@ -644,7 +707,7 @@ export const getApprovedLocationCommentCount = unstable_cache(
  * Returns count 0 / average 0 when nothing has been approved yet; callers
  * must treat count === 0 as "no rating to show", never render a fabricated
  * default score. */
-export const getLocationRatingSummary = unstable_cache(
+export const getLocationRatingSummary = cachedByLocation(
   async (locationId: string): Promise<LocationRatingSummary> => {
     const supabase = createPublicClient();
     const { data } = await supabase
@@ -654,7 +717,6 @@ export const getLocationRatingSummary = unstable_cache(
     return { average: row?.average ?? 0, count: row?.count ?? 0 };
   },
   ["getLocationRatingSummary"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
 );
 
 export type PublicStudioCard = {
@@ -716,7 +778,7 @@ export const getPublishedStudios = unstable_cache(
     });
   },
   ["getPublishedStudios"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.studios, CACHE_TAGS.geo] },
 );
 
 /** Availability dropdown used by both Changing Rooms and Parking Facility. */
@@ -858,7 +920,7 @@ export const getPublishedLocationBySlug = cache(
   };
     },
     ["getPublishedLocationBySlug"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.locations, CACHE_TAGS.geo] },
   ),
 );
 
@@ -880,7 +942,8 @@ export type PublicSponsoredPhotographer = {
  * the location detail page it's rendered on, so an expiring card disappears
  * within that window like every other public data change. */
 export const getActiveSponsoredPhotographerByState = cache(
-  unstable_cache(
+  cachedByTag(
+    sponsoredStateTag,
     async (stateId: string): Promise<PublicSponsoredPhotographer | null> => {
       const supabase = createPublicClient();
       const { data } = await supabase
@@ -892,7 +955,6 @@ export const getActiveSponsoredPhotographerByState = cache(
       return data;
     },
     ["getActiveSponsoredPhotographerByState"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -923,7 +985,7 @@ export const getActiveSponsoredPhotographers = unstable_cache(
     }));
   },
   ["getActiveSponsoredPhotographers"],
-  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.sponsored] },
 );
 
 export type PublicStudioDetail = ExtraDetails & {
@@ -1021,7 +1083,7 @@ export const getPublishedStudioBySlug = cache(
   };
     },
     ["getPublishedStudioBySlug"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.studios, CACHE_TAGS.geo] },
   ),
 );
 
@@ -1043,7 +1105,7 @@ export type PublicPhotographerPhoto = {
  * the function enforces status='approved' and location is_published=true
  * and returns only the public-safe field subset. */
 export const getApprovedPhotographerPhotos = cache(
-  unstable_cache(
+  cachedByLocation(
     async (locationId: string): Promise<PublicPhotographerPhoto[]> => {
       const supabase = createPublicClient();
       const { data } = await supabase.rpc("get_approved_photographer_photos", {
@@ -1052,7 +1114,6 @@ export const getApprovedPhotographerPhotos = cache(
       return (data as PublicPhotographerPhoto[]) ?? [];
     },
     ["getApprovedPhotographerPhotos"],
-    { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
   ),
 );
 
@@ -1134,7 +1195,7 @@ export const getPublishedBlogPostsPage = unstable_cache(
     return { posts: (data ?? []).map(toBlogPostCard), total: count ?? 0 };
   },
   ["getPublishedBlogPostsPage"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
 );
 
 /** Every published post's card data, newest first — the full published set
@@ -1153,7 +1214,7 @@ export const getPublishedBlogPosts = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getPublishedBlogPosts"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
 );
 
 /** Featured published posts for the /blog hero rail. Bounded to `limit`. */
@@ -1170,7 +1231,7 @@ export const getFeaturedBlogPosts = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getFeaturedBlogPosts"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
 );
 
 /** Active blog categories for /blog's category navigation. */
@@ -1185,7 +1246,7 @@ export const getActiveBlogCategories = unstable_cache(
     return data ?? [];
   },
   ["getActiveBlogCategories"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
 );
 
 export type PublicBlogCategoryDetail = {
@@ -1212,7 +1273,7 @@ export const getBlogCategoryBySlug = cache(
       return data ?? null;
     },
     ["getBlogCategoryBySlug"],
-    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
   ),
 );
 
@@ -1231,7 +1292,7 @@ export const getBlogPostsByCategorySlug = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getBlogPostsByCategorySlug"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
 );
 
 /** Published posts carrying one tag, newest first. Returns an empty array
@@ -1249,7 +1310,7 @@ export const getBlogPostsByTagSlug = unstable_cache(
     return (data ?? []).map(toBlogPostCard);
   },
   ["getBlogPostsByTagSlug"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
 );
 
 /** Published posts linked to a given location (blog_post_locations), newest
@@ -1268,7 +1329,7 @@ export const getBlogPostsForLocation = cache(
       return (data ?? []).map(toBlogPostCard);
     },
     ["getBlogPostsForLocation"],
-    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
   ),
 );
 
@@ -1287,7 +1348,7 @@ export const getPublishedBlogPostsForSitemap = unstable_cache(
     return (data ?? []).map((row) => ({ slug: row.slug, updatedAt: row.updated_at }));
   },
   ["getPublishedBlogPostsForSitemap"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
 );
 
 export type PublicBlogPostForLlms = {
@@ -1320,7 +1381,7 @@ export const getPublishedBlogPostsForLlms = unstable_cache(
     }));
   },
   ["getPublishedBlogPostsForLlms"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
 );
 
 export type PublicBlogPostDetail = {
@@ -1427,7 +1488,7 @@ export const getPublishedBlogPostBySlug = cache(
       };
     },
     ["getPublishedBlogPostBySlug"],
-    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog, CACHE_TAGS.locations] },
   ),
 );
 
@@ -1519,7 +1580,7 @@ export const getRelatedBlogPosts = cache(
         .map(({ row }) => toBlogPostCard(row));
     },
     ["getRelatedBlogPosts"],
-    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
   ),
 );
 
@@ -1541,7 +1602,7 @@ export const getPublicLocationLinksByIds = cache(
       return data ?? [];
     },
     ["getPublicLocationLinksByIds"],
-    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.locations] },
   ),
 );
 // ---------------------------------------------------------------------------
@@ -1583,7 +1644,7 @@ export const getPublicLocationInfoByIds = cache(
       });
     },
     ["getPublicLocationInfoByIds"],
-    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.locations] },
   ),
 );
 
@@ -1614,6 +1675,26 @@ export const getLocationEditorial = cache(
       return parseEditorialBlocks(data.content);
     },
     ["getLocationEditorial"],
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-editorial"] },
+  ),
+);
+
+/** Published editorial content for a City — shown on both the /locations and
+ * /studios city pages. */
+export const getCityEditorial = cache(
+  unstable_cache(
+    async (cityId: string): Promise<EditorialBlock[]> => {
+      const supabase = createPublicClient();
+      const { data } = await supabase
+        .from("location_editorial")
+        .select("content")
+        .eq("city_id", cityId)
+        .eq("scope", "city")
+        .eq("status", "published")
+        .maybeSingle();
+      return data ? parseEditorialBlocks(data.content) : [];
+    },
+    ["getCityEditorial"],
     { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-editorial"] },
   ),
 );
@@ -1708,5 +1789,5 @@ export const getSocialMediaLinks = unstable_cache(
     return links;
   },
   ["getSocialMediaLinks"],
-  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG] },
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.settings] },
 );

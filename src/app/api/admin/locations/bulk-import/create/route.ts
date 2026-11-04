@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { CACHE_TAGS } from "@/lib/public-data";
 import { revalidatePublicContentFromRoute } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
 
   if (outcome.created.length > 0) {
     revalidatePath("/admin/locations");
-    revalidatePublicContentFromRoute();
+    revalidatePublicContentFromRoute(CACHE_TAGS.locations);
   }
 
   return NextResponse.json({

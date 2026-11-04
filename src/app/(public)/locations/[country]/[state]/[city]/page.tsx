@@ -218,6 +218,7 @@ export default async function LocationsCityOrStateCategoryPage({ params }: Props
               countrySlug={countrySlug}
             />
           </Suspense>
+          <EditorialSection cityId={city.id} />
         </div>
       </div>
     );

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { CACHE_TAGS, sponsoredStateTag } from "@/lib/public-data";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -57,7 +58,7 @@ export async function createPhotographer(formData: FormData) {
     redirect(`/admin/photographers/new?error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePublicContent();
+  revalidatePublicContent(CACHE_TAGS.sponsored, sponsoredStateTag(values.state_id));
   revalidatePath("/admin/photographers");
   redirect("/admin/photographers");
 }
@@ -73,13 +74,24 @@ export async function updatePhotographer(id: string, formData: FormData) {
     redirect(`/admin/photographers/${id}/edit?error=${encodeURIComponent(message)}`);
   }
 
+  const { data: previous } = await supabase
+    .from("sponsored_photographers")
+    .select("state_id")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await supabase.from("sponsored_photographers").update(values).eq("id", id);
 
   if (error) {
     redirect(`/admin/photographers/${id}/edit?error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePublicContent();
+  // A reassigned sponsor leaves its old state too.
+  revalidatePublicContent(
+    CACHE_TAGS.sponsored,
+    sponsoredStateTag(values.state_id),
+    ...(previous ? [sponsoredStateTag(previous.state_id)] : []),
+  );
   revalidatePath("/admin/photographers");
   redirect("/admin/photographers");
 }
@@ -89,7 +101,12 @@ export async function deletePhotographer(id: string) {
   // No incoming FK references a photographer row, so a direct delete is
   // safe (same reasoning as deleteLocation) — historical/expired records
   // are kept intentionally (see the admin list), deletion is opt-in only.
+  const { data: removed } = await supabase
+    .from("sponsored_photographers")
+    .select("state_id")
+    .eq("id", id)
+    .maybeSingle();
   await supabase.from("sponsored_photographers").delete().eq("id", id);
-  revalidatePublicContent();
+  revalidatePublicContent(CACHE_TAGS.sponsored, ...(removed ? [sponsoredStateTag(removed.state_id)] : []));
   revalidatePath("/admin/photographers");
 }

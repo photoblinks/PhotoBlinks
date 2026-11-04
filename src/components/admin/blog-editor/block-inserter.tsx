@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   Heading2,
+  Heading3,
   Pilcrow,
   List as ListIcon,
   Quote as QuoteIcon,
@@ -28,7 +29,7 @@ export const BLOCK_LIBRARY: {
 }[] = [
   { type: "paragraph", label: "Paragraph", category: "Text", icon: Pilcrow },
   { type: "heading2", label: "Heading (H2)", category: "Text", icon: Heading2 },
-  { type: "heading3", label: "Heading (H3)", category: "Text", icon: Heading2 },
+  { type: "heading3", label: "Heading (H3)", category: "Text", icon: Heading3 },
   { type: "list", label: "List", category: "Text", icon: ListIcon },
   { type: "quote", label: "Quote", category: "Text", icon: QuoteIcon },
   { type: "image", label: "Image", category: "Media", icon: ImageIcon },

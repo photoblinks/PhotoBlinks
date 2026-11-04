@@ -4,7 +4,7 @@ import { GalleryUploader } from "@/components/admin/gallery-uploader";
 import { Field, FieldGroup, FieldLabel, FieldDescription, FieldError } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { updateBannerImages, updateSocialMediaLinks } from "./actions";
+import { purgePublicCache, updateBannerImages, updateSocialMediaLinks } from "./actions";
 
 export default async function AdminSettingsPage({
   searchParams,
@@ -41,7 +41,7 @@ export default async function AdminSettingsPage({
         <form action={updateBannerImages} className="max-w-lg">
           <FieldGroup>
             {error && <FieldError>{error}</FieldError>}
-            {saved && saved !== "social" && !error && (
+            {saved === "1" && !error && (
               <p className="text-sm text-emerald-600">Homepage banner updated.</p>
             )}
 
@@ -144,6 +144,22 @@ export default async function AdminSettingsPage({
             </FieldGroup>
           </form>
         )}
+      </section>
+
+      <section className="mt-10">
+        <h2 className="mb-2 text-xl font-semibold">Public cache</h2>
+        <p className="mb-6 max-w-lg text-sm text-muted-foreground">
+          Edits made in this panel refresh the public site automatically. Use this after changing data
+          directly in the database or importing it outside the panel.
+        </p>
+        <form action={purgePublicCache} className="max-w-lg">
+          {saved === "purged" && (
+            <p className="mb-3 text-sm text-emerald-600">Public cache purged.</p>
+          )}
+          <Button type="submit" variant="outline">
+            Purge public cache
+          </Button>
+        </form>
       </section>
     </div>
   );

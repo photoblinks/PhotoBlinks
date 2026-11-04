@@ -2,8 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ensurePhotographerProfileFromMetadata } from "@/lib/supabase/require-photographer";
+import { AuthSubmitButton } from "@/components/public/auth-submit-button";
+import { VerifyEmailBanner } from "@/components/public/verify-email-banner";
 import { signOut } from "@/lib/auth-actions";
-import { Button } from "@/components/ui/button";
 
 export default async function PhotographerShellLayout({
   children,
@@ -22,16 +23,19 @@ export default async function PhotographerShellLayout({
   // recognizes the request (?pending_email=), otherwise sends the visitor
   // to sign in. Every other /photographer/* route still requires a real
   // session and redirects itself if one is missing (see their own pages).
+  let pendingApproval = false;
   if (user) {
     const { data: profile } = await supabase
       .from("photographer_profiles")
-      .select("is_active")
+      .select("is_active, suspended_at")
       .eq("user_id", user.id)
       .maybeSingle();
 
     if (profile) {
-      // Suspended → the standalone signup route also shows this notice.
-      if (!profile.is_active) redirect("/photographer/signup");
+      // Suspended → the standalone signup route shows the notice. A profile
+      // that is merely awaiting approval keeps full dashboard access.
+      if (profile.suspended_at) redirect("/photographer/signup");
+      pendingApproval = !profile.is_active;
     } else {
       // No profile yet. The combined signup form (/sign-in/photographer)
       // stashed the profile fields in this user's signup metadata since it
@@ -74,12 +78,19 @@ export default async function PhotographerShellLayout({
           ))}
         </nav>
         <form action={signOut} className="mt-4 md:mt-auto md:border-t md:pt-4">
-          <Button type="submit" variant="outline" size="sm" className="w-full">
-            Log out
-          </Button>
+          <AuthSubmitButton label="Log out" pendingLabel="Logging out…" variant="outline" size="sm" />
         </form>
       </aside>
-      <main className="min-w-0 flex-1">{children}</main>
+      <main className="min-w-0 flex-1">
+        <VerifyEmailBanner photographer />
+        {pendingApproval && (
+          <div className="border-b border-sky-200 bg-sky-50 px-4 py-2 text-center text-sm text-sky-900">
+            Your profile is awaiting approval. It becomes visible on the website once your email is verified and
+            PhotoBlinks approves it.
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

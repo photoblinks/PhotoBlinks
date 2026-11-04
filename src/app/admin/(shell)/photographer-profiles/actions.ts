@@ -80,7 +80,11 @@ export async function updatePhotographerProfileByAdmin(id: string, formData: For
 
   if (error) {
     console.error("[updatePhotographerProfileByAdmin] update failed:", error.message);
-    redirect(`${base}?error=${encodeURIComponent("Could not save changes. Please try again.")}`);
+    const message =
+      error.code === "23505"
+        ? "This phone number is already registered with another account."
+        : "Could not save changes. Please try again.";
+    redirect(`${base}?error=${encodeURIComponent(message)}`);
   }
   if (!data || data.length === 0) redirect("/admin/photographer-profiles");
 
@@ -111,6 +115,15 @@ export async function setPhotographerStatus(
   if (!patch) return { error: "Invalid status." };
 
   const supabase = await createClient();
+
+  // A profile can only go live once its owner has verified their email.
+  if (status === "active") {
+    const { data: profile } = await supabase.from("photographer_profiles").select("user_id").eq("id", id).maybeSingle();
+    if (!profile) return { error: "This photographer no longer exists." };
+    const { data: verified } = await supabase.rpc("is_email_verified", { p_user: profile.user_id });
+    if (verified !== true) return { error: "Email not verified yet. Ask the photographer to verify their email first." };
+  }
+
   const { data, error } = await supabase
     .from("photographer_profiles")
     .update(patch)
@@ -120,6 +133,7 @@ export async function setPhotographerStatus(
   if (!data || data.length === 0) return { error: "This photographer no longer exists." };
 
   revalidatePath("/admin/photographer-profiles");
+  revalidatePath("/admin/photographer-requests");
   revalidatePath(`/admin/photographer-profiles/${id}`);
   return { ok: true };
 }

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { GoogleSignInButton } from "@/components/public/google-sign-in-button";
 import { AuthDivider } from "@/components/public/auth-divider";
+import { TurnstileWidget } from "@/components/public/turnstile-widget";
 import { AuthSubmitButton } from "@/components/public/auth-submit-button";
 
 export const metadata: Metadata = {
@@ -44,6 +45,7 @@ export default async function SignUpPage({
             <FieldLabel htmlFor="password">Password</FieldLabel>
             <Input id="password" name="password" type="password" minLength={6} required />
           </Field>
+          <TurnstileWidget />
           {error && <FieldError>{error}</FieldError>}
           <AuthSubmitButton label="Create account" pendingLabel="Creating account…" />
         </FieldGroup>

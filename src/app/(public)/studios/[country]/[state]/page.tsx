@@ -1,7 +1,7 @@
 import { Suspense, cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getActiveStates, getPublishedStudios } from "@/lib/public-data";
+import { getActiveStates, getPublishedStudios, getStateStaticParams } from "@/lib/public-data";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { StudioSearch } from "@/components/public/studio-search";
 import { StudioDirectory, StateStudioResults } from "@/components/public/studio-directory";
@@ -12,8 +12,13 @@ import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 // search now runs client-side (StudioDirectory).
 export const revalidate = 604800;
 
+// Country/state routes pre-build every active entry and 404 anything else without
+// rendering (no ISR entry per junk URL). Redeploy after adding a country or state
+// to the DB, or its pages 404 (the admin Purge button does not help).
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
-  return [];
+  return getStateStaticParams();
 }
 
 type Props = {

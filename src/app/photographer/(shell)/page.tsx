@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PhotographerProfileSummary } from "@/components/photographer/profile-summary";
+import { PhotographerProfileSummary, photographerStatusLabel } from "@/components/photographer/profile-summary";
 import { CompleteProfileModal } from "@/components/photographer/complete-profile-modal";
 import { RealtimeRefresh } from "@/components/realtime/realtime-refresh";
 import { AuthSubmitButton } from "@/components/public/auth-submit-button";
@@ -116,7 +116,7 @@ export default async function PhotographerDashboardPage({
 
         <p className="mt-6 text-sm text-muted-foreground">
           Already verified this email in another tab?{" "}
-          <Link href="/sign-in/photographer?mode=login" className="font-medium text-pb-brand hover:underline">
+          <Link href="/sign-in/photographer" className="font-medium text-pb-brand hover:underline">
             Sign in
           </Link>{" "}
           to continue.
@@ -212,7 +212,7 @@ export default async function PhotographerDashboardPage({
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between gap-2">
                 <dt className="text-muted-foreground">Status</dt>
-                <dd>{profile?.is_active ? "Active" : "Suspended"}</dd>
+                <dd>{profile ? photographerStatusLabel(profile) : "—"}</dd>
               </div>
               <div className="flex justify-between gap-2">
                 <dt className="text-muted-foreground">Account email</dt>

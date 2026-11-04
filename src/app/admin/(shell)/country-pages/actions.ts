@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { CACHE_TAGS } from "@/lib/public-data";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,7 +25,7 @@ export async function updateCountryPage(id: string, formData: FormData) {
     redirect(`/admin/country-pages/${id}/edit?error=${encodeURIComponent(error.message)}`);
   }
 
-  revalidatePublicContent();
+  revalidatePublicContent(CACHE_TAGS.geo);
   revalidatePath("/admin/country-pages");
   redirect("/admin/country-pages");
 }

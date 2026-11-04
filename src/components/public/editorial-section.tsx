@@ -1,4 +1,4 @@
-import { getLocationEditorial, getPublicLocationInfoByIds, getLocationInfoTableConfig } from "@/lib/public-data";
+import { getCityEditorial, getLocationEditorial, getPublicLocationInfoByIds, getLocationInfoTableConfig } from "@/lib/public-data";
 import { BlogContentRenderer } from "@/components/public/blog-content-renderer";
 import type { BlogBlock } from "@/lib/blog/content-blocks";
 
@@ -20,14 +20,15 @@ function collectLocationIds(blocks: BlogBlock[]): string[] {
  * editorial content, and never leaves an empty container. All content and
  * location data exist in the initial HTML — no client fetch.
  */
-export async function EditorialSection({
-  stateId,
-  categoryId,
-}: {
-  stateId: string;
-  categoryId: string | null;
-}) {
-  const blocks = await getLocationEditorial(stateId, categoryId);
+export async function EditorialSection(
+  props:
+    | { stateId: string; categoryId: string | null }
+    | { cityId: string },
+) {
+  const blocks =
+    "cityId" in props
+      ? await getCityEditorial(props.cityId)
+      : await getLocationEditorial(props.stateId, props.categoryId);
   if (blocks.length === 0) return null;
 
   const locationIds = collectLocationIds(blocks);

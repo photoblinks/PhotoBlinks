@@ -7,6 +7,7 @@ import {
   getActiveCities,
   getActiveStates,
   getPublishedLocations,
+  getStateStaticParams,
 } from "@/lib/public-data";
 import { HomeFilter } from "@/components/public/home-filter";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
@@ -22,8 +23,13 @@ import { buildGeoDefaultDescription, extractCategoryNames } from "@/lib/seo-temp
 // pagination run client-side (DirectoryFilter/DirectoryResults).
 export const revalidate = 604800;
 
+// Country/state routes pre-build every active entry and 404 anything else without
+// rendering (no ISR entry per junk URL). Redeploy after adding a country or state
+// to the DB, or its pages 404 (the admin Purge button does not help).
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
-  return [];
+  return getStateStaticParams();
 }
 
 type Props = {

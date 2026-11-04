@@ -90,7 +90,9 @@ export async function updatePhotographerProfile(formData: FormData) {
     .eq("user_id", user.id);
 
   if (error) {
-    redirect(`/photographer/profile?error=${encodeURIComponent(error.message)}`);
+    const message =
+      error.code === "23505" ? "This phone number is already registered with another account." : error.message;
+    redirect(`/photographer/profile?error=${encodeURIComponent(message)}`);
   }
 
   redirect("/photographer/profile?success=1");
