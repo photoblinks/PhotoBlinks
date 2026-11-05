@@ -219,7 +219,7 @@ export default async function LocationsCityOrStateCategoryPage({ params }: Props
               countrySlug={countrySlug}
             />
           </Suspense>
-          <EditorialSection cityId={city.id} />
+          <EditorialSection cityId={city.id} locationTypes={extractCategoryNames(locations)} />
           <RelatedPlaces
             level="city"
             section="locations"

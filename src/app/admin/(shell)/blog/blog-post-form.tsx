@@ -25,6 +25,7 @@ type BlogPost = {
   excerpt: string | null;
   category_id: string | null;
   author_name: string;
+  editor_id: string | null;
   featured_image_url: string | null;
   featured_image_alt: string | null;
   meta_title: string | null;
@@ -94,6 +95,7 @@ export function BlogPostForm({
   categories,
   tags,
   locations,
+  editors,
   error,
 }: {
   action: (formData: FormData) => void;
@@ -101,6 +103,7 @@ export function BlogPostForm({
   categories: { id: string; name: string }[];
   tags: { id: string; name: string }[];
   locations: { id: string; name: string }[];
+  editors: { id: string; name: string; is_default: boolean }[];
   error?: string;
 }) {
   const [title, setTitle] = useState(post?.title ?? "");
@@ -218,7 +221,31 @@ export function BlogPostForm({
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="author_name">Author name</FieldLabel>
+                <FieldLabel htmlFor="editor_id">Editor (shown as author)</FieldLabel>
+                <Select
+                  name="editor_id"
+                  items={[
+                    { value: "default", label: "Site default editor" },
+                    ...editors.map((e) => ({ value: e.id, label: e.is_default ? `${e.name} (default)` : e.name })),
+                  ]}
+                  defaultValue={post?.editor_id ?? "default"}
+                >
+                  <SelectTrigger id="editor_id" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Site default editor</SelectItem>
+                    {editors.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.is_default ? `${e.name} (default)` : e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="author_name">Fallback author name</FieldLabel>
                 <Input id="author_name" name="author_name" defaultValue={post?.author_name ?? ""} required />
               </Field>
 

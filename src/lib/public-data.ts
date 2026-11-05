@@ -8,6 +8,7 @@ import { toTransformUrl } from "@/lib/cf-image-loader";
 import { blogBlockSchema, parseEditorialBlocks, type BlogBlock, type EditorialBlock } from "@/lib/blog/content-blocks";
 import { PACKAGE_COLUMNS, toPhotographerPackage, type PackageRow, type PhotographerPackage } from "@/lib/photographer-options";
 import { LOCATION_INFO_FIELDS, type LocationInfoTableConfig } from "@/lib/location-info-fields";
+import { parseCityQuickFacts, type CityQuickFacts } from "@/lib/city-quick-facts";
 
 // This module is the ONLY place public pages read data from — it never
 // imports the cookie-based admin client (src/lib/supabase/server.ts), so
@@ -235,6 +236,17 @@ export const getActiveCities = unstable_cache(
     return data ?? [];
   },
   ["getActiveCities"],
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.geo] },
+);
+
+/** Admin-entered Quick Facts for a city. Read separately from getActiveCities
+ * so a failure here can never empty the shared city list. */
+export const getCityQuickFacts = unstable_cache(
+  async (cityId: string): Promise<CityQuickFacts> => {
+    const { data } = await createPublicClient().from("cities").select("quick_facts").eq("id", cityId).maybeSingle();
+    return parseCityQuickFacts(data?.quick_facts);
+  },
+  ["getCityQuickFacts"],
   { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.geo] },
 );
 
@@ -1393,6 +1405,7 @@ export type PublicBlogPostDetail = {
   excerpt: string | null;
   content: BlogBlock[];
   authorName: string;
+  editorId: string | null;
   featuredImageUrl: string | null;
   featuredImageAlt: string | null;
   metaTitle: string | null;
@@ -1446,7 +1459,7 @@ export const getPublishedBlogPostBySlug = cache(
       const { data } = await supabase
         .from("blog_posts")
         .select(
-          "id, slug, title, excerpt, content, author_name, featured_image_url, featured_image_alt, meta_title, meta_description, is_featured, category_id, published_at, updated_at, blog_categories(name, slug), blog_faqs(question, answer, sort_order), blog_post_tags(tag_id, blog_tags(id, name, slug)), blog_post_locations(location_id, locations(id, name, slug))",
+          "id, slug, title, excerpt, content, author_name, editor_id, featured_image_url, featured_image_alt, meta_title, meta_description, is_featured, category_id, published_at, updated_at, blog_categories(name, slug), blog_faqs(question, answer, sort_order), blog_post_tags(tag_id, blog_tags(id, name, slug)), blog_post_locations(location_id, locations(id, name, slug))",
         )
         .eq("slug", slug)
         .eq("status", "published")
@@ -1464,6 +1477,7 @@ export const getPublishedBlogPostBySlug = cache(
         excerpt: data.excerpt,
         content: parsePublicBlogContent(data.content),
         authorName: data.author_name,
+        editorId: data.editor_id,
         featuredImageUrl: data.featured_image_url,
         featuredImageAlt: data.featured_image_alt,
         metaTitle: data.meta_title,
@@ -1702,8 +1716,210 @@ export const getCityEditorial = cache(
 );
 
 // ---------------------------------------------------------------------------
+// Editor profiles (E-E-A-T)
+// ---------------------------------------------------------------------------
+
+export type PublicEditor = {
+  id: string;
+  slug: string;
+  name: string;
+  roleTitle: string | null;
+  imageUrl: string | null;
+  bio: string | null;
+  isDefault: boolean;
+  /** Profile URLs, in display order; only the ones that are set. */
+  socials: { key: "instagram" | "youtube" | "x" | "linkedin" | "facebook" | "website"; label: string; url: string }[];
+};
+
+const EDITOR_COLUMNS =
+  "id, slug, name, role_title, image_url, bio, is_default, instagram_url, youtube_url, x_url, linkedin_url, facebook_url, website_url";
+
+type EditorRow = {
+  id: string;
+  slug: string;
+  name: string;
+  role_title: string | null;
+  image_url: string | null;
+  bio: string | null;
+  is_default: boolean;
+  instagram_url: string | null;
+  youtube_url: string | null;
+  x_url: string | null;
+  linkedin_url: string | null;
+  facebook_url: string | null;
+  website_url: string | null;
+};
+
+function toPublicEditor(row: EditorRow): PublicEditor {
+  const links: PublicEditor["socials"] = [
+    { key: "instagram", label: "Instagram", url: row.instagram_url ?? "" },
+    { key: "youtube", label: "YouTube", url: row.youtube_url ?? "" },
+    { key: "x", label: "X", url: row.x_url ?? "" },
+    { key: "linkedin", label: "LinkedIn", url: row.linkedin_url ?? "" },
+    { key: "facebook", label: "Facebook", url: row.facebook_url ?? "" },
+    { key: "website", label: "Website", url: row.website_url ?? "" },
+  ];
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    roleTitle: row.role_title,
+    imageUrl: row.image_url,
+    bio: row.bio,
+    isDefault: row.is_default,
+    socials: links.filter((link) => link.url),
+  };
+}
+
+/** The editor to credit: the one chosen for a piece, else the site default.
+ * Null when no editors exist, so callers simply render nothing. */
+export const getEditorForContent = cache(
+  unstable_cache(
+    async (editorId: string | null): Promise<PublicEditor | null> => {
+      const supabase = createPublicClient();
+      if (editorId) {
+        const { data } = await supabase.from("editors").select(EDITOR_COLUMNS).eq("id", editorId).maybeSingle();
+        if (data) return toPublicEditor(data);
+      }
+      const { data } = await supabase.from("editors").select(EDITOR_COLUMNS).eq("is_default", true).maybeSingle();
+      return data ? toPublicEditor(data) : null;
+    },
+    ["getEditorForContent"],
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog, "location-editorial"] },
+  ),
+);
+
+export const getEditorBySlug = cache(
+  unstable_cache(
+    async (slug: string): Promise<PublicEditor | null> => {
+      const { data } = await createPublicClient().from("editors").select(EDITOR_COLUMNS).eq("slug", slug).maybeSingle();
+      return data ? toPublicEditor(data) : null;
+    },
+    ["getEditorBySlug"],
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog, "location-editorial"] },
+  ),
+);
+
+/** Published posts credited to an editor; the default editor also gets posts
+ * with no editor chosen. */
+export const getEditorPosts = unstable_cache(
+  async (editorId: string, isDefault: boolean): Promise<PublicBlogPostCard[]> => {
+    let query = createPublicClient().from("blog_posts").select(BLOG_POST_CARD_COLUMNS).eq("status", "published");
+    query = isDefault ? query.or(`editor_id.eq.${editorId},editor_id.is.null`) : query.eq("editor_id", editorId);
+    const { data } = await query.order("published_at", { ascending: false });
+    return (data ?? []).map(toBlogPostCard);
+  },
+  ["getEditorPosts"],
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
+);
+
+/** Every editor profile — for the llms-full.txt authors section. */
+export const getAllEditors = unstable_cache(
+  async (): Promise<PublicEditor[]> => {
+    const { data } = await createPublicClient().from("editors").select(EDITOR_COLUMNS).order("name");
+    return (data ?? []).map(toPublicEditor);
+  },
+  ["getAllEditors"],
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
+);
+
+export const getEditorsForSitemap = unstable_cache(
+  async (): Promise<{ slug: string; updatedAt: string }[]> => {
+    const { data } = await createPublicClient().from("editors").select("slug, updated_at");
+    return (data ?? []).map((row) => ({ slug: row.slug, updatedAt: row.updated_at }));
+  },
+  ["getEditorsForSitemap"],
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.blog] },
+);
+
+/** Published editorial content for a City + Category page. */
+export const getCityCategoryEditorial = cache(
+  unstable_cache(
+    async (cityId: string, categoryId: string): Promise<EditorialBlock[]> => {
+      const { data } = await createPublicClient()
+        .from("location_editorial")
+        .select("content")
+        .eq("city_id", cityId)
+        .eq("category_id", categoryId)
+        .eq("scope", "city_category")
+        .eq("status", "published")
+        .maybeSingle();
+      return data ? parseEditorialBlocks(data.content) : [];
+    },
+    ["getCityCategoryEditorial"],
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, "location-editorial"] },
+  ),
+);
+
+/** Admin SEO overrides + published blog for a photographer State page
+ * (citySlug null) or City page. SEO applies as soon as it is saved; the blog
+ * only once published. Photographer cities are free text, so the city is
+ * keyed by slug, not by a cities row. */
+export const getPhotographerGeoPage = cache(
+  unstable_cache(
+    async (
+      countrySlug: string,
+      stateSlug: string,
+      citySlug: string | null,
+    ): Promise<{ seo: GeoPageSeo | null; blocks: EditorialBlock[] }> => {
+      const supabase = createPublicClient();
+      const { data: state } = await supabase
+        .from("states")
+        .select("id, countries!inner(slug)")
+        .eq("slug", stateSlug)
+        .eq("countries.slug", countrySlug)
+        .maybeSingle();
+      if (!state) return { seo: null, blocks: [] };
+
+      let seoQuery = supabase
+        .from("photographer_geo_seo")
+        .select("image_url, h1_title, meta_title, meta_description")
+        .eq("state_id", state.id);
+      let blogQuery = supabase
+        .from("location_editorial")
+        .select("content")
+        .eq("state_id", state.id)
+        .eq("scope", citySlug ? "photographer_city" : "photographer_state")
+        .eq("status", "published");
+      if (citySlug) {
+        seoQuery = seoQuery.eq("city_slug", citySlug);
+        blogQuery = blogQuery.eq("city_slug", citySlug);
+      } else {
+        seoQuery = seoQuery.is("city_slug", null);
+      }
+
+      const [{ data: seo }, { data: blog }] = await Promise.all([seoQuery.maybeSingle(), blogQuery.maybeSingle()]);
+      return { seo: seo ?? null, blocks: blog ? parseEditorialBlocks(blog.content) : [] };
+    },
+    ["getPhotographerGeoPage"],
+    { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.photographers, "location-editorial"] },
+  ),
+);
+
+// ---------------------------------------------------------------------------
 // Public photographer directory
 // ---------------------------------------------------------------------------
+
+/** Approximate centre of each city (`state-slug/city-slug`): the average
+ * position of its published locations. Used to rank photographers by
+ * distance, since a photographer profile only stores a city name. */
+export const getCityCentroids = unstable_cache(
+  async (): Promise<Record<string, { lat: number; lng: number }>> => {
+    const sums = new Map<string, { lat: number; lng: number; n: number }>();
+    for (const l of await getPublishedLocations()) {
+      if (!l.state || !l.city || l.latitude == null || l.longitude == null) continue;
+      const key = `${l.state.slug}/${l.city.slug}`;
+      const sum = sums.get(key) ?? { lat: 0, lng: 0, n: 0 };
+      sum.lat += l.latitude;
+      sum.lng += l.longitude;
+      sum.n += 1;
+      sums.set(key, sum);
+    }
+    return Object.fromEntries([...sums].map(([key, s]) => [key, { lat: s.lat / s.n, lng: s.lng / s.n }]));
+  },
+  ["getCityCentroids"],
+  { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.locations, CACHE_TAGS.photographers] },
+);
 
 export type PublicPhotographer = {
   id: string;
@@ -1713,20 +1929,31 @@ export type PublicPhotographer = {
   bio: string | null;
   avatarUrl: string | null;
   instagramUrl: string | null;
+  youtubeUrl: string | null;
   portfolioUrl: string | null;
-  /** Only populated by getPublicPhotographerBySlug — never in the listing. */
+  logoUrl: string | null;
+  bannerUrl: string | null;
   phoneNumber: string | null;
   whatsappNumber: string | null;
   city: string;
   citySlug: string;
   state: GeoRef;
   country: GeoRef;
+  /** Lowest effective package price (offer if set, else actual); null without packages. */
   startingPrice: number | null;
+  /** That package's actual price — differs from startingPrice only when it has an offer. */
+  startingActualPrice: number | null;
+  offersPreWedding: boolean;
+  offersWedding: boolean;
+  isVerified: boolean;
   experienceYears: number | null;
   services: string[];
   languages: string[];
   travelsToOtherCities: boolean;
   createdAt: string;
+  /** Admin-set title tag / meta description overrides. */
+  seoTitle: string | null;
+  seoDescription: string | null;
 };
 
 type PublicPhotographerRow = {
@@ -1736,7 +1963,14 @@ type PublicPhotographerRow = {
   studio_name: string;
   bio: string | null;
   avatar_url: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  starting_actual_price: number | null;
+  offers_pre_wedding: boolean;
+  offers_wedding: boolean;
+  is_verified: boolean;
   instagram_url: string | null;
+  youtube_url: string | null;
   portfolio_url: string | null;
   phone_number: string | null;
   whatsapp_number: string | null;
@@ -1752,6 +1986,8 @@ type PublicPhotographerRow = {
   languages: string[];
   travels_to_other_cities: boolean;
   created_at: string;
+  seo_title: string | null;
+  seo_description: string | null;
 };
 
 function toPublicPhotographer(row: PublicPhotographerRow): PublicPhotographer {
@@ -1762,7 +1998,14 @@ function toPublicPhotographer(row: PublicPhotographerRow): PublicPhotographer {
     studioName: row.studio_name,
     bio: row.bio,
     avatarUrl: row.avatar_url,
+    logoUrl: row.logo_url ?? null,
+    bannerUrl: row.banner_url ?? null,
+    startingActualPrice: row.starting_actual_price ?? null,
+    offersPreWedding: row.offers_pre_wedding ?? true,
+    offersWedding: row.offers_wedding ?? false,
+    isVerified: row.is_verified ?? false,
     instagramUrl: row.instagram_url,
+    youtubeUrl: row.youtube_url ?? null,
     portfolioUrl: row.portfolio_url,
     phoneNumber: row.phone_number,
     whatsappNumber: row.whatsapp_number,
@@ -1776,12 +2019,13 @@ function toPublicPhotographer(row: PublicPhotographerRow): PublicPhotographer {
     languages: row.languages,
     travelsToOtherCities: row.travels_to_other_cities,
     createdAt: row.created_at,
+    seoTitle: row.seo_title ?? null,
+    seoDescription: row.seo_description ?? null,
   };
 }
 
 /** Every publicly visible photographer (active, not suspended, email-verified
- * — enforced inside get_public_photographers, which is service-role only).
- * Contact numbers are never included here. */
+ * — enforced inside get_public_photographers, which is service-role only). */
 export const getPublicPhotographers = unstable_cache(
   async (): Promise<PublicPhotographer[]> => {
     const { data } = await createPublicClient().rpc("get_public_photographers");

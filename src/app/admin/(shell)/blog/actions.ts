@@ -36,6 +36,7 @@ const postSchema = z.object({
   slug: z.string().trim().min(1, "Slug is required.").max(200),
   excerpt: z.string().trim().max(500).optional(),
   category_id: z.string().uuid().optional(),
+  editor_id: z.string().uuid().optional(),
   author_name: z.string().trim().min(1, "Author name is required.").max(150),
   featured_image_url: featuredImageUrlSchema,
   featured_image_alt: z.string().trim().max(300).optional(),
@@ -60,6 +61,10 @@ function parseBlogPostForm(formData: FormData) {
     slug: slugInput ? slugify(slugInput) : slugify(title),
     excerpt: String(formData.get("excerpt") ?? "").trim() || undefined,
     category_id: categoryId || undefined,
+    editor_id: (() => {
+      const value = String(formData.get("editor_id") ?? "").trim();
+      return value && value !== "default" ? value : undefined;
+    })(),
     author_name: String(formData.get("author_name") ?? "").trim(),
     featured_image_url: String(formData.get("featured_image_url") ?? "").trim(),
     featured_image_alt: String(formData.get("featured_image_alt") ?? "").trim() || undefined,
@@ -148,6 +153,7 @@ export async function createBlogPost(formData: FormData) {
       content: postValues.content,
       category_id: postValues.category_id ?? null,
       author_name: postValues.author_name,
+      editor_id: postValues.editor_id ?? null,
       author_id: admin.id,
       featured_image_url: postValues.featured_image_url ?? null,
       featured_image_alt: postValues.featured_image_alt ?? null,
@@ -207,6 +213,7 @@ export async function updateBlogPost(id: string, formData: FormData) {
       content: postValues.content,
       category_id: postValues.category_id ?? null,
       author_name: postValues.author_name,
+      editor_id: postValues.editor_id ?? null,
       featured_image_url: postValues.featured_image_url ?? null,
       featured_image_alt: postValues.featured_image_alt ?? null,
       meta_title: postValues.meta_title ?? null,

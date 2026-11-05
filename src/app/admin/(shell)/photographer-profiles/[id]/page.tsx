@@ -11,7 +11,9 @@ import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field
 import { AuthSubmitButton } from "@/components/public/auth-submit-button";
 import { CountryStateFields } from "@/components/photographer/country-state-fields";
 import { PhotographerStatusActions } from "@/components/admin/photographer-status-actions";
-import { updatePhotographerProfileByAdmin } from "../actions";
+import { setPhotographerVerified, updatePhotographerProfileByAdmin } from "../actions";
+import { Button } from "@/components/ui/button";
+import { VerifiedBadge } from "@/components/public/verified-badge";
 import {
   PHOTOGRAPHER_STATUS_LABEL,
   type PhotographerProfileRow,
@@ -36,11 +38,13 @@ export default async function AdminPhotographerProfileDetailPage({
   const { error, success } = await searchParams;
 
   const supabase = await createClient();
-  const [{ data }, countries, states] = await Promise.all([
+  const [{ data }, countries, states, { data: verifiedRow }] = await Promise.all([
     supabase.rpc("get_admin_photographer_profiles", { p_profile_id: id, p_limit: 1 }),
     getActiveCountries(),
     getActiveStates(),
+    supabase.from("photographer_profiles").select("is_verified, youtube_url, seo_title, seo_description").eq("id", id).maybeSingle(),
   ]);
+  const isVerified = verifiedRow?.is_verified === true;
   const profile = ((data ?? []) as PhotographerProfileRow[])[0];
   if (!profile) notFound();
 
@@ -79,6 +83,19 @@ export default async function AdminPhotographerProfileDetailPage({
         </p>
         <PhotographerStatusActions id={profile.id} current={profile.status} />
       </div>
+
+      <form action={setPhotographerVerified.bind(null, profile.id)} className="mt-4 rounded-lg border bg-card p-4">
+        <h2 className="mb-1 flex items-center gap-1.5 text-sm font-medium">
+          Verified badge {isVerified && <VerifiedBadge className="size-4" />}
+        </h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Shows a blue tick next to the studio name on the photographer&apos;s card and public page.
+        </p>
+        <input type="hidden" name="verified" value={isVerified ? "false" : "true"} />
+        <Button type="submit" variant={isVerified ? "outline" : "default"} size="sm">
+          {isVerified ? "Remove verified badge" : "Mark as verified"}
+        </Button>
+      </form>
 
       {success && (
         <p className="mt-6 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950/30 dark:text-green-400">
@@ -123,8 +140,31 @@ export default async function AdminPhotographerProfileDetailPage({
             <Input id="instagram_url" name="instagram_url" type="url" defaultValue={profile.instagram_url ?? ""} />
           </Field>
           <Field>
+            <FieldLabel htmlFor="youtube_url">YouTube URL</FieldLabel>
+            <Input id="youtube_url" name="youtube_url" type="url" defaultValue={verifiedRow?.youtube_url ?? ""} />
+          </Field>
+          <Field>
             <FieldLabel htmlFor="portfolio_url">Portfolio URL</FieldLabel>
             <Input id="portfolio_url" name="portfolio_url" type="url" defaultValue={profile.portfolio_url ?? ""} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="seo_title">SEO Title Tag</FieldLabel>
+            <Input
+              id="seo_title"
+              name="seo_title"
+              defaultValue={verifiedRow?.seo_title ?? ""}
+              placeholder="Shown in Google results (blank = auto-generated)"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="seo_description">SEO Meta Description</FieldLabel>
+            <Textarea
+              id="seo_description"
+              name="seo_description"
+              rows={2}
+              defaultValue={verifiedRow?.seo_description ?? ""}
+              placeholder="Shown in Google results (blank = auto-generated)"
+            />
           </Field>
           {error && <FieldError>{error}</FieldError>}
           <AuthSubmitButton label="Save changes" pendingLabel="Saving…" />

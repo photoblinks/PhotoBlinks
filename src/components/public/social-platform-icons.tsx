@@ -52,7 +52,7 @@ function FacebookIcon({ className }: { className?: string }) {
   );
 }
 
-function YoutubeIcon({ className }: { className?: string }) {
+export function YoutubeIcon({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"

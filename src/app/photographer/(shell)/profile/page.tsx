@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { updatePhotographerProfile } from "./actions";
@@ -11,6 +12,7 @@ import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field
 import { AuthSubmitButton } from "@/components/public/auth-submit-button";
 import { PhotographerProfileSummary } from "@/components/photographer/profile-summary";
 import { CountryStateFields } from "@/components/photographer/country-state-fields";
+import { ProfileImageField } from "@/components/photographer/profile-image-field";
 
 export const metadata: Metadata = {
   title: "My Profile",
@@ -44,6 +46,14 @@ export default async function PhotographerProfilePage({
     getActiveCountries(),
     getActiveStates(),
   ]);
+
+  const { data: packages } = await supabase
+    .from("photographer_packages")
+    .select("actual_price, offer_price")
+    .eq("photographer_id", user.id)
+    .eq("is_visible", true);
+  const prices = (packages ?? []).map((p) => p.offer_price ?? p.actual_price);
+  const startingPrice = prices.length > 0 ? Math.min(...prices) : null;
 
   const countryName = normalizeRelation(profile?.countries)?.name ?? null;
   const stateName = normalizeRelation(profile?.states)?.name ?? null;
@@ -91,6 +101,20 @@ export default async function PhotographerProfilePage({
               required
             />
           </Field>
+          <ProfileImageField
+            name="logo_url"
+            label="Logo"
+            hint="Square image works best. Shown on your card next to your studio name."
+            shape="logo"
+            defaultValue={profile?.logo_url}
+          />
+          <ProfileImageField
+            name="banner_url"
+            label="Banner image"
+            hint="Wide photo shown at the top of your card."
+            shape="banner"
+            defaultValue={profile?.banner_url}
+          />
           <CountryStateFields
             countries={countries}
             states={states}
@@ -117,16 +141,26 @@ export default async function PhotographerProfilePage({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="starting_price">Starting price (₹)</FieldLabel>
-            <Input
-              id="starting_price"
-              name="starting_price"
-              type="number"
-              min={0}
-              step={500}
-              defaultValue={profile?.starting_price ?? ""}
-              placeholder="25000"
-            />
+            <FieldLabel>Starting price</FieldLabel>
+            {startingPrice != null ? (
+              <p className="text-sm">
+                <span className="font-semibold">₹{startingPrice.toLocaleString("en-IN")}</span>{" "}
+                <span className="text-muted-foreground">
+                  — the lowest price across your packages (offer price when set).{" "}
+                </span>
+                <Link href="/photographer/packages" className="font-medium text-pb-brand hover:underline">
+                  Manage packages
+                </Link>
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Your starting price comes from your packages. Create a package to show it on your card, and add an
+                offer price there.{" "}
+                <Link href="/photographer/packages" className="font-medium text-pb-brand hover:underline">
+                  Create a package
+                </Link>
+              </p>
+            )}
           </Field>
           <Field>
             <FieldLabel htmlFor="experience_years">Years of experience</FieldLabel>
@@ -139,6 +173,27 @@ export default async function PhotographerProfilePage({
               defaultValue={profile?.experience_years ?? ""}
             />
           </Field>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-sm font-medium">Shoot types you offer</legend>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="offers_pre_wedding"
+                defaultChecked={profile?.offers_pre_wedding ?? true}
+                className="size-4"
+              />
+              Pre-wedding
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="offers_wedding"
+                defaultChecked={profile?.offers_wedding ?? false}
+                className="size-4"
+              />
+              Wedding
+            </label>
+          </fieldset>
           <CheckboxGroup legend="Services" name="services" options={PHOTOGRAPHER_SERVICES} selected={profile?.services ?? []} />
           <CheckboxGroup legend="Languages spoken" name="languages" options={PHOTOGRAPHER_LANGUAGES} selected={profile?.languages ?? []} />
           <label className="flex items-center gap-2 text-sm">
@@ -178,6 +233,16 @@ export default async function PhotographerProfilePage({
               type="url"
               defaultValue={profile?.instagram_url ?? ""}
               placeholder="https://instagram.com/yourhandle"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="youtube_url">YouTube URL</FieldLabel>
+            <Input
+              id="youtube_url"
+              name="youtube_url"
+              type="url"
+              defaultValue={profile?.youtube_url ?? ""}
+              placeholder="https://youtube.com/@yourchannel"
             />
           </Field>
           <Field>

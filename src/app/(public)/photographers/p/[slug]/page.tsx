@@ -2,16 +2,20 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Camera, Globe, Languages, MapPin, MessageCircle, Phone, Plane, Wallet, Award } from "lucide-react";
+import { Camera, Globe, Languages, MapPin, Phone, Plane, Wallet, Award } from "lucide-react";
+import { YoutubeIcon } from "@/components/public/social-platform-icons";
+import { WhatsAppIcon } from "@/components/public/whatsapp-icon";
 import { getPublicPhotographerBySlug, getPublicPhotographerPackages, getPublicPhotographers } from "@/lib/public-data";
 import { PACKAGE_TYPES, PACKAGE_TYPE_LABEL } from "@/lib/photographer-options";
 import { PackageCard } from "@/components/public/package-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { JsonLd } from "@/components/public/json-ld";
 import { PhotographerCard } from "@/components/public/photographer-card";
+import { ShareButton } from "@/components/public/share-button";
+import { VerifiedBadge } from "@/components/public/verified-badge";
 import { Button } from "@/components/ui/button";
 import { buildWhatsAppLink } from "@/lib/format";
-import { DEFAULT_OG_IMAGE, absoluteUrl, buildBreadcrumbList, socialImageUrl } from "@/lib/jsonld";
+import { absoluteUrl, buildBreadcrumbList } from "@/lib/jsonld";
 
 export const revalidate = 604800;
 
@@ -26,10 +30,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = await getPublicPhotographerBySlug(slug);
   if (!p) return {};
 
-  const title = `${p.studioName} — Pre-Wedding Photographer in ${p.city}`;
+  const title = p.seoTitle || `${p.studioName} — Pre-Wedding Photographer in ${p.city}`;
+  const price = p.startingPrice != null ? ` Starting from ₹${p.startingPrice.toLocaleString("en-IN")}.` : "";
   const description =
+    p.seoDescription ||
     p.bio?.slice(0, 155) ||
-    `${p.studioName} by ${p.displayName} — pre-wedding photography in ${p.city}, ${p.state.name}. View services, experience and contact details.`;
+    `${p.studioName} by ${p.displayName} — pre-wedding photography in ${p.city}, ${p.state.name}.${price} View services, experience and contact details.`;
   const path = `/photographers/p/${p.slug}`;
 
   return {
@@ -42,8 +48,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: path,
       siteName: "PhotoBlinks",
       type: "profile",
-      images: [p.avatarUrl ? socialImageUrl(p.avatarUrl) : DEFAULT_OG_IMAGE],
+      images: [{ url: `${path}/og`, width: 1200, height: 630, alt: `${p.studioName} — pre-wedding photographer` }],
     },
+    twitter: { card: "summary_large_image", title, description, images: [`${path}/og`] },
   };
 }
 
@@ -85,23 +92,29 @@ export default async function PhotographerPage({ params }: Props) {
     name: p.studioName,
     url: absoluteUrl(path),
     description: p.bio ?? undefined,
-    image: p.avatarUrl ?? undefined,
+    image: p.logoUrl ?? p.avatarUrl ?? p.bannerUrl ?? undefined,
     founder: { "@type": "Person", name: p.displayName },
     areaServed: p.city,
     address: { "@type": "PostalAddress", addressLocality: p.city, addressRegion: p.state.name, addressCountry: p.country.name },
     knowsLanguage: p.languages.length > 0 ? p.languages : undefined,
-    sameAs: [p.instagramUrl, p.portfolioUrl].filter(Boolean),
+    sameAs: [p.instagramUrl, p.youtubeUrl, p.portfolioUrl].filter(Boolean),
     makesOffer: p.services.map((service) => ({ "@type": "Offer", itemOffered: { "@type": "Service", name: service } })),
   };
 
   return (
     <div>
-      <section className="relative bg-linear-to-br from-emerald-950 via-pb-brand to-emerald-800 pt-12 pb-24 sm:pt-16 sm:pb-28">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+      <section className="relative overflow-hidden bg-linear-to-br from-emerald-950 via-pb-brand to-emerald-800 pt-12 pb-24 sm:pt-16 sm:pb-28">
+        {p.bannerUrl && (
+          <>
+            <Image src={p.bannerUrl} alt="" fill priority sizes="100vw" className="object-cover" />
+            <div aria-hidden="true" className="absolute inset-0 bg-black/45" />
+          </>
+        )}
+        <div className="relative mx-auto max-w-5xl px-4 sm:px-6">
           <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-end sm:text-left">
             <div className="relative size-32 shrink-0 overflow-hidden rounded-full bg-white/10 ring-4 ring-white/30 sm:size-40">
-              {p.avatarUrl ? (
-                <Image src={p.avatarUrl} alt={p.displayName} fill sizes="160px" priority className="object-cover" />
+              {p.logoUrl ?? p.avatarUrl ? (
+                <Image src={(p.logoUrl ?? p.avatarUrl)!} alt={p.displayName} fill sizes="160px" priority className="object-cover" />
               ) : (
                 <div className="flex h-full items-center justify-center">
                   <Camera className="size-12 text-white/70" strokeWidth={1.25} />
@@ -109,7 +122,10 @@ export default async function PhotographerPage({ params }: Props) {
               )}
             </div>
             <div>
-              <h1 className="font-heading text-3xl font-semibold text-white sm:text-4xl">{p.studioName}</h1>
+              <h1 className="font-heading flex items-center justify-center gap-2 text-3xl font-semibold text-white sm:justify-start sm:text-4xl">
+                {p.studioName}
+                {p.isVerified && <VerifiedBadge className="size-7" />}
+              </h1>
               <p className="mt-1 text-lg text-white/85">by {p.displayName}</p>
               <p className="mt-2 flex items-center justify-center gap-1.5 text-white/80 sm:justify-start">
                 <MapPin className="size-4" />
@@ -124,7 +140,7 @@ export default async function PhotographerPage({ params }: Props) {
       </section>
 
       <div className="relative z-10 mx-auto -mt-10 max-w-5xl px-4 sm:px-6">
-        <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border bg-white p-4 shadow-lg sm:justify-start">
+        <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border bg-white p-4 shadow-lg">
           {p.phoneNumber && (
             <Button render={<a href={`tel:${p.phoneNumber.replace(/[^\d+]/g, "")}`} />}>
               <Phone className="size-4" /> Call
@@ -135,7 +151,7 @@ export default async function PhotographerPage({ params }: Props) {
               variant="outline"
               render={<a href={buildWhatsAppLink(p.whatsappNumber)} target="_blank" rel="noopener noreferrer" />}
             >
-              <MessageCircle className="size-4" /> WhatsApp
+              <WhatsAppIcon className="size-4" /> WhatsApp
             </Button>
           )}
           {p.instagramUrl && (
@@ -143,11 +159,17 @@ export default async function PhotographerPage({ params }: Props) {
               <Camera className="size-4" /> Instagram
             </Button>
           )}
+          {p.youtubeUrl && (
+            <Button variant="outline" render={<a href={p.youtubeUrl} target="_blank" rel="noopener noreferrer nofollow" />}>
+              <YoutubeIcon className="size-4" /> YouTube
+            </Button>
+          )}
           {p.portfolioUrl && (
             <Button variant="outline" render={<a href={p.portfolioUrl} target="_blank" rel="noopener noreferrer nofollow" />}>
               <Globe className="size-4" /> Portfolio
             </Button>
           )}
+          <ShareButton size="default" title={`${p.studioName} — Pre-Wedding Photographer`} url={absoluteUrl(`/photographers/p/${p.slug}`)} />
         </div>
       </div>
 
@@ -192,9 +214,9 @@ export default async function PhotographerPage({ params }: Props) {
             )}
           </div>
 
-          {facts.length > 0 && (
-            <aside className="h-fit rounded-2xl border bg-white p-5 shadow-sm">
-              <h2 className="font-heading mb-4 text-lg font-semibold">At a glance</h2>
+          <aside className="h-fit rounded-2xl border bg-white p-5 shadow-sm">
+            <h2 className="font-heading mb-4 text-lg font-semibold">At a glance</h2>
+            {facts.length > 0 && (
               <dl className="flex flex-col gap-4">
                 {facts.map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-start gap-3">
@@ -206,8 +228,24 @@ export default async function PhotographerPage({ params }: Props) {
                   </div>
                 ))}
               </dl>
-            </aside>
-          )}
+            )}
+            <div className={`flex flex-col gap-2 ${facts.length > 0 ? "mt-5 border-t pt-5" : ""}`}>
+              {p.phoneNumber && (
+                <Button render={<a href={`tel:${p.phoneNumber.replace(/[^\d+]/g, "")}`} />}>
+                  <Phone className="size-4" /> Call
+                </Button>
+              )}
+              {p.whatsappNumber && (
+                <Button
+                  className="bg-[#25D366] text-white hover:bg-[#1fb857]"
+                  render={<a href={buildWhatsAppLink(p.whatsappNumber)} target="_blank" rel="noopener noreferrer" />}
+                >
+                  <WhatsAppIcon className="size-4" /> WhatsApp
+                </Button>
+              )}
+              <ShareButton title={`${p.studioName} — Pre-Wedding Photographer`} url={absoluteUrl(`/photographers/p/${p.slug}`)} />
+            </div>
+          </aside>
         </div>
 
         {sameCity.length > 0 && (

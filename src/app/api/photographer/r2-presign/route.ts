@@ -18,8 +18,9 @@ const CONTENT_TYPE_EXT: Record<(typeof ALLOWED_IMAGE_CONTENT_TYPES)[number], str
 };
 
 const bodySchema = z.object({
-  // "package" files go to photographer-packages/ (not swept as orphans).
-  purpose: z.enum(["package"]).optional(),
+  // "package" / "profile" files go to photographer-packages/ and
+  // photographer-profiles/ (neither is swept as orphans).
+  purpose: z.enum(["package", "profile"]).optional(),
   contentType: z.enum(ALLOWED_IMAGE_CONTENT_TYPES, {
     message: "Unsupported file type. Only JPEG, PNG, and WebP images are allowed.",
   }),
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
   // and arbitrary key injection.
   const ext = CONTENT_TYPE_EXT[contentType];
   const storageKey = buildImageKey(
-    purpose === "package" ? "photographer-packages" : "photographers",
+    purpose === "package" ? "photographer-packages" : purpose === "profile" ? "photographer-profiles" : "photographers",
     photographer.id,
     `${Date.now()}.${ext}`,
   );

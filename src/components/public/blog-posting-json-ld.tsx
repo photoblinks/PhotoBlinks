@@ -1,4 +1,4 @@
-import type { PublicBlogPostDetail } from "@/lib/public-data";
+import type { PublicBlogPostDetail, PublicEditor } from "@/lib/public-data";
 import { buildBlogPostingJsonLd } from "@/lib/jsonld";
 import { JsonLd } from "./json-ld";
 import type { BreadcrumbItem } from "./breadcrumbs";
@@ -10,9 +10,11 @@ import type { BreadcrumbItem } from "./breadcrumbs";
 export function BlogPostingJsonLd({
   post,
   breadcrumbItems,
+  editor,
 }: {
   post: PublicBlogPostDetail;
   breadcrumbItems: BreadcrumbItem[];
+  editor: PublicEditor | null;
 }) {
-  return <JsonLd data={buildBlogPostingJsonLd(post, breadcrumbItems)} />;
+  return <JsonLd data={buildBlogPostingJsonLd(post, breadcrumbItems, editor)} />;
 }

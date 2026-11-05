@@ -8,6 +8,7 @@ import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
 import { isValidCountryState } from "@/lib/supabase/require-photographer";
+import { isYouTubeUrl } from "@/lib/photographer-options";
 import type { PhotographerStatus } from "./types";
 
 // Every action re-checks the admin gate server-side; writes go through the
@@ -34,7 +35,13 @@ const profileSchema = z.object({
   phone_number: z.string().trim().regex(PHONE_REGEX, "Enter a valid phone number."),
   whatsapp_number: z.string().trim().regex(PHONE_REGEX, "Enter a valid WhatsApp number."),
   instagram_url: httpsUrl("Enter a valid Instagram URL."),
+  youtube_url: httpsUrl("Enter a valid YouTube URL.").refine(
+    (v) => v === undefined || isYouTubeUrl(v),
+    "Enter a youtube.com or youtu.be link.",
+  ),
   portfolio_url: httpsUrl("Enter a valid portfolio URL."),
+  seo_title: z.string().trim().max(120, "Title tag must be 120 characters or fewer.").optional(),
+  seo_description: z.string().trim().max(320, "Meta description must be 320 characters or fewer.").optional(),
 });
 
 const idSchema = z.string().uuid();
@@ -56,6 +63,9 @@ export async function updatePhotographerProfileByAdmin(id: string, formData: For
       phone_number: String(formData.get("phone_number") ?? ""),
       whatsapp_number: String(formData.get("whatsapp_number") ?? ""),
       instagram_url: String(formData.get("instagram_url") ?? "").trim() || undefined,
+      youtube_url: String(formData.get("youtube_url") ?? "").trim() || undefined,
+      seo_title: String(formData.get("seo_title") ?? "").trim() || undefined,
+      seo_description: String(formData.get("seo_description") ?? "").trim() || undefined,
       portfolio_url: String(formData.get("portfolio_url") ?? "").trim() || undefined,
     });
   } catch (err) {
@@ -75,6 +85,9 @@ export async function updatePhotographerProfileByAdmin(id: string, formData: For
       ...values,
       bio: values.bio ?? null,
       instagram_url: values.instagram_url ?? null,
+      youtube_url: values.youtube_url ?? null,
+      seo_title: values.seo_title ?? null,
+      seo_description: values.seo_description ?? null,
       portfolio_url: values.portfolio_url ?? null,
     })
     .eq("id", id)
@@ -90,6 +103,7 @@ export async function updatePhotographerProfileByAdmin(id: string, formData: For
   }
   if (!data || data.length === 0) redirect("/admin/photographer-profiles");
 
+  revalidatePublicContent(CACHE_TAGS.photographers);
   revalidatePath("/admin/photographer-profiles");
   redirect(`${base}?success=1`);
 }
@@ -139,4 +153,26 @@ export async function setPhotographerStatus(
   revalidatePath("/admin/photographer-requests");
   revalidatePath(`/admin/photographer-profiles/${id}`);
   return { ok: true };
+}
+
+/** Grants or removes the blue "verified" tick. The DB trigger
+ * protect_photographer_status_fields also blocks non-admins from changing it. */
+export async function setPhotographerVerified(id: string, formData: FormData) {
+  const base = `/admin/photographer-profiles/${id}`;
+  if (!idSchema.safeParse(id).success) redirect("/admin/photographer-profiles");
+  if (!(await getAuthorizedAdminUser())) redirect("/admin/login");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("photographer_profiles")
+    .update({ is_verified: formData.get("verified") === "true" })
+    .eq("id", id)
+    .select("id");
+  if (error || !data || data.length === 0) {
+    redirect(`${base}?error=${encodeURIComponent("Could not update the verified badge.")}`);
+  }
+
+  revalidatePublicContent(CACHE_TAGS.photographers);
+  revalidatePath(base);
+  redirect(`${base}?success=1`);
 }

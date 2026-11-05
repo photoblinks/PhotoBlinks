@@ -22,8 +22,9 @@ const EDITORIAL_BLOCK_TYPES: readonly BlockType[] = [
 ];
 
 export type EditorialTarget = {
-  scope: "state" | "state_category" | "city";
+  scope: "state" | "state_category" | "city" | "city_category" | "photographer_state" | "photographer_city";
   stateId?: string;
+  citySlug?: string;
   categoryId?: string;
   cityId?: string;
   /** Deterministic localStorage autosave key — never sent to the server. */
@@ -77,6 +78,7 @@ export function EditorialForm({
         {target.stateId && <input type="hidden" name="state_id" value={target.stateId} />}
         {target.categoryId && <input type="hidden" name="category_id" value={target.categoryId} />}
         {target.cityId && <input type="hidden" name="city_id" value={target.cityId} />}
+        {target.citySlug && <input type="hidden" name="city_slug" value={target.citySlug} />}
 
         <BlogContentEditor
           name="content_json"

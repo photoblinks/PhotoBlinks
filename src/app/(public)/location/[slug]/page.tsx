@@ -67,6 +67,7 @@ export default async function LocationDetailPage({ params }: Props) {
       <LocationDetailContent location={location} showSponsoredPhotographer />
       <RelatedLocations
         locationSlug={location.slug}
+        countrySlug={location.country?.slug}
         stateSlug={location.state?.slug}
         citySlug={location.city?.slug}
         placeName={location.city?.name ?? location.state?.name ?? location.name}

@@ -8,6 +8,7 @@ import {
   getPublishedLocations,
   getPublishedStudios,
   type PublicLocationCard,
+  type PublicPhotographer,
 } from "@/lib/public-data";
 import { LocationCard } from "@/components/public/location-card";
 import { PhotographerCard } from "@/components/public/photographer-card";
@@ -70,22 +71,32 @@ function PlaceCards({ title, places, section }: { title: string; places: PlaceCa
   );
 }
 
-/** 4 photographers: the page's city first, then the rest of its state. Renders
- * nothing when none are visible. */
+/** 4 photographers, closest first: same city, then same state, then same
+ * country, then anywhere. Renders nothing when none are visible. */
 async function PhotographerCards({
   placeName,
+  countrySlug,
   stateSlug,
   citySlug,
 }: {
   placeName: string;
+  countrySlug: string;
   stateSlug: string;
   citySlug?: string;
 }) {
-  const inState = (await getPublicPhotographers()).filter((p) => p.state.slug === stateSlug);
-  const photographers = [
-    ...inState.filter((p) => citySlug && p.citySlug === citySlug),
-    ...inState.filter((p) => !citySlug || p.citySlug !== citySlug),
-  ].slice(0, CARD_LIMIT);
+  const closeness = (p: PublicPhotographer) =>
+    p.state.slug !== stateSlug
+      ? p.country.slug === countrySlug
+        ? 1
+        : 0
+      : citySlug && p.citySlug === citySlug
+        ? 3
+        : 2;
+  const photographers = (await getPublicPhotographers())
+    .map((p) => ({ p, score: closeness(p) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, CARD_LIMIT)
+    .map(({ p }) => p);
   if (photographers.length === 0) return null;
 
   return (
@@ -179,7 +190,7 @@ export async function RelatedPlaces({
         places={topPlaces(places)}
         section={section}
       />
-      <PhotographerCards placeName={placeName} stateSlug={stateSlug} citySlug={citySlug} />
+      <PhotographerCards placeName={placeName} countrySlug={countrySlug} stateSlug={stateSlug} citySlug={citySlug} />
     </>
   );
 }
@@ -188,11 +199,13 @@ export async function RelatedPlaces({
  * city first, then same state, then anywhere), then 4 photographers. */
 export async function RelatedLocations({
   locationSlug,
+  countrySlug,
   stateSlug,
   citySlug,
   placeName,
 }: {
   locationSlug: string;
+  countrySlug?: string;
   stateSlug?: string;
   citySlug?: string;
   placeName: string;
@@ -217,7 +230,9 @@ export async function RelatedLocations({
           </div>
         </section>
       )}
-      {stateSlug && <PhotographerCards placeName={placeName} stateSlug={stateSlug} citySlug={citySlug} />}
+      {countrySlug && stateSlug && (
+        <PhotographerCards placeName={placeName} countrySlug={countrySlug} stateSlug={stateSlug} citySlug={citySlug} />
+      )}
     </div>
   );
 }

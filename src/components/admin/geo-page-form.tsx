@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUploader } from "@/components/admin/image-uploader";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
+import { CITY_QUICK_FACT_FIELDS, type CityQuickFacts } from "@/lib/city-quick-facts";
 
 export type GeoPageRecord = {
   image_url: string | null;
@@ -25,6 +26,7 @@ export function GeoPageForm({
   pageUrl,
   defaultH1,
   error,
+  quickFacts,
 }: {
   action: (formData: FormData) => void;
   record?: GeoPageRecord;
@@ -33,6 +35,8 @@ export function GeoPageForm({
   pageUrl: string;
   defaultH1: string;
   error?: string;
+  /** City pages only: current values; presence enables the Quick Facts inputs. */
+  quickFacts?: CityQuickFacts;
 }) {
   return (
     <form action={action} className="max-w-lg">
@@ -91,6 +95,18 @@ export function GeoPageForm({
             rows={2}
           />
         </Field>
+
+        {quickFacts && (
+          <>
+            <p className="text-sm font-medium">Quick Facts card (city pages)</p>
+            {CITY_QUICK_FACT_FIELDS.map(({ key, label, placeholder }) => (
+              <Field key={key}>
+                <FieldLabel htmlFor={key}>{label}</FieldLabel>
+                <Input id={key} name={key} defaultValue={quickFacts[key] ?? ""} placeholder={placeholder} />
+              </Field>
+            ))}
+          </>
+        )}
 
         <Button type="submit">Save changes</Button>
       </FieldGroup>

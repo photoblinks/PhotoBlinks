@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { CACHE_TAGS } from "@/lib/public-data";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
+import { parseCityQuickFacts } from "@/lib/city-quick-facts";
 
 function parseGeoPageForm(formData: FormData) {
   return {
@@ -17,7 +18,11 @@ function parseGeoPageForm(formData: FormData) {
 
 export async function updateCityPage(id: string, formData: FormData) {
   const supabase = await createClient();
-  const values = parseGeoPageForm(formData);
+  const quickFacts = parseCityQuickFacts(Object.fromEntries(formData));
+  const values = {
+    ...parseGeoPageForm(formData),
+    quick_facts: Object.keys(quickFacts).length > 0 ? quickFacts : null,
+  };
 
   const { error } = await supabase.from("cities").update(values).eq("id", id);
 

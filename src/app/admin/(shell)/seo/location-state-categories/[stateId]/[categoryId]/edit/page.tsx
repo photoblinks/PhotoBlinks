@@ -10,6 +10,9 @@ import {
   buildStateCategoryDefaultDescription,
   buildStateCategoryDefaultTitle,
 } from "@/lib/seo-templates";
+import { parseEditorialBlocks } from "@/lib/blog/content-blocks";
+import type { BlogBlockInput } from "@/components/admin/blog-content-editor";
+import { EditorialForm } from "@/app/admin/(shell)/editorial/editorial-form";
 import { resetLocationStateCategorySeo, saveLocationStateCategorySeo } from "../../../actions";
 
 type Props = {
@@ -24,7 +27,7 @@ export default async function EditLocationStateCategorySeoPage({ params, searchP
   const { error, returnTo } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: state }, { data: category }, { data: seo }] = await Promise.all([
+  const [{ data: state }, { data: category }, { data: seo }, { data: blog }, { data: locations }] = await Promise.all([
     supabase.from("states").select("name, slug, countries(name, slug)").eq("id", stateId).single(),
     supabase.from("categories").select("name, slug").eq("id", categoryId).single(),
     supabase
@@ -33,6 +36,21 @@ export default async function EditLocationStateCategorySeoPage({ params, searchP
       .eq("state_id", stateId)
       .eq("category_id", categoryId)
       .maybeSingle(),
+    supabase
+      .from("location_editorial")
+      .select("id, status, content")
+      .eq("scope", "state_category")
+      .eq("state_id", stateId)
+      .eq("category_id", categoryId)
+      .maybeSingle(),
+    supabase
+      .from("locations")
+      .select("id, name")
+      .eq("state_id", stateId)
+      .eq("category_id", categoryId)
+      .eq("is_published", true)
+      .order("name")
+      .limit(500),
   ]);
 
   if (!state || !category) notFound();
@@ -107,6 +125,31 @@ export default async function EditLocationStateCategorySeoPage({ params, searchP
           </div>
         </FieldGroup>
       </form>
+
+      <div className="mt-10 border-t pt-8">
+        <p className="mb-4 text-sm text-muted-foreground">
+          Blog shown below the cards on this page. Drafts stay hidden until you publish.
+        </p>
+        <EditorialForm
+          target={{
+            scope: "state_category",
+            stateId,
+            categoryId,
+            syntheticSlug: `state-category-${state.slug}-${category.slug}`,
+            title: `Blog — ${category.name} in ${state.name}`,
+          }}
+          existing={
+            blog
+              ? {
+                  id: blog.id,
+                  status: blog.status as "draft" | "published",
+                  content: parseEditorialBlocks(blog.content) as unknown as BlogBlockInput[],
+                }
+              : undefined
+          }
+          locations={locations ?? []}
+        />
+      </div>
     </div>
   );
 }

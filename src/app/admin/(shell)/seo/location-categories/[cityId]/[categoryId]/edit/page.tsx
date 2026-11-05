@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { buildCategoryCityDefaultDescription, buildCategoryCityDefaultTitle } from "@/lib/seo-templates";
+import { parseEditorialBlocks } from "@/lib/blog/content-blocks";
+import type { BlogBlockInput } from "@/components/admin/blog-content-editor";
+import { EditorialForm } from "@/app/admin/(shell)/editorial/editorial-form";
 import { resetLocationCategorySeo, saveLocationCategorySeo } from "../../../actions";
 
 type Props = {
@@ -21,7 +24,7 @@ export default async function EditLocationCategorySeoPage({ params, searchParams
   const { error, returnTo } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: city }, { data: category }, { data: seo }] = await Promise.all([
+  const [{ data: city }, { data: category }, { data: seo }, { data: blog }, { data: locations }] = await Promise.all([
     supabase
       .from("cities")
       .select("name, slug, states(name, slug, countries(name, slug))")
@@ -34,6 +37,21 @@ export default async function EditLocationCategorySeoPage({ params, searchParams
       .eq("city_id", cityId)
       .eq("category_id", categoryId)
       .maybeSingle(),
+    supabase
+      .from("location_editorial")
+      .select("id, status, content")
+      .eq("scope", "city_category")
+      .eq("city_id", cityId)
+      .eq("category_id", categoryId)
+      .maybeSingle(),
+    supabase
+      .from("locations")
+      .select("id, name")
+      .eq("city_id", cityId)
+      .eq("category_id", categoryId)
+      .eq("is_published", true)
+      .order("name")
+      .limit(500),
   ]);
 
   if (!city || !category) notFound();
@@ -109,6 +127,31 @@ export default async function EditLocationCategorySeoPage({ params, searchParams
           </div>
         </FieldGroup>
       </form>
+
+      <div className="mt-10 border-t pt-8">
+        <p className="mb-4 text-sm text-muted-foreground">
+          Blog shown below the cards on this page. Drafts stay hidden until you publish.
+        </p>
+        <EditorialForm
+          target={{
+            scope: "city_category",
+            cityId,
+            categoryId,
+            syntheticSlug: `city-category-${city.slug}-${category.slug}`,
+            title: `Blog — ${category.name} in ${city.name}`,
+          }}
+          existing={
+            blog
+              ? {
+                  id: blog.id,
+                  status: blog.status as "draft" | "published",
+                  content: parseEditorialBlocks(blog.content) as unknown as BlogBlockInput[],
+                }
+              : undefined
+          }
+          locations={locations ?? []}
+        />
+      </div>
     </div>
   );
 }

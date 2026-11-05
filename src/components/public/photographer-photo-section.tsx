@@ -1,5 +1,6 @@
 import Image from "next/image";
-import { Phone, MessageCircle } from "lucide-react";
+import { Phone } from "lucide-react";
+import { WhatsAppIcon } from "@/components/public/whatsapp-icon";
 import { buildWhatsAppLink } from "@/lib/format";
 import { PHOTOGRAPHER_PHOTO_WIDTH, toTransformUrl } from "@/lib/cf-image-loader";
 import type { PublicPhotographerPhoto } from "@/lib/public-data";
@@ -55,7 +56,7 @@ export function PhotographerPhotoSection({ photos, locationName }: Props) {
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-1.5 rounded-md border border-pb-brand bg-white px-2 py-1.5 text-xs font-medium text-pb-brand hover:bg-pb-brand/5 dark:bg-transparent"
                 >
-                  <MessageCircle className="size-3.5" aria-hidden="true" />
+                  <WhatsAppIcon className="size-3.5" aria-hidden="true" />
                   WhatsApp
                 </a>
               </div>

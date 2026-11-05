@@ -16,7 +16,13 @@ const POLL_MS = 60_000;
  * re-render between page navigations: counts are refetched on every route
  * change, on tab focus, and every minute. Opening a "new since last visit"
  * page (Users, Photographer Profiles) marks it seen, which clears its badge. */
-export function AdminNav({ links, showBadges }: { links: { href: string; label: string }[]; showBadges: boolean }) {
+export function AdminNav({
+  sections,
+  showBadges,
+}: {
+  sections: { key: string; label: string; href: string; itemHrefs: string[] }[];
+  showBadges: boolean;
+}) {
   const pathname = usePathname();
   const [counts, setCounts] = useState<NavBadgeCounts>({});
 
@@ -47,17 +53,29 @@ export function AdminNav({ links, showBadges }: { links: { href: string; label: 
     };
   }, [showBadges, refresh]);
 
+  // Longest matching href wins, so /admin/locations/bulk-import does not also
+  // light up /admin/locations (and nothing matches the /admin prefix).
+  const matches = (href: string) => (href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`));
+  const activeKey = sections
+    .flatMap((section) => [section.href, ...section.itemHrefs].map((href) => ({ key: section.key, href })))
+    .filter((entry) => matches(entry.href))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.key;
+
   return (
-    <nav className="flex flex-1 flex-col gap-1">
-      {links.map((link) => {
-        const count = counts[link.href] ?? 0;
+    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
+      {sections.map((section) => {
+        const count = section.itemHrefs.reduce((sum, href) => sum + (counts[href] ?? 0), 0);
+        const active = section.key === activeKey;
         return (
           <Link
-            key={link.href}
-            href={link.href}
-            className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm text-foreground/80 hover:bg-muted hover:text-foreground"
+            key={section.key}
+            href={section.href}
+            aria-current={active ? "page" : undefined}
+            className={`flex items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-muted hover:text-foreground ${
+              active ? "bg-muted font-medium text-foreground" : "text-foreground/80"
+            }`}
           >
-            {link.label}
+            {section.label}
             {count > 0 && (
               <span
                 aria-label={`${count} new`}

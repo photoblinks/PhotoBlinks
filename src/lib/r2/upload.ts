@@ -57,6 +57,7 @@ export function buildImageKey(
     | "site"
     | "photographers"
     | "photographer-packages"
+    | "photographer-profiles"
     | "blog",
   slug: string,
   filename: string,

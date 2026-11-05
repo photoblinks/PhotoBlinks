@@ -47,7 +47,7 @@ export default async function EditorialAdminPage({
 
   const [{ data: states }, { data: editorialRows }, { data: inventoryData }, config] = await Promise.all([
     supabase.from("states").select("id, name, slug").eq("is_active", true).order("name"),
-    supabase.from("location_editorial").select("id, scope, state_id, category_id, status"),
+    supabase.from("location_editorial").select("id, scope, state_id, category_id, status").in("scope", ["state", "state_category"]),
     supabase.rpc("get_admin_seo_location_state_category_inventory", {
       p_q: null,
       p_country_slug: null,

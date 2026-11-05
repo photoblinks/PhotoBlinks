@@ -14,9 +14,10 @@ export default async function NewBlogPostPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: categories }, { data: tags }, { data: locations }] = await Promise.all([
+  const [{ data: categories }, { data: tags }, { data: editors }, { data: locations }] = await Promise.all([
     supabase.from("blog_categories").select("id, name").order("sort_order"),
     supabase.from("blog_tags").select("id, name").order("name"),
+    supabase.from("editors").select("id, name, is_default").order("name"),
     // Only published locations — an admin can technically see every
     // location via RLS, but linking a post to an unpublished one would be a
     // dead selection: the public renderer only ever resolves locationLink
@@ -34,6 +35,7 @@ export default async function NewBlogPostPage({
         categories={categories ?? []}
         tags={tags ?? []}
         locations={locations ?? []}
+        editors={editors ?? []}
         error={error}
       />
     </div>

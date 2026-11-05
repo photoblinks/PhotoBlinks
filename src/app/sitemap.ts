@@ -4,6 +4,7 @@ import {
   getActiveCategories,
   getPublishedLocations,
   getPublishedStudios,
+  getEditorsForSitemap,
   getPublicPhotographers,
   getPublishedBlogPostsForSitemap,
 } from "@/lib/public-data";
@@ -24,13 +25,14 @@ function latest(dates: string[]) {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [locations, studios, categories, blogPosts, blogCategories, photographers] = await Promise.all([
+  const [locations, studios, categories, blogPosts, blogCategories, photographers, editors] = await Promise.all([
     getPublishedLocations(),
     getPublishedStudios(),
     getActiveCategories(),
     getPublishedBlogPostsForSitemap(),
     getActiveBlogCategories(),
     getPublicPhotographers(),
+    getEditorsForSitemap(),
   ]);
 
   const entries: MetadataRoute.Sitemap = [
@@ -83,6 +85,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: post.updatedAt,
       changeFrequency: "weekly",
       priority: 0.6,
+    });
+  }
+
+  // Editor (author) profile pages.
+  for (const editor of editors) {
+    entries.push({
+      url: `${SITE_URL}/editors/${editor.slug}`,
+      lastModified: editor.updatedAt,
+      changeFrequency: "monthly",
+      priority: 0.4,
     });
   }
 

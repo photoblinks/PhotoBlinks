@@ -82,7 +82,14 @@ ${listEligible(geo.stateCategories, "/locations") || "(none yet)"}`,
 
     `## Photographers
 
-Verified photographer contact details appear directly on eligible location pages, either as approved photographer-submitted photos or as a clearly labeled sponsored placement. PhotoBlinks does not operate standalone public photographer profile pages.`,
+PhotoBlinks lists pre-wedding photographers with their own public profile pages (studio, city, services, experience, starting price from their published packages, contact details). Photographers are also shown on eligible location pages, either as approved photographer-submitted photos or as a clearly labeled sponsored placement.
+
+- [Browse photographers](${absoluteUrl("/photographers")}) — by state at /photographers/{country}/{state} and by city at /photographers/{country}/{state}/{city}
+- Individual profiles live at /photographers/p/{slug}. See /llms-full.txt for the full photographer list.
+
+## Authors / Editors
+
+Articles and editorial guides are credited to named editors with public profile pages at /editors/{slug} (role, short bio, social accounts).`,
 
     `## Guides / Blog
 

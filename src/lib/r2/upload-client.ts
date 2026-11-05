@@ -6,7 +6,7 @@
  * The server constructs the key — the client does not choose the R2 path. */
 export async function uploadPhotographerFileToR2(
   file: File,
-  purpose?: "package",
+  purpose?: "package" | "profile",
 ): Promise<{ publicUrl: string; storageKey: string }> {
   const presignRes = await fetch("/api/photographer/r2-presign", {
     method: "POST",

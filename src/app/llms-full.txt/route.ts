@@ -3,6 +3,8 @@ import {
   getPublishedStudios,
   getPublishedBlogPostsForLlms,
   getActiveSponsoredPhotographers,
+  getAllEditors,
+  getPublicPhotographers,
   PUBLIC_REVALIDATE_SECONDS,
   type PublicLocationCard,
   type PublicStudioCard,
@@ -61,11 +63,13 @@ function aggregationEntry(group: SeoGeoGroup, basePath: string) {
 }
 
 export async function GET() {
-  const [locations, studios, blogPosts, photographers] = await Promise.all([
+  const [locations, studios, blogPosts, photographers, directoryPhotographers, editors] = await Promise.all([
     getPublishedLocations(),
     getPublishedStudios(),
     getPublishedBlogPostsForLlms(),
     getActiveSponsoredPhotographers(),
+    getPublicPhotographers(),
+    getAllEditors(),
   ]);
 
   const geo = buildLocationGeoGroups(locations);
@@ -156,6 +160,33 @@ The 5-published-location threshold below applies ONLY to geographic/category AGG
               p.description ? `\n- ${p.description}` : ""
             }\n- Contact: ${p.phone_number}`,
         )
+        .join("\n\n")}`,
+    );
+  }
+
+  if (directoryPhotographers.length > 0) {
+    sections.push(
+      `## Photographer Directory (${directoryPhotographers.length})\n\nPre-wedding photographers who created a PhotoBlinks profile. Starting price is the lowest price among their published packages.\n\n${directoryPhotographers
+        .map((p) => {
+          const url = absoluteUrl(`/photographers/p/${p.slug}`);
+          const price = p.startingPrice != null ? `\n- Starting price: ₹${p.startingPrice.toLocaleString("en-IN")}` : "";
+          return `### ${p.studioName}\n- URL: [${url}](${url})\n- Location: ${p.city}, ${p.state.name}${price}${
+            p.isVerified ? "\n- Verified by PhotoBlinks" : ""
+          }`;
+        })
+        .join("\n\n")}`,
+    );
+  }
+
+  if (editors.length > 0) {
+    sections.push(
+      `## Editors (${editors.length})\n\nAuthors credited on PhotoBlinks articles and guides.\n\n${editors
+        .map((editor) => {
+          const url = absoluteUrl(`/editors/${editor.slug}`);
+          return `### ${editor.name}\n- URL: [${url}](${url})${editor.roleTitle ? `\n- Role: ${editor.roleTitle}` : ""}${
+            editor.bio ? `\n- ${editor.bio}` : ""
+          }`;
+        })
         .join("\n\n")}`,
     );
   }

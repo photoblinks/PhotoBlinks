@@ -1,7 +1,8 @@
 import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { MessageCircle, Phone, UserRound } from "lucide-react";
+import { Phone, UserRound } from "lucide-react";
+import { WhatsAppIcon } from "@/components/public/whatsapp-icon";
 import { getPublishedLocations, getSharedLocationCollection } from "@/lib/public-data";
 import { buildWhatsAppLink } from "@/lib/format";
 import { LocationCard } from "@/components/public/location-card";
@@ -73,7 +74,7 @@ export default async function SharedLocationCollectionPage({ params }: Props) {
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-1.5 rounded-md border border-pb-brand bg-white px-3 py-2 text-sm font-medium text-pb-brand hover:bg-pb-brand/5"
             >
-              <MessageCircle className="size-4" aria-hidden="true" />
+              <WhatsAppIcon className="size-4" aria-hidden="true" />
               WhatsApp
             </a>
           </div>

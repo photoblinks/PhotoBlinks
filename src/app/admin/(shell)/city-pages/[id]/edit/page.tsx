@@ -4,6 +4,7 @@ import { requireAdminPage } from "@/lib/supabase/require-permission";
 import { GeoPageForm } from "@/components/admin/geo-page-form";
 import { SeoInventoryBreakdown, type SeoBreakdownRow } from "@/components/admin/seo-inventory-breakdown";
 import { parseEditorialBlocks } from "@/lib/blog/content-blocks";
+import { parseCityQuickFacts } from "@/lib/city-quick-facts";
 import type { BlogBlockInput } from "@/components/admin/blog-content-editor";
 import { EditorialForm } from "../../../editorial/editorial-form";
 import { updateCityPage } from "../../actions";
@@ -81,6 +82,7 @@ export default async function EditCityPage({
         pageUrl={`/locations/${countrySlug}/${stateSlug}/${city.slug}`}
         defaultH1={`Photoshoot Locations in ${city.name}`}
         error={error}
+        quickFacts={parseCityQuickFacts(city.quick_facts)}
       />
       <SeoInventoryBreakdown
         title={`SEO inventory by category in ${city.name}`}

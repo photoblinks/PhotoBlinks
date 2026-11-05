@@ -19,7 +19,7 @@ export default async function EditBlogPostPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: post }, { data: categories }, { data: tags }, { data: locations }] = await Promise.all([
+  const [{ data: post }, { data: categories }, { data: tags }, { data: editors }, { data: locations }] = await Promise.all([
     supabase
       .from("blog_posts")
       .select(
@@ -29,6 +29,7 @@ export default async function EditBlogPostPage({
       .single(),
     supabase.from("blog_categories").select("id, name").order("sort_order"),
     supabase.from("blog_tags").select("id, name").order("name"),
+    supabase.from("editors").select("id, name, is_default").order("name"),
     // Only published locations — see the matching comment in new/page.tsx.
     // A post already linked to a location that's since been unpublished
     // simply won't show that location as (re-)selectable here; its stored
@@ -55,6 +56,7 @@ export default async function EditBlogPostPage({
         categories={categories ?? []}
         tags={tags ?? []}
         locations={locations ?? []}
+        editors={editors ?? []}
         error={error}
       />
     </div>

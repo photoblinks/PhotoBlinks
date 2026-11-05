@@ -6,6 +6,7 @@ import {
   getActiveCategories,
   getActiveCities,
   getActiveStates,
+  getCityCategoryEditorial,
   getLocationCategorySeo,
   getPublishedLocations,
 } from "@/lib/public-data";
@@ -221,7 +222,7 @@ export default async function CategoryLocationsPage({ params }: Props) {
           </ul>
         </div>
 
-        <EditorialSection stateId={state.id} categoryId={category.id} />
+        <EditorialSection blocks={await getCityCategoryEditorial(city.id, category.id)} />
         <RelatedPlaces
           level="city"
           section="locations"

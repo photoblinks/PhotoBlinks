@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getPublicPhotographers } from "@/lib/public-data";
+import { getPhotographerGeoPage, getPublicPhotographers } from "@/lib/public-data";
+import { EditorialSection } from "@/components/public/editorial-section";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { PhotographersHero } from "@/components/public/photographers-hero";
 import { PhotographerDirectory } from "@/components/public/photographer-directory";
-import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
+import { JsonLd } from "@/components/public/json-ld";
+import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
 
 export const revalidate = 604800;
 
@@ -26,8 +28,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await loadState(country, stateSlug);
   if (!data) return {};
 
-  const title = `Pre-Wedding Photographers in ${data.state.name}`;
-  const description = `Browse ${data.photographers.length} pre-wedding photographer${data.photographers.length === 1 ? "" : "s"} in ${data.state.name}. Compare services, experience and starting prices.`;
+  const { seo } = await getPhotographerGeoPage(country, stateSlug, null);
+  const title = seo?.meta_title || `Pre-Wedding Photographers in ${data.state.name}`;
+  const description = seo?.meta_description || `Browse ${data.photographers.length} pre-wedding photographer${data.photographers.length === 1 ? "" : "s"} in ${data.state.name}. Compare services, experience and starting prices.`;
   const path = `/photographers/${country}/${stateSlug}`;
 
   return {
@@ -51,6 +54,7 @@ export default async function PhotographersStatePage({ params }: Props) {
   if (!data) notFound();
 
   const { photographers, state } = data;
+  const { seo, blocks } = await getPhotographerGeoPage(country, stateSlug, null);
   const cities = new Map<string, { name: string; slug: string; count: number }>();
   for (const p of photographers) {
     const entry = cities.get(p.citySlug);
@@ -62,12 +66,14 @@ export default async function PhotographersStatePage({ params }: Props) {
   return (
     <div>
       <PhotographersHero
-        title={`Pre-Wedding Photographers in ${state.name}`}
+        title={seo?.h1_title || `Pre-Wedding Photographers in ${state.name}`}
+        imageUrl={seo?.image_url}
         subtitle={`${photographers.length} photographer${photographers.length === 1 ? "" : "s"} across ${cityLinks.length} cit${cityLinks.length === 1 ? "y" : "ies"} in ${state.name}.`}
       />
 
       <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
         <PhotographerDirectory photographers={photographers} />
+        <JsonLd data={buildItemListJsonLd(seo?.h1_title || `Pre-Wedding Photographers in ${state.name}`, photographers.slice(0, 100).map((p) => ({ name: p.studioName, path: `/photographers/p/${p.slug}` })))} />
 
         <div className="mt-10">
           <Breadcrumbs
@@ -95,6 +101,8 @@ export default async function PhotographersStatePage({ params }: Props) {
             </div>
           </div>
         )}
+
+        <EditorialSection blocks={blocks} />
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import type { ExtraDetails, PublicLocationDetail, PublicStudioDetail, PublicBlogPostDetail } from "./public-data";
+import type { ExtraDetails, PublicEditor, PublicLocationDetail, PublicStudioDetail, PublicBlogPostDetail } from "./public-data";
 import type { BlogBlock } from "./blog/content-blocks";
 import { getValidatedYouTubeVideo, type ValidatedYouTubeVideo } from "./youtube";
 import { SITE_URL } from "./site-url";
@@ -342,6 +342,21 @@ export function buildStudioJsonLd(
   };
 }
 
+/** schema.org Person for an editor profile — the author entity for E-E-A-T. */
+export function buildEditorPersonJsonLd(editor: PublicEditor) {
+  return {
+    "@type": "Person",
+    "@id": `${absoluteUrl(`/editors/${editor.slug}`)}#person`,
+    name: editor.name,
+    url: absoluteUrl(`/editors/${editor.slug}`),
+    jobTitle: editor.roleTitle ?? undefined,
+    description: editor.bio ?? undefined,
+    image: editor.imageUrl ? socialImageUrl(editor.imageUrl) : undefined,
+    sameAs: editor.socials.length > 0 ? editor.socials.map((social) => social.url) : undefined,
+    worksFor: { "@type": "Organization", name: "PhotoBlinks", url: absoluteUrl("/") },
+  };
+}
+
 /** Combined BlogPosting + BreadcrumbList (+ FAQPage when the post has FAQs)
  * structured data for a published blog article, as one JSON-LD script with
  * an @graph — mirrors buildLocationJsonLd/buildStudioJsonLd. `post` and
@@ -351,6 +366,7 @@ export function buildStudioJsonLd(
 export function buildBlogPostingJsonLd(
   post: PublicBlogPostDetail,
   breadcrumbItems: { name: string; path: string }[],
+  editor: PublicEditor | null = null,
 ) {
   const canonicalUrl = absoluteUrl(`/blog/${post.slug}`);
   const breadcrumbList = buildBreadcrumbList(breadcrumbItems);
@@ -363,7 +379,7 @@ export function buildBlogPostingJsonLd(
     image: post.featuredImageUrl ? [socialImageUrl(post.featuredImageUrl)] : undefined,
     datePublished: post.publishedAt,
     dateModified: post.updatedAt,
-    author: { "@type": "Person", name: post.authorName },
+    author: editor ? buildEditorPersonJsonLd(editor) : { "@type": "Person", name: post.authorName },
     publisher: { "@type": "Organization", name: "PhotoBlinks", url: absoluteUrl("/") },
     mainEntityOfPage: canonicalUrl,
     url: canonicalUrl,

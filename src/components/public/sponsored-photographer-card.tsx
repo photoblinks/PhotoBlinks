@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
-import { Phone, MessageCircle } from "lucide-react";
+import { Phone } from "lucide-react";
+import { WhatsAppIcon } from "@/components/public/whatsapp-icon";
 import { Button } from "@/components/ui/button";
 import { buildWhatsAppLink } from "@/lib/format";
 import { recordSponsoredPhotographerEvent } from "@/lib/sponsored-photographer-analytics";
@@ -96,7 +97,7 @@ export function SponsoredPhotographerCard({
           className="w-full border border-pb-brand bg-white text-pb-brand hover:bg-pb-brand/5"
           onClick={() => trackClick("whatsapp_click")}
         >
-          <MessageCircle className="size-4" />
+          <WhatsAppIcon className="size-4" />
           WhatsApp
         </Button>
       </div>

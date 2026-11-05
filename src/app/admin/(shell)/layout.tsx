@@ -1,44 +1,9 @@
 import { redirect } from "next/navigation";
-import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
+import { getAuthorizedStaffUser } from "@/lib/supabase/require-permission";
+import { getVisibleNavSections, navSectionHref } from "@/lib/admin-nav";
 import { AuthSubmitButton } from "@/components/public/auth-submit-button";
 import { logout } from "../login/actions";
 import { AdminNav } from "@/components/admin/admin-nav";
-
-// Links without `permissions` are admin-only; links with them are also shown
-// to employees whose active role grants any of those permissions. `allStaff`
-// links are shown to every admin and every active employee. This mirrors the
-// server-side guards on each page — hiding a link is only a convenience, the
-// real enforcement happens in the page/action guards and RLS.
-const NAV_LINKS: {
-  href: string;
-  label: string;
-  permissions?: readonly string[];
-  allStaff?: boolean;
-}[] = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/activity", label: "Employee Activity", permissions: [PERMISSION.ACTIVITY_VIEW] },
-  { href: "/admin/performance", label: "Employee Performance", allStaff: true },
-  { href: "/admin/employees", label: "Employees" },
-  { href: "/admin/users", label: "Users" },
-  { href: "/admin/photographer-requests", label: "Photographer Requests" },
-  { href: "/admin/photographer-profiles", label: "Photographer Profiles" },
-  { href: "/admin/categories", label: "Categories" },
-  { href: "/admin/locations", label: "Locations", permissions: [PERMISSION.LOCATIONS_EDIT, PERMISSION.LOCATIONS_PUBLISH] },
-  { href: "/admin/locations/bulk-import", label: "Bulk Import", permissions: [PERMISSION.LOCATIONS_EDIT] },
-  { href: "/admin/studios", label: "Studios", permissions: [PERMISSION.STUDIOS_EDIT, PERMISSION.STUDIOS_PUBLISH] },
-  { href: "/admin/blog", label: "Blog" },
-  { href: "/admin/photographers", label: "Sponsored Photographers" },
-  { href: "/admin/comments", label: "Comments" },
-  { href: "/admin/photographer-photos", label: "Photographer Photos" },
-  { href: "/admin/location-reports", label: "Location Reports" },
-  { href: "/admin/country-pages", label: "Country Pages" },
-  { href: "/admin/state-pages", label: "State Pages" },
-  { href: "/admin/city-pages", label: "City Pages" },
-  { href: "/admin/editorial", label: "Editorial Content" },
-  { href: "/admin/seo/location-categories", label: "Location + Category SEO" },
-  { href: "/admin/seo/location-state-categories", label: "State + Category SEO" },
-  { href: "/admin/settings", label: "Settings" },
-];
 
 export default async function AdminShellLayout({
   children,
@@ -48,17 +13,19 @@ export default async function AdminShellLayout({
   const staff = await getAuthorizedStaffUser();
   if (!staff) redirect("/admin/login");
 
-  const visibleLinks = NAV_LINKS.filter(
-    (link) =>
-      link.allStaff || (link.permissions ? staff.canAny(link.permissions) : staff.isAdmin),
-  );
+  const sections = getVisibleNavSections(staff).map((section) => ({
+    key: section.key,
+    label: section.label,
+    href: navSectionHref(section),
+    itemHrefs: section.items.map((item) => item.href),
+  }));
 
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-56 shrink-0 flex-col border-r bg-muted/20 p-4">
         <div className="mb-6 px-2 text-lg font-semibold">PhotoBlinks</div>
         <AdminNav
-          links={visibleLinks.map(({ href, label }) => ({ href, label }))}
+          sections={sections}
           showBadges={staff.isAdmin}
         />
         <div className="mt-auto flex flex-col gap-2 border-t pt-4">

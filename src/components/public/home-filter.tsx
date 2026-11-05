@@ -19,7 +19,7 @@ type City = Option & { state_id: string };
 
 const ALL = "all";
 
-const FIELD_TRIGGER_CLASS =
+export const FIELD_TRIGGER_CLASS =
   "h-auto w-full justify-start gap-0 border-0 bg-transparent p-0 text-sm font-medium shadow-none hover:bg-transparent data-placeholder:text-muted-foreground";
 
 const PRICING_LABELS: Record<string, string> = { free: "Free", paid: "Paid", unknown: "Unknown" };
@@ -37,7 +37,7 @@ const DRONE_OPTIONS = ["allowed", "not_allowed", "allowed_with_permission"] as c
 /** Trigger content for one filter field: a caption + value on desktop
  * (two lines), collapsed to a single line on mobile — just the field's
  * label until something is picked, then the picked value. */
-function FilterFieldText({
+export function FilterFieldText({
   label,
   mobilePlaceholder,
   desktopPlaceholder,

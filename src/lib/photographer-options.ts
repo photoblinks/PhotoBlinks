@@ -109,3 +109,14 @@ export function toPhotographerPackage(row: PackageRow): PhotographerPackage {
     isVisible: row.is_visible,
   };
 }
+
+/** True for an https link on youtube.com / youtu.be (channel, video or short link). */
+export function isYouTubeUrl(value: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(value);
+    const host = hostname.replace(/^www\./, "");
+    return protocol === "https:" && (host === "youtube.com" || host.endsWith(".youtube.com") || host === "youtu.be");
+  } catch {
+    return false;
+  }
+}

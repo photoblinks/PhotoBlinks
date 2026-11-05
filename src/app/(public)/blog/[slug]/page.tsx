@@ -3,10 +3,12 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import {
+  getEditorForContent,
   getPublishedBlogPostBySlug,
   getPublicLocationLinksByIds,
   getRelatedBlogPosts,
 } from "@/lib/public-data";
+import { EditorCard } from "@/components/public/editor-card";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { BlogPostingJsonLd } from "@/components/public/blog-posting-json-ld";
 import { BlogContentRenderer } from "@/components/public/blog-content-renderer";
@@ -77,7 +79,7 @@ export default async function BlogPostPage({ params }: Props) {
     .map((block) => block.locationId);
   const allLocationIds = [...new Set([...contentLocationIds, ...post.locationIds])];
 
-  const [locationLinks, relatedPosts] = await Promise.all([
+  const [locationLinks, relatedPosts, editor] = await Promise.all([
     getPublicLocationLinksByIds(allLocationIds),
     getRelatedBlogPosts({
       postId: post.id,
@@ -85,6 +87,7 @@ export default async function BlogPostPage({ params }: Props) {
       tagSlugs: post.tags.map((t) => t.slug),
       locationIds: post.locationIds,
     }),
+    getEditorForContent(post.editorId),
   ]);
 
   const locationLinkById = new Map(locationLinks.map((l) => [l.id, l]));
@@ -119,7 +122,15 @@ export default async function BlogPostPage({ params }: Props) {
         <h1 className="font-heading mt-2 text-3xl font-semibold sm:text-4xl">{post.title}</h1>
         {post.excerpt && <p className="mt-3 text-lg text-muted-foreground">{post.excerpt}</p>}
         <p className="mt-4 text-sm text-muted-foreground">
-          By {post.authorName} · {formatPostDate(post.publishedAt)}
+          By{" "}
+          {editor ? (
+            <Link href={`/editors/${editor.slug}`} className="font-medium text-foreground hover:underline">
+              {editor.name}
+            </Link>
+          ) : (
+            post.authorName
+          )}{" "}
+          · {formatPostDate(post.publishedAt)}
         </p>
       </header>
 
@@ -136,6 +147,8 @@ export default async function BlogPostPage({ params }: Props) {
       )}
 
       <BlogContentRenderer blocks={post.content} locationLinks={locationLinks} />
+
+      {editor && <EditorCard editor={editor} />}
 
       {relatedLocations.length > 0 && (
         <section className="mt-14 border-t pt-8">
@@ -187,7 +200,7 @@ export default async function BlogPostPage({ params }: Props) {
         </section>
       )}
 
-      <BlogPostingJsonLd post={post} breadcrumbItems={breadcrumbItems} />
+      <BlogPostingJsonLd post={post} breadcrumbItems={breadcrumbItems} editor={editor} />
     </article>
   );
 }
