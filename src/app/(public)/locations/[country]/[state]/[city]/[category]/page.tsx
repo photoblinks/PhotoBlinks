@@ -16,6 +16,7 @@ import { FlatBrowse } from "@/components/public/location-browse-views";
 import { JsonLd } from "@/components/public/json-ld";
 import { LocationFactsStrip } from "@/components/public/location-facts-strip";
 import { EditorialSection } from "@/components/public/editorial-section";
+import { RelatedPlaces } from "@/components/public/related-sections";
 import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
 import {
   buildCategoryCityDefaultDescription,
@@ -221,6 +222,14 @@ export default async function CategoryLocationsPage({ params }: Props) {
         </div>
 
         <EditorialSection stateId={state.id} categoryId={category.id} />
+        <RelatedPlaces
+          level="city"
+          section="locations"
+          countrySlug={countrySlug}
+          stateSlug={state.slug}
+          citySlug={city.slug}
+          placeName={city.name}
+        />
       </div>
 
       {/* Always describes this page's own canonical city+category result

@@ -14,6 +14,7 @@ import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DirectoryFilter, DirectoryResults } from "@/components/public/location-directory";
 import { StateBrowse } from "@/components/public/location-browse-views";
 import { EditorialSection } from "@/components/public/editorial-section";
+import { RelatedPlaces } from "@/components/public/related-sections";
 import { DEFAULT_OG_IMAGE, socialImageUrl } from "@/lib/jsonld";
 import { isSeoEligible } from "@/lib/seo-eligibility";
 import { buildGeoDefaultDescription, extractCategoryNames } from "@/lib/seo-templates";
@@ -173,6 +174,13 @@ export default async function StateLocationsPage({ params }: Props) {
           />
         </Suspense>
         <EditorialSection stateId={state.id} categoryId={null} />
+        <RelatedPlaces
+          level="state"
+          section="locations"
+          countrySlug={countrySlug}
+          stateSlug={state.slug}
+          placeName={state.name}
+        />
       </div>
     </div>
   );

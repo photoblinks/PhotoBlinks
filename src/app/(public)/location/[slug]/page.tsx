@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { getPublishedLocationBySlug } from "@/lib/public-data";
 import { socialImageUrl } from "@/lib/jsonld";
 import { LocationDetailContent } from "@/components/public/location-detail-content";
+import { RelatedLocations } from "@/components/public/related-sections";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -61,5 +62,15 @@ export default async function LocationDetailPage({ params }: Props) {
   const location = await getPublishedLocationBySlug(slug);
   if (!location) notFound();
 
-  return <LocationDetailContent location={location} showSponsoredPhotographer />;
+  return (
+    <>
+      <LocationDetailContent location={location} showSponsoredPhotographer />
+      <RelatedLocations
+        locationSlug={location.slug}
+        stateSlug={location.state?.slug}
+        citySlug={location.city?.slug}
+        placeName={location.city?.name ?? location.state?.name ?? location.name}
+      />
+    </>
+  );
 }

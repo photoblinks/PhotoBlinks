@@ -5,6 +5,7 @@ import { getActiveStates, getPublishedStudios, getStateStaticParams } from "@/li
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { StudioSearch } from "@/components/public/studio-search";
 import { StudioDirectory, StateStudioResults } from "@/components/public/studio-directory";
+import { RelatedPlaces } from "@/components/public/related-sections";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
 // ISR: no searchParams/cookies read, so the route is eligible for the Full
@@ -105,6 +106,14 @@ export default async function StateStudiosPage({ params }: Props) {
           stateSlug={state.slug}
         />
       </Suspense>
+
+      <RelatedPlaces
+        level="state"
+        section="studios"
+        countrySlug={countrySlug}
+        stateSlug={state.slug}
+        placeName={state.name}
+      />
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { CityBrowse, FlatBrowse } from "@/components/public/location-browse-view
 import { JsonLd } from "@/components/public/json-ld";
 import { LocationFactsStrip } from "@/components/public/location-facts-strip";
 import { EditorialSection } from "@/components/public/editorial-section";
+import { RelatedPlaces } from "@/components/public/related-sections";
 import { DEFAULT_OG_IMAGE, buildItemListJsonLd, socialImageUrl } from "@/lib/jsonld";
 import {
   buildGeoDefaultDescription,
@@ -219,6 +220,14 @@ export default async function LocationsCityOrStateCategoryPage({ params }: Props
             />
           </Suspense>
           <EditorialSection cityId={city.id} />
+          <RelatedPlaces
+            level="city"
+            section="locations"
+            countrySlug={countrySlug}
+            stateSlug={state.slug}
+            citySlug={city.slug}
+            placeName={city.name}
+          />
         </div>
       </div>
     );
@@ -337,6 +346,13 @@ export default async function LocationsCityOrStateCategoryPage({ params }: Props
         </div>
 
         <EditorialSection stateId={state.id} categoryId={category.id} />
+        <RelatedPlaces
+          level="state"
+          section="locations"
+          countrySlug={countrySlug}
+          stateSlug={state.slug}
+          placeName={state.name}
+        />
       </div>
 
       {/* Always describes this page's own canonical state+category result
