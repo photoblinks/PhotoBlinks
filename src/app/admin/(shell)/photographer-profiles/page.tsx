@@ -29,10 +29,11 @@ const STATUS_TABS = [
 
 type StatusFilter = (typeof STATUS_TABS)[number]["value"];
 
-const STATUS_VARIANT: Record<PhotographerStatus, "default" | "secondary" | "destructive"> = {
+const STATUS_VARIANT: Record<PhotographerStatus, "default" | "secondary" | "destructive" | "outline"> = {
   active: "default",
   on_hold: "secondary",
   suspended: "destructive",
+  draft: "outline",
 };
 
 export default async function AdminPhotographerProfilesPage({
@@ -50,12 +51,19 @@ export default async function AdminPhotographerProfilesPage({
   const p_status = status === "all" ? null : status;
 
   const supabase = await createClient();
-  const { data: countData } = await supabase.rpc("get_admin_photographer_profiles_count", {
-    p_status,
-    p_search: q || null,
-  });
+  // Per-tab counts honour the current search.
+  const tabCounts = await Promise.all(
+    STATUS_TABS.map(async (tab) => {
+      const { data } = await supabase.rpc("get_admin_photographer_profiles_count", {
+        p_status: tab.value === "all" ? null : tab.value,
+        p_search: q || null,
+      });
+      return [tab.value, Number(data ?? 0)] as const;
+    }),
+  );
+  const countByTab = Object.fromEntries(tabCounts) as Record<StatusFilter, number>;
 
-  const total = Number(countData ?? 0);
+  const total = countByTab[status];
   const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
   const currentPage = parsePage(pageParam, totalPages);
   const { from } = rangeFor(currentPage);
@@ -102,7 +110,7 @@ export default async function AdminPhotographerProfilesPage({
                 : "rounded-full px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted"
             }
           >
-            {tab.label}
+            {tab.label} ({countByTab[tab.value]})
           </Link>
         ))}
       </div>
@@ -124,7 +132,7 @@ export default async function AdminPhotographerProfilesPage({
             <TableRow key={row.id}>
               <TableCell>
                 <p className="font-medium">{row.display_name}</p>
-                <p className="text-xs text-muted-foreground">{row.email}</p>
+                <p className="text-xs text-muted-foreground">{row.email ?? "Unclaimed (imported)"}</p>
               </TableCell>
               <TableCell>{row.studio_name}</TableCell>
               <TableCell className="text-muted-foreground">

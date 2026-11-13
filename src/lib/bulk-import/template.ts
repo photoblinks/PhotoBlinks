@@ -24,7 +24,7 @@ const HEADER_TEXT_COLOR = "FFFFFFFF";
 const SECTION_FILL = "FFD9E2F3";
 const BORDER_COLOR = "FFBFBFBF";
 
-function colLetter(index: number): string {
+export function colLetter(index: number): string {
   let n = index;
   let s = "";
   while (n > 0) {

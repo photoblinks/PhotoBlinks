@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
-export const size = { width: 32, height: 32 };
+// Google requires favicon dimensions to be a multiple of 48px (min 48x48).
+export const size = { width: 192, height: 192 };
 export const contentType = "image/png";
 
 // Branded favicon — same Aperture mark and brand green used in the
@@ -17,12 +18,12 @@ export default function Icon() {
           alignItems: "center",
           justifyContent: "center",
           background: "#16382a",
-          borderRadius: 6,
+          borderRadius: 36,
         }}
       >
         <svg
-          width="24"
-          height="24"
+          width="144"
+          height="144"
           viewBox="0 0 24 24"
           fill="none"
           stroke="white"

@@ -16,6 +16,7 @@ const TRUST_LINKS = [
   { href: "/how-it-works", label: "How It Works" },
   { href: "/data-and-verification", label: "Data & Verification" },
   { href: "/report-an-issue", label: "Report an Issue" },
+  { href: "/claim-profile", label: "Claim Your Photography Profile" },
   { href: "/contact", label: "Contact Us" },
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/terms", label: "Terms & Conditions" },

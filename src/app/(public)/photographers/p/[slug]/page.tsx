@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Camera, Globe, Languages, MapPin, Phone, Plane, Wallet, Award } from "lucide-react";
+import { Camera, Globe, Languages, MapPin, Phone, Plane, Store, Wallet, Award } from "lucide-react";
 import { YoutubeIcon } from "@/components/public/social-platform-icons";
 import { WhatsAppIcon } from "@/components/public/whatsapp-icon";
 import { getPublicPhotographerBySlug, getPublicPhotographerPackages, getPublicPhotographers } from "@/lib/public-data";
@@ -15,7 +15,8 @@ import { ShareButton } from "@/components/public/share-button";
 import { VerifiedBadge } from "@/components/public/verified-badge";
 import { Button } from "@/components/ui/button";
 import { buildWhatsAppLink } from "@/lib/format";
-import { absoluteUrl, buildBreadcrumbList } from "@/lib/jsonld";
+import { absoluteUrl, buildBreadcrumbList, socialImageUrl } from "@/lib/jsonld";
+import { buildPhotographerSeo } from "@/lib/photographer-seo";
 
 export const revalidate = 604800;
 
@@ -30,12 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const p = await getPublicPhotographerBySlug(slug);
   if (!p) return {};
 
-  const title = p.seoTitle || `${p.studioName} — Pre-Wedding Photographer in ${p.city}`;
-  const price = p.startingPrice != null ? ` Starting from ₹${p.startingPrice.toLocaleString("en-IN")}.` : "";
-  const description =
-    p.seoDescription ||
-    p.bio?.slice(0, 155) ||
-    `${p.studioName} by ${p.displayName} — pre-wedding photography in ${p.city}, ${p.state.name}.${price} View services, experience and contact details.`;
+  const { title, description } = buildPhotographerSeo(p, await getPublicPhotographerPackages(p.id));
   const path = `/photographers/p/${p.slug}`;
 
   return {
@@ -86,19 +82,73 @@ export default async function PhotographerPage({ params }: Props) {
     p.travelsToOtherCities && { icon: Plane, label: "Travel", value: "Available for other cities" },
   ].filter((fact): fact is { icon: typeof Wallet; label: string; value: string } => Boolean(fact));
 
+  const seo = buildPhotographerSeo(p, packages);
+  const pageUrl = absoluteUrl(path);
+  const images = [p.logoUrl ?? p.avatarUrl, p.bannerUrl].filter((u): u is string => Boolean(u)).map(socialImageUrl);
+  const prices = packages.map((k) => k.offerPrice ?? k.actualPrice);
+
+  // One @graph: the business (LocalBusiness + ProfessionalService), the
+  // ProfilePage describing it, and a FAQPage mirroring the visible FAQ.
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "ProfessionalService",
-    name: p.studioName,
-    url: absoluteUrl(path),
-    description: p.bio ?? undefined,
-    image: p.logoUrl ?? p.avatarUrl ?? p.bannerUrl ?? undefined,
-    founder: { "@type": "Person", name: p.displayName },
-    areaServed: p.city,
-    address: { "@type": "PostalAddress", addressLocality: p.city, addressRegion: p.state.name, addressCountry: p.country.name },
-    knowsLanguage: p.languages.length > 0 ? p.languages : undefined,
-    sameAs: [p.instagramUrl, p.youtubeUrl, p.portfolioUrl].filter(Boolean),
-    makesOffer: p.services.map((service) => ({ "@type": "Offer", itemOffered: { "@type": "Service", name: service } })),
+    "@graph": [
+      {
+        "@type": ["LocalBusiness", "ProfessionalService"],
+        "@id": `${pageUrl}#business`,
+        name: p.studioName,
+        url: pageUrl,
+        description: p.bio || seo.summary,
+        image: images.length > 0 ? images : undefined,
+        logo: p.logoUrl ? socialImageUrl(p.logoUrl) : undefined,
+        telephone: p.phoneNumber ?? undefined,
+        priceRange: prices.length > 0 ? `From ₹${Math.min(...prices)}` : p.startingPrice != null ? `From ₹${p.startingPrice}` : undefined,
+        founder: { "@type": "Person", name: p.displayName },
+        address: { "@type": "PostalAddress", addressLocality: p.city, addressRegion: p.state.name, addressCountry: p.country.name },
+        areaServed: { "@type": "City", name: p.city, containedInPlace: { "@type": "State", name: p.state.name } },
+        knowsLanguage: p.languages.length > 0 ? p.languages : undefined,
+        knowsAbout: p.services.length > 0 ? p.services : undefined,
+        sameAs: [p.instagramUrl, p.youtubeUrl, p.portfolioUrl, p.googleBusinessUrl].filter(Boolean),
+        hasMap: p.googleMapsUrl ?? undefined,
+        mainEntityOfPage: { "@id": `${pageUrl}#webpage` },
+        hasOfferCatalog:
+          packages.length > 0
+            ? {
+                "@type": "OfferCatalog",
+                name: `${p.studioName} pre-wedding packages`,
+                itemListElement: packages.map((k) => ({
+                  "@type": "Offer",
+                  name: k.name,
+                  price: k.offerPrice ?? k.actualPrice,
+                  priceCurrency: "INR",
+                  itemOffered: { "@type": "Service", name: k.name, serviceType: "Pre-wedding photography" },
+                })),
+              }
+            : undefined,
+      },
+      {
+        "@type": "ProfilePage",
+        "@id": `${pageUrl}#webpage`,
+        url: pageUrl,
+        name: seo.title,
+        description: seo.description,
+        inLanguage: "en-IN",
+        dateCreated: p.createdAt,
+        about: { "@id": `${pageUrl}#business` },
+        isPartOf: { "@type": "WebSite", name: "PhotoBlinks", url: absoluteUrl("/") },
+      },
+      ...(seo.faqs.length > 0
+        ? [
+            {
+              "@type": "FAQPage",
+              mainEntity: seo.faqs.map((f) => ({
+                "@type": "Question",
+                name: f.question,
+                acceptedAnswer: { "@type": "Answer", text: f.answer },
+              })),
+            },
+          ]
+        : []),
+    ],
   };
 
   return (
@@ -106,7 +156,7 @@ export default async function PhotographerPage({ params }: Props) {
       <section className="relative overflow-hidden bg-linear-to-br from-emerald-950 via-pb-brand to-emerald-800 pt-12 pb-24 sm:pt-16 sm:pb-28">
         {p.bannerUrl && (
           <>
-            <Image src={p.bannerUrl} alt="" fill priority sizes="100vw" className="object-cover" />
+            <Image src={p.bannerUrl} alt={`${p.studioName} pre-wedding photography in ${p.city}`} fill priority sizes="100vw" className="object-cover" />
             <div aria-hidden="true" className="absolute inset-0 bg-black/45" />
           </>
         )}
@@ -114,7 +164,7 @@ export default async function PhotographerPage({ params }: Props) {
           <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-end sm:text-left">
             <div className="relative size-32 shrink-0 overflow-hidden rounded-full bg-white/10 ring-4 ring-white/30 sm:size-40">
               {p.logoUrl ?? p.avatarUrl ? (
-                <Image src={(p.logoUrl ?? p.avatarUrl)!} alt={p.displayName} fill sizes="160px" priority className="object-cover" />
+                <Image src={(p.logoUrl ?? p.avatarUrl)!} alt={`${p.studioName} logo`} fill sizes="160px" priority className="object-cover" />
               ) : (
                 <div className="flex h-full items-center justify-center">
                   <Camera className="size-12 text-white/70" strokeWidth={1.25} />
@@ -123,7 +173,7 @@ export default async function PhotographerPage({ params }: Props) {
             </div>
             <div>
               <h1 className="font-heading flex items-center justify-center gap-2 text-3xl font-semibold text-white sm:justify-start sm:text-4xl">
-                {p.studioName}
+                {seo.h1}
                 {p.isVerified && <VerifiedBadge className="size-7" />}
               </h1>
               <p className="mt-1 text-lg text-white/85">by {p.displayName}</p>
@@ -169,6 +219,16 @@ export default async function PhotographerPage({ params }: Props) {
               <Globe className="size-4" /> Portfolio
             </Button>
           )}
+          {p.googleBusinessUrl && (
+            <Button variant="outline" render={<a href={p.googleBusinessUrl} target="_blank" rel="noopener noreferrer nofollow" />}>
+              <Store className="size-4" /> Google Business
+            </Button>
+          )}
+          {p.googleMapsUrl && (
+            <Button variant="outline" render={<a href={p.googleMapsUrl} target="_blank" rel="noopener noreferrer nofollow" />}>
+              <MapPin className="size-4" /> Google Maps
+            </Button>
+          )}
           <ShareButton size="default" title={`${p.studioName} — Pre-Wedding Photographer`} url={absoluteUrl(`/photographers/p/${p.slug}`)} />
         </div>
       </div>
@@ -193,15 +253,14 @@ export default async function PhotographerPage({ params }: Props) {
 
         <div className="mt-12 grid grid-cols-1 gap-8 border-t pt-10 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            {p.bio && (
-              <section>
-                <h2 className="font-heading mb-3 text-xl font-semibold">About {p.studioName}</h2>
-                <p className="leading-relaxed whitespace-pre-line text-foreground/90">{p.bio}</p>
-              </section>
-            )}
+            <section>
+              <h2 className="font-heading mb-3 text-xl font-semibold">About {p.studioName}</h2>
+              <p className="leading-relaxed text-foreground/90">{seo.summary}</p>
+              {p.bio && <p className="mt-3 leading-relaxed whitespace-pre-line text-foreground/90">{p.bio}</p>}
+            </section>
 
             {p.services.length > 0 && (
-              <section className={p.bio ? "mt-8" : ""}>
+              <section className="mt-8">
                 <h2 className="font-heading mb-3 text-xl font-semibold">Services</h2>
                 <div className="flex flex-wrap gap-2">
                   {p.services.map((service) => (
@@ -210,6 +269,22 @@ export default async function PhotographerPage({ params }: Props) {
                     </span>
                   ))}
                 </div>
+              </section>
+            )}
+
+            {seo.faqs.length > 0 && (
+              <section className="mt-8">
+                <h2 className="font-heading mb-3 text-xl font-semibold">
+                  Frequently asked questions about {p.studioName}
+                </h2>
+                <dl className="flex flex-col gap-4">
+                  {seo.faqs.map((faq) => (
+                    <div key={faq.question}>
+                      <dt className="font-medium">{faq.question}</dt>
+                      <dd className="mt-1 text-foreground/90">{faq.answer}</dd>
+                    </div>
+                  ))}
+                </dl>
               </section>
             )}
           </div>

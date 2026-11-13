@@ -46,7 +46,7 @@ export function PhotographerStatusActions({
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        {ACTIONS.filter((a) => a.status !== current).map((a) => (
+        {ACTIONS.filter((a) => a.status !== current && !(current === "draft" && a.status === "on_hold")).map((a) => (
           <Button
             key={a.status}
             type="button"
@@ -55,7 +55,7 @@ export function PhotographerStatusActions({
             disabled={pending}
             onClick={() => handleClick(a.status)}
           >
-            {current === "on_hold" ? (REQUEST_LABEL[a.status] ?? a.label) : a.label}
+            {current === "on_hold" || current === "draft" ? (REQUEST_LABEL[a.status] ?? a.label) : a.label}
           </Button>
         ))}
       </div>

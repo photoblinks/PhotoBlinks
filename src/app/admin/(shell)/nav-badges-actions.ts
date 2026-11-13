@@ -29,9 +29,16 @@ export async function getNavBadgeCounts(): Promise<NavBadgeCounts> {
     .from("photographer_profiles")
     .select("id", { count: "exact", head: true })
     .eq("is_active", false)
-    .is("suspended_at", null);
+    .is("suspended_at", null)
+    .not("user_id", "is", null); // imported drafts are not signup requests
+
+  const { count: pendingClaims } = await supabase
+    .from("photographer_claim_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
 
   return {
+    "/admin/photographer-claims": pendingClaims ?? 0,
     "/admin/photographer-requests": pendingPhotographers ?? 0,
     "/admin/comments": Number(row.pending_comments),
     "/admin/photographer-photos": Number(row.pending_photos),

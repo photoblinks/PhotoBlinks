@@ -12,7 +12,7 @@
     "db:reset": "supabase db reset",
     "db:preflight": "node --env-file=.env.production-backup scripts/preflight-migrations.mjs",
     "db:push": "supabase db push --linked",
-    "test": "tsx --test src/lib/bulk-import/parser.test.ts src/lib/bulk-import/validate.test.ts src/lib/bulk-import/create.test.ts"
+    "test": "tsx --test src/lib/bulk-import/parser.test.ts src/lib/bulk-import/validate.test.ts src/lib/bulk-import/create.test.ts src/lib/bulk-import/photographers.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1117.0",

@@ -32,6 +32,17 @@ export async function allowAction(
   return data === true;
 }
 
+/** Per-IP limit under `prefix`. Skipped (allowed) when the IP is unknown. */
+export async function allowByIp(
+  supabase: SupabaseClient,
+  prefix: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<boolean> {
+  const ip = await clientIpKey();
+  return ip ? allowAction(supabase, `${prefix}:${ip}`, limit, windowSeconds) : true;
+}
+
 export const SIGNUP_RATE_LIMITED_MESSAGE = "Too many signup attempts. Please try again later.";
 
 /** Per-IP signup throttle shared by every signup path: 10/hour and 30/day. */

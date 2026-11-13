@@ -110,6 +110,19 @@ export function toPhotographerPackage(row: PackageRow): PhotographerPackage {
   };
 }
 
+const GOOGLE_HOSTS = ["google.com", "g.page", "goo.gl", "g.co"];
+
+/** True for an https link on a Google domain (Business Profile / Maps, incl. g.page and maps.app.goo.gl short links). */
+export function isGoogleUrl(value: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(value);
+    const host = hostname.toLowerCase();
+    return protocol === "https:" && GOOGLE_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+  } catch {
+    return false;
+  }
+}
+
 /** True for an https link on youtube.com / youtu.be (channel, video or short link). */
 export function isYouTubeUrl(value: string): boolean {
   try {

@@ -1931,6 +1931,8 @@ export type PublicPhotographer = {
   instagramUrl: string | null;
   youtubeUrl: string | null;
   portfolioUrl: string | null;
+  googleBusinessUrl: string | null;
+  googleMapsUrl: string | null;
   logoUrl: string | null;
   bannerUrl: string | null;
   phoneNumber: string | null;
@@ -1954,6 +1956,7 @@ export type PublicPhotographer = {
   /** Admin-set title tag / meta description overrides. */
   seoTitle: string | null;
   seoDescription: string | null;
+  seoH1: string | null;
 };
 
 type PublicPhotographerRow = {
@@ -1972,6 +1975,8 @@ type PublicPhotographerRow = {
   instagram_url: string | null;
   youtube_url: string | null;
   portfolio_url: string | null;
+  google_business_url: string | null;
+  google_maps_url: string | null;
   phone_number: string | null;
   whatsapp_number: string | null;
   city: string;
@@ -1988,6 +1993,7 @@ type PublicPhotographerRow = {
   created_at: string;
   seo_title: string | null;
   seo_description: string | null;
+  seo_h1: string | null;
 };
 
 function toPublicPhotographer(row: PublicPhotographerRow): PublicPhotographer {
@@ -2007,6 +2013,8 @@ function toPublicPhotographer(row: PublicPhotographerRow): PublicPhotographer {
     instagramUrl: row.instagram_url,
     youtubeUrl: row.youtube_url ?? null,
     portfolioUrl: row.portfolio_url,
+    googleBusinessUrl: row.google_business_url ?? null,
+    googleMapsUrl: row.google_maps_url ?? null,
     phoneNumber: row.phone_number,
     whatsappNumber: row.whatsapp_number,
     city: row.city,
@@ -2021,6 +2029,7 @@ function toPublicPhotographer(row: PublicPhotographerRow): PublicPhotographer {
     createdAt: row.created_at,
     seoTitle: row.seo_title ?? null,
     seoDescription: row.seo_description ?? null,
+    seoH1: row.seo_h1 ?? null,
   };
 }
 

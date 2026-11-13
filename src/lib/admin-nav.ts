@@ -54,7 +54,10 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     description: "Photographer accounts, photos and pages.",
     items: [
       { href: "/admin/photographer-requests", label: "Requests", description: "Approve new photographer sign-ups." },
+      { href: "/admin/photographer-claims", label: "Claims", description: "Approve owners claiming imported profiles." },
       { href: "/admin/photographer-profiles", label: "Profiles", description: "Edit profiles, verified tick and SEO." },
+      { href: "/admin/photographer-drafts", label: "Drafts", description: "Imported profiles not yet claimed or activated." },
+      { href: "/admin/photographer-profiles/bulk-import", label: "Bulk Import", description: "Import many photographer profiles at once." },
       { href: "/admin/photographer-photos", label: "Photos", description: "Approve or reject submitted photos." },
       { href: "/admin/photographers", label: "Sponsored", description: "Sponsored photographer placements." },
       { href: "/admin/photographer-state-seo", label: "State SEO", description: "Title, banner and blog for photographer state pages." },

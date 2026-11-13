@@ -37,6 +37,32 @@ export default async function PhotographerShellLayout({
       if (profile.suspended_at) redirect("/photographer/signup");
       pendingApproval = !profile.is_active;
     } else {
+      // A claimant (see /claim-profile) has no profile until an admin approves
+      // the claim: show only the waiting notice, no nav and no children.
+      const { data: pendingClaim } = await supabase
+        .from("photographer_claim_requests")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("status", "pending")
+        .limit(1)
+        .maybeSingle();
+      if (pendingClaim) {
+        return (
+          <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-4 py-10">
+            <VerifyEmailBanner photographer />
+            <div className="rounded-lg border border-sky-200 bg-sky-50 px-5 py-6 text-sky-900">
+              <h1 className="font-heading text-xl font-semibold">Your claim is awaiting admin approval</h1>
+              <p className="mt-2 text-sm">
+                Your claim is yet to be approved by our team. This usually takes 24 to 48 hours. Once it is
+                approved you will be able to access and manage your photographer profile.
+              </p>
+            </div>
+            <form action={signOut} className="mt-4">
+              <AuthSubmitButton label="Log out" pendingLabel="Logging out…" variant="outline" size="sm" />
+            </form>
+          </main>
+        );
+      }
       // No profile yet. The combined signup form (/sign-in/photographer)
       // stashed the profile fields in this user's signup metadata since it
       // couldn't insert them itself yet — consume it now. A Google sign-in

@@ -205,7 +205,7 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -256,14 +256,14 @@ otp_expiry = 3600
 # the hosted project needs the same values entered separately in its own
 # Dashboard (Authentication > Emails > SMTP Settings), which this file has
 # no effect on.
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.resend.com"
-# port = 465
-# user = "resend"
-# pass = "env(RESEND_API_KEY)"
-# admin_email = "noreply@photoblinks.com"
-# sender_name = "PhotoBlinks"
+[auth.email.smtp]
+enabled = true
+host = "env(SENDPULSE_SMTP_HOST)"
+port = 465
+user = "env(SENDPULSE_SMTP_USER)"
+pass = "env(SENDPULSE_SMTP_PASS)"
+admin_email = "env(SENDPULSE_FROM_EMAIL)"
+sender_name = "env(SENDPULSE_FROM_NAME)"
 
 # PhotoBlinks-branded confirmation email — see supabase/templates/confirmation.html
 [auth.email.template.confirmation]
@@ -274,6 +274,11 @@ content_path = "./supabase/templates/confirmation.html"
 [auth.email.template.magic_link]
 subject = "Verify your PhotoBlinks email"
 content_path = "./supabase/templates/magic_link.html"
+
+# Set / reset password link (claimed profiles and "Forgot password").
+[auth.email.template.recovery]
+subject = "Set your PhotoBlinks password"
+content_path = "./supabase/templates/recovery.html"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]

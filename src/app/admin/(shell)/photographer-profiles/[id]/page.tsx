@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { AuthSubmitButton } from "@/components/public/auth-submit-button";
+import { ImageUploader } from "@/components/admin/image-uploader";
 import { CountryStateFields } from "@/components/photographer/country-state-fields";
 import { PhotographerStatusActions } from "@/components/admin/photographer-status-actions";
 import { setPhotographerVerified, updatePhotographerProfileByAdmin } from "../actions";
@@ -42,7 +43,7 @@ export default async function AdminPhotographerProfileDetailPage({
     supabase.rpc("get_admin_photographer_profiles", { p_profile_id: id, p_limit: 1 }),
     getActiveCountries(),
     getActiveStates(),
-    supabase.from("photographer_profiles").select("is_verified, youtube_url, seo_title, seo_description").eq("id", id).maybeSingle(),
+    supabase.from("photographer_profiles").select("is_verified, youtube_url, seo_title, seo_h1, seo_description, logo_url, banner_url, google_business_url, google_maps_url").eq("id", id).maybeSingle(),
   ]);
   const isVerified = verifiedRow?.is_verified === true;
   const profile = ((data ?? []) as PhotographerProfileRow[])[0];
@@ -63,7 +64,7 @@ export default async function AdminPhotographerProfileDetailPage({
 
       <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
         <dt className="text-muted-foreground">Email</dt>
-        <dd>{profile.email}</dd>
+        <dd>{profile.email ?? "— (unclaimed)"}</dd>
         <dt className="text-muted-foreground">Signed up</dt>
         <dd>{formatDateTime(profile.created_at)}</dd>
         <dt className="text-muted-foreground">Last sign-in</dt>
@@ -113,6 +114,26 @@ export default async function AdminPhotographerProfileDetailPage({
             <FieldLabel htmlFor="studio_name">Photography Studio Name *</FieldLabel>
             <Input id="studio_name" name="studio_name" defaultValue={profile.studio_name} required />
           </Field>
+          <Field>
+            <FieldLabel>Logo</FieldLabel>
+            <ImageUploader
+              kind="photographers"
+              slug={profile.id}
+              name="logo_url"
+              defaultValue={verifiedRow?.logo_url}
+              previewClassName="h-24 w-24 rounded-full"
+            />
+          </Field>
+          <Field>
+            <FieldLabel>Banner image</FieldLabel>
+            <ImageUploader
+              kind="photographers"
+              slug={profile.id}
+              name="banner_url"
+              defaultValue={verifiedRow?.banner_url}
+              previewClassName="aspect-16/6 w-full max-w-md"
+            />
+          </Field>
           <CountryStateFields
             countries={countries}
             states={states}
@@ -148,12 +169,43 @@ export default async function AdminPhotographerProfileDetailPage({
             <Input id="portfolio_url" name="portfolio_url" type="url" defaultValue={profile.portfolio_url ?? ""} />
           </Field>
           <Field>
+            <FieldLabel htmlFor="google_business_url">Google Business Profile Link</FieldLabel>
+            <Input
+              id="google_business_url"
+              name="google_business_url"
+              type="url"
+              defaultValue={verifiedRow?.google_business_url ?? ""}
+              placeholder="https://g.page/…"
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="google_maps_url">Google Maps Link (business address)</FieldLabel>
+            <Input
+              id="google_maps_url"
+              name="google_maps_url"
+              type="url"
+              defaultValue={verifiedRow?.google_maps_url ?? ""}
+              placeholder="https://maps.app.goo.gl/…"
+            />
+          </Field>
+          <Field>
             <FieldLabel htmlFor="seo_title">SEO Title Tag</FieldLabel>
             <Input
               id="seo_title"
               name="seo_title"
               defaultValue={verifiedRow?.seo_title ?? ""}
-              placeholder="Shown in Google results (blank = auto-generated)"
+              maxLength={60}
+              placeholder={`Blank = auto: ${profile.studio_name} – Pre-Wedding Photographer in ${profile.city}`}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="seo_h1">Page H1 Heading</FieldLabel>
+            <Input
+              id="seo_h1"
+              name="seo_h1"
+              defaultValue={verifiedRow?.seo_h1 ?? ""}
+              maxLength={120}
+              placeholder={`Blank = auto: ${profile.studio_name} – Pre-Wedding Photographer in ${profile.city}`}
             />
           </Field>
           <Field>
@@ -162,8 +214,9 @@ export default async function AdminPhotographerProfileDetailPage({
               id="seo_description"
               name="seo_description"
               rows={2}
+              maxLength={160}
               defaultValue={verifiedRow?.seo_description ?? ""}
-              placeholder="Shown in Google results (blank = auto-generated)"
+              placeholder="Blank = auto-generated from services, experience and starting price (aim for 120–160 characters)"
             />
           </Field>
           {error && <FieldError>{error}</FieldError>}

@@ -8,7 +8,8 @@ import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
 import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
 import { isValidCountryState } from "@/lib/supabase/require-photographer";
-import { isYouTubeUrl } from "@/lib/photographer-options";
+import { isGoogleUrl, isYouTubeUrl } from "@/lib/photographer-options";
+import { isAllowedR2ImageUrl } from "@/lib/r2/upload";
 import type { PhotographerStatus } from "./types";
 
 // Every action re-checks the admin gate server-side; writes go through the
@@ -40,7 +41,18 @@ const profileSchema = z.object({
     "Enter a youtube.com or youtu.be link.",
   ),
   portfolio_url: httpsUrl("Enter a valid portfolio URL."),
+  google_business_url: httpsUrl("Enter a valid Google Business Profile link.").refine(
+    (v) => v === undefined || isGoogleUrl(v),
+    "Enter a Google link (google.com, g.page, goo.gl or maps.app.goo.gl).",
+  ),
+  google_maps_url: httpsUrl("Enter a valid Google Maps link.").refine(
+    (v) => v === undefined || isGoogleUrl(v),
+    "Enter a Google link (google.com, g.page, goo.gl or maps.app.goo.gl).",
+  ),
+  logo_url: z.string().trim().max(500).optional(),
+  banner_url: z.string().trim().max(500).optional(),
   seo_title: z.string().trim().max(120, "Title tag must be 120 characters or fewer.").optional(),
+  seo_h1: z.string().trim().max(120, "H1 must be 120 characters or fewer.").optional(),
   seo_description: z.string().trim().max(320, "Meta description must be 320 characters or fewer.").optional(),
 });
 
@@ -65,8 +77,13 @@ export async function updatePhotographerProfileByAdmin(id: string, formData: For
       instagram_url: String(formData.get("instagram_url") ?? "").trim() || undefined,
       youtube_url: String(formData.get("youtube_url") ?? "").trim() || undefined,
       seo_title: String(formData.get("seo_title") ?? "").trim() || undefined,
+      seo_h1: String(formData.get("seo_h1") ?? "").trim() || undefined,
       seo_description: String(formData.get("seo_description") ?? "").trim() || undefined,
       portfolio_url: String(formData.get("portfolio_url") ?? "").trim() || undefined,
+      google_business_url: String(formData.get("google_business_url") ?? "").trim() || undefined,
+      google_maps_url: String(formData.get("google_maps_url") ?? "").trim() || undefined,
+      logo_url: String(formData.get("logo_url") ?? "").trim() || undefined,
+      banner_url: String(formData.get("banner_url") ?? "").trim() || undefined,
     });
   } catch (err) {
     const message = err instanceof z.ZodError ? err.issues[0].message : "Invalid form data.";
@@ -76,6 +93,12 @@ export async function updatePhotographerProfileByAdmin(id: string, formData: For
   const supabase = await createClient();
   if (!(await isValidCountryState(supabase, values.country_id, values.state_id))) {
     redirect(`${base}?error=${encodeURIComponent("Select a valid country and state.")}`);
+  }
+  // Images must be this account's own R2 uploads, never an arbitrary URL.
+  for (const url of [values.logo_url, values.banner_url]) {
+    if (url && !isAllowedR2ImageUrl(url)) {
+      redirect(`${base}?error=${encodeURIComponent("Invalid image. Please upload it again.")}`);
+    }
   }
 
   // Optional fields cleared in the form must be nulled, not left unchanged.
@@ -87,8 +110,13 @@ export async function updatePhotographerProfileByAdmin(id: string, formData: For
       instagram_url: values.instagram_url ?? null,
       youtube_url: values.youtube_url ?? null,
       seo_title: values.seo_title ?? null,
+      seo_h1: values.seo_h1 ?? null,
       seo_description: values.seo_description ?? null,
       portfolio_url: values.portfolio_url ?? null,
+      google_business_url: values.google_business_url ?? null,
+      google_maps_url: values.google_maps_url ?? null,
+      logo_url: values.logo_url ?? null,
+      banner_url: values.banner_url ?? null,
     })
     .eq("id", id)
     .select("id");
@@ -133,10 +161,13 @@ export async function setPhotographerStatus(
   const supabase = await createClient();
 
   // A profile can only go live once its owner has verified their email.
+  // Unclaimed (bulk-imported) profiles have no owner yet, so nothing to verify.
   if (status === "active") {
     const { data: profile } = await supabase.from("photographer_profiles").select("user_id").eq("id", id).maybeSingle();
     if (!profile) return { error: "This photographer no longer exists." };
-    const { data: verified } = await supabase.rpc("is_email_verified", { p_user: profile.user_id });
+    const { data: verified } = profile.user_id
+      ? await supabase.rpc("is_email_verified", { p_user: profile.user_id })
+      : { data: true };
     if (verified !== true) return { error: "Email not verified yet. Ask the photographer to verify their email first." };
   }
 

@@ -90,6 +90,31 @@ const STATUS_CLASS: Record<RowStatus, string> = {
   SLUG_CONFLICT: "text-orange-600",
 };
 
+const ENTITY = {
+  locations: {
+    apiBase: "/api/admin/locations/bulk-import",
+    plural: "locations",
+    singular: "Location",
+    listHref: "/admin/locations",
+    listLabel: "Go to Locations",
+    fallbackFile: "photoblinks-location-import.xlsx",
+    draftNote: "They are created as drafts; nothing is published.",
+    doneNote: "All created locations are drafts and are not visible publicly.",
+  },
+  photographers: {
+    apiBase: "/api/admin/photographers/bulk-import",
+    plural: "photographers",
+    singular: "Studio",
+    listHref: "/admin/photographer-requests",
+    listLabel: "Review in Photographer Requests",
+    fallbackFile: "photoblinks-photographer-import.xlsx",
+    draftNote: "They are created as unclaimed drafts (on hold); nothing is public until you activate them.",
+    doneNote: "All created profiles are on hold and not visible publicly. Activate them after review.",
+  },
+} as const;
+
+export type BulkImportEntity = keyof typeof ENTITY;
+
 function Stat({ label, value, className }: { label: string; value: number; className?: string }) {
   return (
     <div className="rounded-lg border p-3">
@@ -102,10 +127,13 @@ function Stat({ label, value, className }: { label: string; value: number; class
 export function BulkImportForm({
   countries,
   states,
+  entity = "locations",
 }: {
   countries: Option[];
   states: StateOption[];
+  entity?: BulkImportEntity;
 }) {
+  const config = ENTITY[entity];
   const [countryId, setCountryId] = useState("");
   const [stateId, setStateId] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -136,6 +164,30 @@ export function BulkImportForm({
     setAcknowledged(false);
   }
 
+  const problemRowCount = result
+    ? result.rows.filter((row) => row.status !== "NEW" && row.status !== "WARNING").length
+    : 0;
+
+  // Drops rows that cannot be created from the preview so the valid ones can be
+  // imported without re-uploading. The server re-validates the same file on
+  // create and skips these rows again, so nothing unsafe is written.
+  function removeProblemRows() {
+    if (!result) return;
+    const rows = result.rows.filter((row) => row.status === "NEW" || row.status === "WARNING");
+    const warningRows = rows.filter((row) => row.status === "WARNING").length;
+    setResult({
+      ...result,
+      rows,
+      summary: {
+        totalRows: rows.length,
+        validRows: rows.length - warningRows,
+        warningRows,
+        errorRows: 0,
+        duplicateRows: 0,
+      },
+    });
+  }
+
   function handleCountryChange(value: string) {
     setCountryId(value);
     setStateId("");
@@ -163,7 +215,7 @@ export function BulkImportForm({
     try {
       const params = new URLSearchParams({ countryId, stateId });
       const response = await fetch(
-        `/api/admin/locations/bulk-import/template?${params.toString()}`,
+        `${config.apiBase}/template?${params.toString()}`,
       );
 
       if (!response.ok) {
@@ -174,7 +226,7 @@ export function BulkImportForm({
       const blob = await response.blob();
       const disposition = response.headers.get("Content-Disposition") ?? "";
       const filename =
-        disposition.match(/filename="([^"]+)"/)?.[1] ?? "photoblinks-location-import.xlsx";
+        disposition.match(/filename="([^"]+)"/)?.[1] ?? config.fallbackFile;
 
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
@@ -206,7 +258,7 @@ export function BulkImportForm({
       body.append("countryId", countryId);
       body.append("stateId", stateId);
 
-      const response = await fetch("/api/admin/locations/bulk-import/validate", {
+      const response = await fetch(`${config.apiBase}/validate`, {
         method: "POST",
         body,
       });
@@ -242,7 +294,7 @@ export function BulkImportForm({
       body.append("stateId", stateId);
       body.append("acknowledgeWarnings", String(acknowledged));
 
-      const response = await fetch("/api/admin/locations/bulk-import/create", {
+      const response = await fetch(`${config.apiBase}/create`, {
         method: "POST",
         body,
       });
@@ -253,7 +305,7 @@ export function BulkImportForm({
 
       if (!response.ok) {
         throw new Error(
-          data && "error" in data && data.error ? data.error : "Could not create the locations.",
+          data && "error" in data && data.error ? data.error : `Could not create the ${config.plural}.`,
         );
       }
 
@@ -263,7 +315,7 @@ export function BulkImportForm({
       setAcknowledged(false);
       setFile(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not create the locations.");
+      setError(e instanceof Error ? e.message : `Could not create the ${config.plural}.`);
     } finally {
       setCreating(false);
     }
@@ -344,7 +396,7 @@ export function BulkImportForm({
           {validating ? "Validating…" : "Validate Excel"}
         </Button>
         <FieldDescription>
-          Parses and validates the workbook without creating any locations. Creation only happens
+          Parses and validates the workbook without creating any {config.plural}. Creation only happens
           after you confirm below.
         </FieldDescription>
       </Field>
@@ -371,7 +423,7 @@ export function BulkImportForm({
             <TableHeader>
               <TableRow>
                 <TableHead className="w-14">Row</TableHead>
-                <TableHead>Location</TableHead>
+                <TableHead>{config.singular}</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Problems</TableHead>
               </TableRow>
@@ -410,14 +462,25 @@ export function BulkImportForm({
           </Table>
 
           {result.summary.errorRows > 0 || result.summary.duplicateRows > 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Validation complete — no locations were created. Fix the errors and upload again.
-            </p>
+            <div className="space-y-3 rounded-lg border p-4">
+              <p className="text-sm text-muted-foreground">
+                Validation complete — no {config.plural} were created. {problemRowCount} row(s) have
+                errors or already exist.
+                {creatableCount > 0
+                  ? ` Remove them to import the other ${creatableCount} without re-uploading.`
+                  : " Fix the errors and upload again."}
+              </p>
+              {creatableCount > 0 && (
+                <Button type="button" variant="outline" onClick={removeProblemRows}>
+                  Remove {problemRowCount} problem row(s)
+                </Button>
+              )}
+            </div>
           ) : creatableCount > 0 ? (
             <div className="space-y-3 rounded-lg border p-4">
               <p className="text-sm">
-                Validation complete — <strong>{creatableCount}</strong> new location(s) ready.
-                They are created as <strong>drafts</strong>; nothing is published.
+                Validation complete — <strong>{creatableCount}</strong> new {config.plural} ready.{" "}
+                {config.draftNote}
               </p>
               {result.summary.warningRows > 0 && (
                 <label className="flex items-start gap-2 text-sm text-amber-600">
@@ -434,11 +497,11 @@ export function BulkImportForm({
                 </label>
               )}
               <Button type="button" onClick={handleCreate} disabled={!canCreate || creating}>
-                {creating ? "Creating…" : "Create Draft Locations"}
+                {creating ? "Creating…" : `Create Draft ${config.plural.charAt(0).toUpperCase()}${config.plural.slice(1)}`}
               </Button>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No new locations to create.</p>
+            <p className="text-sm text-muted-foreground">No new {config.plural} to create.</p>
           )}
         </div>
       )}
@@ -446,7 +509,7 @@ export function BulkImportForm({
       {createResult && (
         <div className="space-y-3 rounded-lg border p-4">
           <p className="text-sm font-medium">
-            Import completed — {createResult.created.length} draft location(s) created.
+            Import completed — {createResult.created.length} draft {config.plural} created.
           </p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat label="Requested" value={createResult.requested} />
@@ -455,7 +518,7 @@ export function BulkImportForm({
             <Stat label="Failed" value={createResult.failed.length} className="text-destructive" />
           </div>
           <p className="text-sm text-muted-foreground">
-            All created locations are drafts and are not visible publicly.
+            {config.doneNote}
           </p>
           {createResult.created.length > 0 && (
             <ul className="list-disc pl-5 text-sm">
@@ -474,8 +537,8 @@ export function BulkImportForm({
               Row {row.excelRow} — {row.name ?? "—"}: {row.reason}
             </div>
           ))}
-          <Link href="/admin/locations" className="text-sm font-medium underline">
-            Go to Locations
+          <Link href={config.listHref} className="text-sm font-medium underline">
+            {config.listLabel}
           </Link>
         </div>
       )}

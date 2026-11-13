@@ -60,6 +60,9 @@ export default async function PhotographerLoginPage({
           </Field>
           {error && <FieldError>{error}</FieldError>}
           <AuthSubmitButton label="Log in" pendingLabel="Signing in…" />
+          <Link href="/forgot-password" className="text-center text-sm text-pb-brand hover:underline">
+            Forgot password?
+          </Link>
         </FieldGroup>
       </form>
 

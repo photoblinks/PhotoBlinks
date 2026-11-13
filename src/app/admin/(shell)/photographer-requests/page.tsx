@@ -45,7 +45,9 @@ export default async function AdminPhotographerRequestsPage({
   });
   const requests = (data ?? []) as PhotographerProfileRow[];
   const { data: unverified } = requests.length
-    ? await supabase.rpc("get_unverified_user_ids", { p_ids: requests.map((r) => r.user_id) })
+    ? await supabase.rpc("get_unverified_user_ids", {
+        p_ids: requests.flatMap((r) => (r.user_id ? [r.user_id] : [])),
+      })
     : { data: [] as string[] };
   const unverifiedIds = new Set<string>((unverified ?? []) as string[]);
 
@@ -78,9 +80,13 @@ export default async function AdminPhotographerRequestsPage({
                   {row.display_name}
                 </Link>
                 <p className="text-xs text-muted-foreground">{row.email}</p>
-                <Badge variant={unverifiedIds.has(row.user_id) ? "secondary" : "default"} className="mt-1">
-                  {unverifiedIds.has(row.user_id) ? "Email not verified" : "Email verified"}
-                </Badge>
+                {row.user_id === null ? (
+                  <Badge variant="outline" className="mt-1">Imported (unclaimed)</Badge>
+                ) : (
+                  <Badge variant={unverifiedIds.has(row.user_id) ? "secondary" : "default"} className="mt-1">
+                    {unverifiedIds.has(row.user_id) ? "Email not verified" : "Email verified"}
+                  </Badge>
+                )}
               </TableCell>
               <TableCell>{row.studio_name}</TableCell>
               <TableCell className="text-muted-foreground">
