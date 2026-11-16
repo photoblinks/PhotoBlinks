@@ -6,7 +6,7 @@ import { z } from "zod";
 import { CACHE_TAGS } from "@/lib/public-data";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
+import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
 
 const idSchema = z.string().uuid();
 const citySlugSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
@@ -24,7 +24,7 @@ export async function savePhotographerGeoSeo(stateId: string, citySlug: string |
   if (!idSchema.safeParse(stateId).success || (citySlug !== null && !citySlugSchema.safeParse(citySlug).success)) {
     redirect(`/admin/${section}`);
   }
-  if (!(await getAuthorizedAdminUser())) redirect("/admin/login");
+  if (!(await getAuthorizedStaffUser())?.can(PERMISSION.PHOTOGRAPHERS_EDIT)) redirect("/admin/login");
 
   const values = {
     image_url: field(formData, "image_url"),

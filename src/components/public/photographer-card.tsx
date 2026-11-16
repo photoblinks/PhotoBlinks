@@ -37,7 +37,7 @@ export function PhotographerCard({ photographer }: { photographer: PublicPhotogr
         {banner ? (
           <Image
             src={banner}
-            alt=""
+            alt={`${studioName} — pre-wedding photographer in ${city}`}
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -65,7 +65,7 @@ export function PhotographerCard({ photographer }: { photographer: PublicPhotogr
           <h3 className="font-heading flex items-center gap-1.5 text-lg leading-snug font-semibold text-foreground">
             {/* Stretched link: the whole card opens the profile, while the
                 Call / WhatsApp buttons below sit above it (z-10). */}
-            <Link href={`/photographers/p/${slug}`} className="after:absolute after:inset-0">
+            <Link href={`/photographers/p/${slug}`} prefetch={false} className="after:absolute after:inset-0">
               {studioName}
             </Link>
             {isVerified && <VerifiedBadge />}

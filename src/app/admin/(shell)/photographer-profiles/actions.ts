@@ -3,16 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { recordActivityFor } from "@/lib/activity";
 import { CACHE_TAGS } from "@/lib/public-data";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
+import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
 import { isValidCountryState } from "@/lib/supabase/require-photographer";
 import { isGoogleUrl, isYouTubeUrl } from "@/lib/photographer-options";
 import { isAllowedR2ImageUrl } from "@/lib/r2/upload";
 import type { PhotographerStatus } from "./types";
 
-// Every action re-checks the admin gate server-side; writes go through the
+// Every action re-checks the role/permission gate server-side; writes go through the
 // request-scoped client so the photographer_profiles admin_all RLS policy and
 // the protect_photographer_status_fields trigger still apply.
 
@@ -61,7 +62,7 @@ const idSchema = z.string().uuid();
 export async function updatePhotographerProfileByAdmin(id: string, formData: FormData) {
   const base = `/admin/photographer-profiles/${id}`;
   if (!idSchema.safeParse(id).success) redirect("/admin/photographer-profiles");
-  if (!(await getAuthorizedAdminUser())) redirect("/admin/login");
+  if (!(await getAuthorizedStaffUser())?.can(PERMISSION.PHOTOGRAPHERS_EDIT)) redirect("/admin/login");
 
   let values: z.infer<typeof profileSchema>;
   try {
@@ -145,7 +146,11 @@ export async function setPhotographerStatus(
   id: string,
   status: PhotographerStatus,
 ): Promise<PhotographerStatusResult> {
-  if (!(await getAuthorizedAdminUser())) return { error: "Not authorized." };
+  const staff = await getAuthorizedStaffUser();
+  // Employees may only activate; hold and suspend stay admin-only (the
+  // protect_photographer_status_fields trigger enforces the same split).
+  const allowed = status === "active" ? staff?.can(PERMISSION.PHOTOGRAPHERS_PUBLISH) : staff?.isAdmin;
+  if (!allowed) return { error: "Not authorized." };
   if (!idSchema.safeParse(id).success) return { error: "Invalid photographer." };
 
   const patch =
@@ -179,6 +184,14 @@ export async function setPhotographerStatus(
   if (error) return { error: "Could not update status. Please try again." };
   if (!data || data.length === 0) return { error: "This photographer no longer exists." };
 
+  if (status === "active") {
+    await recordActivityFor(supabase, {
+      module: "photographers",
+      action: "published",
+      entity_id: id,
+    });
+  }
+
   revalidatePublicContent(CACHE_TAGS.photographers);
   revalidatePath("/admin/photographer-profiles");
   revalidatePath("/admin/photographer-requests");
@@ -191,7 +204,7 @@ export async function setPhotographerStatus(
 export async function setPhotographerVerified(id: string, formData: FormData) {
   const base = `/admin/photographer-profiles/${id}`;
   if (!idSchema.safeParse(id).success) redirect("/admin/photographer-profiles");
-  if (!(await getAuthorizedAdminUser())) redirect("/admin/login");
+  if (!(await getAuthorizedStaffUser())?.isAdmin) redirect("/admin/login");
 
   const supabase = await createClient();
   const { data, error } = await supabase

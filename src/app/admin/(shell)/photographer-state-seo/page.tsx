@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { requireAdminPage } from "@/lib/supabase/require-permission";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { getPublicPhotographers } from "@/lib/public-data";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default async function AdminPhotographerStateSeoPage() {
-  await requireAdminPage();
+  await requireModulePage([PERMISSION.PHOTOGRAPHERS_EDIT]);
 
   const supabase = await createClient();
   const [photographers, { data: states }] = await Promise.all([

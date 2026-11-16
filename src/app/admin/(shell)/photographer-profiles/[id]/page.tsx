@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdminPage } from "@/lib/supabase/require-permission";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { getActiveCountries, getActiveStates } from "@/lib/public-data";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,7 @@ export default async function AdminPhotographerProfileDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string; success?: string }>;
 }) {
-  await requireAdminPage();
+  const staff = await requireModulePage([PERMISSION.PHOTOGRAPHERS_EDIT, PERMISSION.PHOTOGRAPHERS_PUBLISH]);
 
   const { id } = await params;
   if (!z.string().uuid().safeParse(id).success) notFound();
@@ -82,21 +82,23 @@ export default async function AdminPhotographerProfileDetailPage({
         <p className="mb-3 text-xs text-muted-foreground">
           On hold and suspended both block photographer access; suspended also records the date.
         </p>
-        <PhotographerStatusActions id={profile.id} current={profile.status} />
+        <PhotographerStatusActions id={profile.id} current={profile.status} isAdmin={staff.isAdmin} />
       </div>
 
-      <form action={setPhotographerVerified.bind(null, profile.id)} className="mt-4 rounded-lg border bg-card p-4">
-        <h2 className="mb-1 flex items-center gap-1.5 text-sm font-medium">
-          Verified badge {isVerified && <VerifiedBadge className="size-4" />}
-        </h2>
-        <p className="mb-3 text-xs text-muted-foreground">
-          Shows a blue tick next to the studio name on the photographer&apos;s card and public page.
-        </p>
-        <input type="hidden" name="verified" value={isVerified ? "false" : "true"} />
-        <Button type="submit" variant={isVerified ? "outline" : "default"} size="sm">
-          {isVerified ? "Remove verified badge" : "Mark as verified"}
-        </Button>
-      </form>
+      {staff.isAdmin && (
+        <form action={setPhotographerVerified.bind(null, profile.id)} className="mt-4 rounded-lg border bg-card p-4">
+          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-medium">
+            Verified badge {isVerified && <VerifiedBadge className="size-4" />}
+          </h2>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Shows a blue tick next to the studio name on the photographer&apos;s card and public page.
+          </p>
+          <input type="hidden" name="verified" value={isVerified ? "false" : "true"} />
+          <Button type="submit" variant={isVerified ? "outline" : "default"} size="sm">
+            {isVerified ? "Remove verified badge" : "Mark as verified"}
+          </Button>
+        </form>
+      )}
 
       {success && (
         <p className="mt-6 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950/30 dark:text-green-400">

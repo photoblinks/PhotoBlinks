@@ -23,9 +23,12 @@ const REQUEST_LABEL: Partial<Record<PhotographerStatus, string>> = {
 export function PhotographerStatusActions({
   id,
   current,
+  isAdmin,
 }: {
   id: string;
   current: PhotographerStatus;
+  /** Employees can only activate; hold and suspend stay admin-only. */
+  isAdmin: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -46,7 +49,7 @@ export function PhotographerStatusActions({
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        {ACTIONS.filter((a) => a.status !== current && !(current === "draft" && a.status === "on_hold")).map((a) => (
+        {ACTIONS.filter((a) => a.status !== current && (isAdmin || a.status === "active") && !(current === "draft" && a.status === "on_hold")).map((a) => (
           <Button
             key={a.status}
             type="button"

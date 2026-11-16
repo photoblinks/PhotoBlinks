@@ -3,13 +3,17 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
 
+const TITLE = "How PhotoBlinks Works — Find Locations & Pre-Wedding Photographers";
+const DESCRIPTION =
+  "Step-by-step: how couples find and compare pre-wedding locations and photographers on PhotoBlinks, how photographers join, and how every listing is reviewed.";
+
 export const metadata: Metadata = {
-  title: "How It Works",
-  description: "How to browse, compare, and research pre-wedding photoshoot locations on PhotoBlinks.",
+  title: TITLE,
+  description: DESCRIPTION,
   alternates: { canonical: "/how-it-works" },
   openGraph: {
-    title: "How It Works | PhotoBlinks",
-    description: "How to browse, compare, and research pre-wedding photoshoot locations on PhotoBlinks.",
+    title: TITLE,
+    description: DESCRIPTION,
     url: "/how-it-works",
     siteName: "PhotoBlinks",
     type: "website",
@@ -17,36 +21,71 @@ export const metadata: Metadata = {
   },
 };
 
-const STEPS = [
+const LINK = "text-pb-brand hover:underline";
+
+const COUPLE_STEPS = [
   {
-    title: "Browse locations",
-    body: "Start from the homepage or the Locations section and browse what's available across India.",
+    title: "Browse by state, city and category",
+    body: "Start from the Locations section. Narrow by state and city, then by category — Beach, Temple, Waterfall, Hill and more — or use the budget filter.",
   },
   {
-    title: "Choose a state, city, or category",
-    body: "Narrow down by state, city, or a category like Beach, Temple, Waterfall, or Hill — whichever makes sense for how you're planning.",
+    title: "Open a location page",
+    body: "Each page has photos and, where available, practical details: pricing, drone policy and best time to visit.",
   },
   {
-    title: "Use the filters",
-    body: "Refine further by city, category, or budget using the filter bar on any browsing page.",
+    title: "See real photographer work",
+    body: "Approved photos from photographers who shot at the location appear on its page, so you can judge how the place photographs in practice.",
   },
   {
-    title: "Open a location",
-    body: "Each location has its own page with photos and, where available, practical details like pricing, drone policy, and best time to visit.",
+    title: "Compare photographers in your city",
+    body: "The photographer directory is organised by state and city. Profiles show services, experience and starting prices.",
   },
   {
-    title: "Review the available information",
-    body: "Check whatever details the location page provides — see Our Data & Verification for what that information means and its limits.",
+    title: "Contact the photographer directly",
+    body: "Reach photographers by call or WhatsApp from their profile. PhotoBlinks does not take bookings or payments — you agree terms with them directly.",
   },
   {
-    title: "Compare your options",
-    body: "Open a few locations side by side before deciding which fits your shoot.",
-  },
-  {
-    title: "Confirm directly with the location before visiting",
-    body: "Fees, permissions, and timings can change — always confirm the details that matter to you directly with the venue before you travel or plan your shoot.",
+    title: "Confirm details before you travel",
+    body: "Fees, permissions and timings change. Check the details that matter with the venue first.",
   },
 ];
+
+const PHOTOGRAPHER_STEPS = [
+  {
+    title: "Create an account or claim your profile",
+    body: "Join through the photographer sign-in, or, if you are already listed, claim your existing profile.",
+  },
+  {
+    title: "Our team checks your details",
+    body: "Claims are verified by our team before you can manage a profile (usually 24–48 hours).",
+  },
+  {
+    title: "Submit photos for a location",
+    body: "Each photo submission targets one existing location or studio and starts as pending.",
+  },
+  {
+    title: "Admin approves or rejects",
+    body: "Only approved photos appear publicly. Rejected photos are removed from storage.",
+  },
+];
+
+function StepList({ steps }: { steps: { title: string; body: string }[] }) {
+  return (
+    <ol className="mt-6 flex flex-col gap-6">
+      {steps.map((step, index) => (
+        <li key={step.title} className="flex gap-4">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-pb-brand/10 font-heading font-semibold text-pb-brand">
+            {index + 1}
+          </span>
+          <div>
+            <h3 className="font-heading text-lg font-semibold">{step.title}</h3>
+            <p className="mt-1 leading-relaxed text-foreground/90">{step.body}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export default function HowItWorksPage() {
   return (
@@ -56,37 +95,52 @@ export default function HowItWorksPage() {
       />
 
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">How PhotoBlinks Works</h1>
-      <p className="mt-4 leading-relaxed text-foreground/90">
-        PhotoBlinks is a discovery and information platform — we help you find and research
-        pre-wedding photoshoot locations. We don&apos;t handle bookings, payments, or reservations; the
-        steps below are how people typically use the site.
-      </p>
-
-      <ol className="mt-8 flex flex-col gap-6">
-        {STEPS.map((step, index) => (
-          <li key={step.title} className="flex gap-4">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-pb-brand/10 font-heading font-semibold text-pb-brand">
-              {index + 1}
-            </span>
-            <div>
-              <h2 className="font-heading text-lg font-semibold">{step.title}</h2>
-              <p className="mt-1 leading-relaxed text-foreground/90">{step.body}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
-
-      <p className="mt-10 border-t pt-6 leading-relaxed text-foreground/90">
-        Read more about{" "}
-        <Link href="/about" className="text-pb-brand hover:underline">
-          who we are
-        </Link>{" "}
-        or how we{" "}
-        <Link href="/data-and-verification" className="text-pb-brand hover:underline">
-          maintain location information
+      <p className="mt-4 text-lg leading-relaxed text-foreground/90">
+        PhotoBlinks helps you choose where to shoot and who to shoot with. We list locations and
+        photographers; we don&apos;t handle bookings, payments or reservations. Here is how it works
+        for couples and for photographers. Who we are and how we review listings is on the{" "}
+        <Link href="/about" className={LINK}>
+          About page
         </Link>
         .
       </p>
+
+      <section className="mt-10">
+        <h2 className="font-heading text-2xl font-semibold">For couples</h2>
+        <StepList steps={COUPLE_STEPS} />
+      </section>
+
+      <section className="mt-12">
+        <h2 className="font-heading text-2xl font-semibold">For photographers</h2>
+        <StepList steps={PHOTOGRAPHER_STEPS} />
+        <p className="mt-6 leading-relaxed text-foreground/90">
+          <Link href="/sign-in/photographer" className={LINK}>
+            Join as a photographer
+          </Link>{" "}
+          or browse the{" "}
+          <Link href="/photographers" className={LINK}>
+            photographer directory
+          </Link>
+          .
+        </p>
+      </section>
+
+      <section className="mt-12 rounded-xl border bg-muted/40 p-5">
+        <h2 className="font-heading text-xl font-semibold">How we keep listings trustworthy</h2>
+        <p className="mt-2 leading-relaxed text-foreground/90">
+          Locations are reviewed by our team before publishing. Photographer photos and public
+          reports are moderated before anything appears. Details can still change at the venue, so
+          see{" "}
+          <Link href="/about#data-and-verification" className={LINK}>
+            how information is reviewed
+          </Link>{" "}
+          or{" "}
+          <Link href="/report-an-issue" className={LINK}>
+            report an issue
+          </Link>
+          .
+        </p>
+      </section>
     </div>
   );
 }

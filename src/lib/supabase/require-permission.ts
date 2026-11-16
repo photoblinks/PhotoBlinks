@@ -11,6 +11,8 @@ export const PERMISSION = {
   LOCATIONS_PUBLISH: "locations.publish",
   STUDIOS_EDIT: "studios.edit",
   STUDIOS_PUBLISH: "studios.publish",
+  PHOTOGRAPHERS_EDIT: "photographers.edit",
+  PHOTOGRAPHERS_PUBLISH: "photographers.publish",
   DASHBOARD_VIEW: "dashboard.view",
   ACTIVITY_VIEW: "activity.view",
 } as const;
@@ -100,10 +102,11 @@ export async function checkAdmin(
 
 /** Page-level guard for permission-scoped pages. Call at the top of every
  * page whose module requires one of the given codes. */
-export async function requireModulePage(codes: readonly string[]): Promise<void> {
+export async function requireModulePage(codes: readonly string[]): Promise<AuthorizedStaff> {
   const staff = await getAuthorizedStaffUser();
   if (!staff) redirect("/admin/login");
   if (!staff.canAny(codes)) redirect("/admin");
+  return staff;
 }
 
 /** Page-level guard for pages open to every authenticated active employee

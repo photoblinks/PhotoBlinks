@@ -1957,6 +1957,8 @@ export type PublicPhotographer = {
   seoTitle: string | null;
   seoDescription: string | null;
   seoH1: string | null;
+  /** Owner has claimed the profile (user_id set). Unclaimed = thin, noindex. */
+  isClaimed: boolean;
 };
 
 type PublicPhotographerRow = {
@@ -1994,6 +1996,7 @@ type PublicPhotographerRow = {
   seo_title: string | null;
   seo_description: string | null;
   seo_h1: string | null;
+  is_claimed: boolean;
 };
 
 function toPublicPhotographer(row: PublicPhotographerRow): PublicPhotographer {
@@ -2030,6 +2033,7 @@ function toPublicPhotographer(row: PublicPhotographerRow): PublicPhotographer {
     seoTitle: row.seo_title ?? null,
     seoDescription: row.seo_description ?? null,
     seoH1: row.seo_h1 ?? null,
+    isClaimed: row.is_claimed ?? false,
   };
 }
 

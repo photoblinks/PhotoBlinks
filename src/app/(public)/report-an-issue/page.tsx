@@ -38,7 +38,7 @@ export default function ReportAnIssuePage() {
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Report an Issue</h1>
       <p className="mt-4 leading-relaxed text-foreground/90">
         See something on a location page that&apos;s wrong or out of date? As explained in{" "}
-        <Link href="/data-and-verification" className="text-pb-brand hover:underline">
+        <Link href="/about#data-and-verification" className="text-pb-brand hover:underline">
           Our Data &amp; Verification
         </Link>
         , details like fees and permissions can change, and we rely on reports like yours to keep

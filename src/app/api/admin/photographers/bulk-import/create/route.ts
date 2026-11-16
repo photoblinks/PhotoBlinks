@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
+import { recordActivityEventsFor } from "@/lib/activity";
+import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
 import { parseBulkImportSheet } from "@/lib/bulk-import/parser";
 import {
   createDraftPhotographers,
@@ -17,8 +18,12 @@ import { readBulkUpload } from "@/lib/bulk-import/upload";
  * and re-validated here, and country/state are re-verified server-side. Runs
  * through the request-scoped client so the admin RLS policy still applies. */
 export async function POST(request: Request) {
-  if (!(await getAuthorizedAdminUser())) {
+  const staff = await getAuthorizedStaffUser();
+  if (!staff) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!staff.can(PERMISSION.PHOTOGRAPHERS_EDIT)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const upload = await readBulkUpload(request);
@@ -54,6 +59,16 @@ export async function POST(request: Request) {
     fieldsByRow,
     reference: loaded.reference,
   });
+
+  await recordActivityEventsFor(
+    supabase,
+    outcome.created.map((photographer) => ({
+      module: "photographers" as const,
+      action: "created" as const,
+      entity_id: photographer.id,
+      metadata: { name: photographer.name, source: "bulk_import" },
+    })),
+  );
 
   // Drafts are inactive, so nothing public changes until an admin activates
   // them (setPhotographerStatus revalidates the public cache then).

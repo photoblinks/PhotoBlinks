@@ -27,6 +27,7 @@ type DailyRow = {
   activity_date: string;
   locations_added: number | string | null;
   studios_added: number | string | null;
+  photographers_added: number | string | null;
   total_added: number | string | null;
 };
 
@@ -35,20 +36,24 @@ type SummaryRow = {
   display_name: string;
   range_locations_added: number | string | null;
   range_studios_added: number | string | null;
+  range_photographers_added: number | string | null;
   range_total_added: number | string | null;
   week_start: string;
   week_end: string;
   week_locations_added: number | string | null;
   week_studios_added: number | string | null;
+  week_photographers_added: number | string | null;
   week_total_added: number | string | null;
 };
 
 type SummaryTotals = {
   rangeLocations: number;
   rangeStudios: number;
+  rangePhotographers: number;
   rangeTotal: number;
   weekLocations: number;
   weekStudios: number;
+  weekPhotographers: number;
   weekTotal: number;
   weekStart: string;
   weekEnd: string;
@@ -199,9 +204,11 @@ export default async function EmployeePerformancePage({
     (acc, row) => ({
       rangeLocations: acc.rangeLocations + num(row.range_locations_added),
       rangeStudios: acc.rangeStudios + num(row.range_studios_added),
+      rangePhotographers: acc.rangePhotographers + num(row.range_photographers_added),
       rangeTotal: acc.rangeTotal + num(row.range_total_added),
       weekLocations: acc.weekLocations + num(row.week_locations_added),
       weekStudios: acc.weekStudios + num(row.week_studios_added),
+      weekPhotographers: acc.weekPhotographers + num(row.week_photographers_added),
       weekTotal: acc.weekTotal + num(row.week_total_added),
       weekStart: row.week_start,
       weekEnd: row.week_end,
@@ -209,9 +216,11 @@ export default async function EmployeePerformancePage({
     {
       rangeLocations: 0,
       rangeStudios: 0,
+      rangePhotographers: 0,
       rangeTotal: 0,
       weekLocations: 0,
       weekStudios: 0,
+      weekPhotographers: 0,
       weekTotal: 0,
       weekStart: from,
       weekEnd: to,
@@ -254,9 +263,10 @@ export default async function EmployeePerformancePage({
             Could not load summary totals. Please try again.
           </p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <SummaryCard title="Total locations added" value={summaryTotals.rangeLocations} />
             <SummaryCard title="Total studios added" value={summaryTotals.rangeStudios} />
+            <SummaryCard title="Total photographers added" value={summaryTotals.rangePhotographers} />
             <SummaryCard title="Total added" value={summaryTotals.rangeTotal} />
             <SummaryCard
               title="Selected period"
@@ -276,9 +286,10 @@ export default async function EmployeePerformancePage({
             Could not load weekly totals. Please try again.
           </p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <SummaryCard title="Locations added this week" value={summaryTotals.weekLocations} />
             <SummaryCard title="Studios added this week" value={summaryTotals.weekStudios} />
+            <SummaryCard title="Photographers added this week" value={summaryTotals.weekPhotographers} />
             <SummaryCard title="Total added this week" value={summaryTotals.weekTotal} />
             <SummaryCard
               title="Week"
@@ -307,6 +318,7 @@ export default async function EmployeePerformancePage({
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Locations added</TableHead>
                 <TableHead className="text-right">Studios added</TableHead>
+                <TableHead className="text-right">Photographers added</TableHead>
                 <TableHead className="text-right">Total added</TableHead>
               </TableRow>
             </TableHeader>
@@ -319,6 +331,7 @@ export default async function EmployeePerformancePage({
                   <TableCell className="font-medium">{formatDay(row.activity_date)}</TableCell>
                   <TableCell className="text-right">{num(row.locations_added)}</TableCell>
                   <TableCell className="text-right">{num(row.studios_added)}</TableCell>
+                  <TableCell className="text-right">{num(row.photographers_added)}</TableCell>
                   <TableCell className="text-right">{num(row.total_added)}</TableCell>
                 </TableRow>
               ))}

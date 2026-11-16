@@ -164,9 +164,11 @@ The 5-published-location threshold below applies ONLY to geographic/category AGG
     );
   }
 
-  if (directoryPhotographers.length > 0) {
+  // Only claimed profiles (real content); unclaimed ones are thin and noindex.
+  const claimedPhotographers = directoryPhotographers.filter((p) => p.isClaimed);
+  if (claimedPhotographers.length > 0) {
     sections.push(
-      `## Photographer Directory (${directoryPhotographers.length})\n\nPre-wedding photographers who created a PhotoBlinks profile. Starting price is the lowest price among their published packages.\n\n${directoryPhotographers
+      `## Photographer Directory (${claimedPhotographers.length})\n\nPre-wedding photographers who created a PhotoBlinks profile. Starting price is the lowest price among their published packages.\n\n${claimedPhotographers
         .map((p) => {
           const url = absoluteUrl(`/photographers/p/${p.slug}`);
           const price = p.startingPrice != null ? `\n- Starting price: ₹${p.startingPrice.toLocaleString("en-IN")}` : "";

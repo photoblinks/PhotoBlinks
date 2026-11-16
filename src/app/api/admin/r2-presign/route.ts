@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     // Admins have access to all namespaces
     hasPermission = true;
   } else if (staff) {
-    // Employees: only locations.edit for locations, studios.edit for studios
+    // Employees: locations.edit, studios.edit, photographers.edit for their own kinds
     // All other namespaces remain admin-only
     switch (kind) {
       case "locations":
@@ -88,8 +88,11 @@ export async function POST(request: Request) {
       case "studios":
         hasPermission = staff.can(PERMISSION.STUDIOS_EDIT);
         break;
+      case "photographers":
+        hasPermission = staff.can(PERMISSION.PHOTOGRAPHERS_EDIT);
+        break;
       default:
-        // categories, countries, states, cities, site, photographers, blog - admin only
+        // categories, countries, states, cities, site, blog - admin only
         hasPermission = false;
         break;
     }

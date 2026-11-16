@@ -22,7 +22,6 @@ export async function updateBannerImages(formData: FormData) {
 
   revalidatePublicContent(CACHE_TAGS.settings);
   revalidatePath("/admin/settings");
-  revalidatePath("/");
   redirect("/admin/settings?saved=1");
 }
 
@@ -111,11 +110,10 @@ export async function updateSocialMediaLinks(formData: FormData) {
     redirect(`/admin/settings?error=${encodeURIComponent(error.message)}`);
   }
 
-  // The footer lives in the public root layout; the settings page itself
-  // must reflect the saved values immediately as well.
+  // The footer lives in the public root layout; the settings tag refreshes
+  // every cached page that reads it, so no path-wide revalidation is needed.
   revalidatePublicContent(CACHE_TAGS.settings);
   revalidatePath("/admin/settings");
-  revalidatePath("/", "layout");
   redirect("/admin/settings?saved=social");
 }
 

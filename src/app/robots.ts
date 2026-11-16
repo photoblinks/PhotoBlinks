@@ -5,12 +5,15 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
+      // Icons are served as /icon/<size>?<hash>; the longer Allow beats the
+      // "/*?*" Disallow so Googlebot-Favicon can fetch them.
+      allow: ["/", "/icon", "/apple-icon"],
       disallow: [
         "/admin/",
         "/api/",
         "/photographer/",
         "/c/",
+        "/locations/search",
         "/favourites/share/",
         "/sign-in",
         "/sign-up",

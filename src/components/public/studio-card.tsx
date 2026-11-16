@@ -5,7 +5,7 @@ import type { PublicStudioCard } from "@/lib/public-data";
 
 export function StudioCard({ studio }: { studio: PublicStudioCard }) {
   return (
-    <Link href={`/studio/${studio.slug}`} className="group flex flex-col gap-3">
+    <Link href={`/studio/${studio.slug}`} className="group flex flex-col gap-3" prefetch={false}>
       <div className="relative aspect-4/3 overflow-hidden rounded-2xl bg-muted">
         {studio.primaryImageUrl ? (
           <Image

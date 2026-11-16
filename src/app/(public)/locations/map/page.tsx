@@ -77,8 +77,8 @@ export default async function LocationsMapPage({
   }
 
   // /locations is a state-directory page with no filter support at all, so
-  // the list-view equivalent of the current map filters is the homepage's
-  // own filtered results view, which reads these same seven params.
+  // the list-view equivalent of the current map filters is the filtered
+  // results view at /locations/search, which reads these same params.
   function listViewHref() {
     const query = new URLSearchParams();
     if (params.q) query.set("q", params.q);
@@ -90,7 +90,7 @@ export default async function LocationsMapPage({
     if (params.lat) query.set("lat", params.lat);
     if (params.lng) query.set("lng", params.lng);
     const qs = query.toString();
-    return qs ? `/?${qs}` : "/";
+    return qs ? `/locations/search?${qs}` : "/locations/search";
   }
 
   const pillClass = (active: boolean) =>

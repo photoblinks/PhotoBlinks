@@ -14,7 +14,6 @@ const EXPLORE_LINKS = [
 const TRUST_LINKS = [
   { href: "/about", label: "About Us" },
   { href: "/how-it-works", label: "How It Works" },
-  { href: "/data-and-verification", label: "Data & Verification" },
   { href: "/report-an-issue", label: "Report an Issue" },
   { href: "/claim-profile", label: "Claim Your Photography Profile" },
   { href: "/contact", label: "Contact Us" },

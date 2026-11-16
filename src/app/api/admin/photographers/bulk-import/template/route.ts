@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
+import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
 import { generatePhotographerImportTemplate } from "@/lib/bulk-import/photographers-template";
 import { checkCountryStateSelection } from "@/lib/bulk-import/validate";
 import { slugify } from "@/lib/slug";
@@ -8,8 +8,12 @@ import { slugify } from "@/lib/slug";
 const EXCEL_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export async function GET(request: Request) {
-  if (!(await getAuthorizedAdminUser())) {
+  const staff = await getAuthorizedStaffUser();
+  if (!staff) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!staff.can(PERMISSION.PHOTOGRAPHERS_EDIT)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);

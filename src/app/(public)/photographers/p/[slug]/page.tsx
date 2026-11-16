@@ -38,6 +38,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: path },
+    // Unclaimed profiles are thin; only claimed ones (packages, real content) may be indexed.
+    robots: p.isClaimed ? undefined : { index: false, follow: true },
     openGraph: {
       title: `${title} | PhotoBlinks`,
       description,

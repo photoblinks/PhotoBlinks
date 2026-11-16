@@ -68,6 +68,15 @@ async function resolveSlug(
 // Refreshes the Supabase auth session on every request so it doesn't expire
 // mid-session in Server Components (which can't write cookies themselves).
 export async function proxy(request: NextRequest) {
+  // Legacy filtered-home URLs (/?state=goa …) moved to the dynamic
+  // /locations/search so "/" itself can be statically cached. The matcher
+  // only runs the proxy on "/" when one of these params is present.
+  if (request.nextUrl.pathname === "/") {
+    const target = new URL("/locations/search", request.url);
+    target.search = request.nextUrl.search;
+    return NextResponse.redirect(target, 301);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -163,6 +172,33 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// Only routes that need the session refresh, role gating, slug redirects or
+// the /blog category redirect. Every other public page is cacheable and must
+// not pay a Supabase Auth round-trip per hit (bots included). Keep this in
+// sync when a public route starts reading the session server-side.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|webp|gif|avif|ico|woff2?|txt|xml|webmanifest)$).*)"],
+  matcher: [
+    "/admin/:path*",
+    "/photographer/:path*",
+    "/location/:path*",
+    "/studio/:path*",
+    "/blog",
+    "/favourites/:path*",
+    "/claim-profile",
+    "/set-password",
+    "/sign-in/:path*",
+    "/sign-up",
+    "/forgot-password",
+    "/c/:path*",
+    "/auth/:path*",
+    { source: "/", has: [{ type: "query", key: "q" }] },
+    { source: "/", has: [{ type: "query", key: "state" }] },
+    { source: "/", has: [{ type: "query", key: "city" }] },
+    { source: "/", has: [{ type: "query", key: "category" }] },
+    { source: "/", has: [{ type: "query", key: "pricing" }] },
+    { source: "/", has: [{ type: "query", key: "drone" }] },
+    { source: "/", has: [{ type: "query", key: "lat" }] },
+    { source: "/", has: [{ type: "query", key: "lng" }] },
+    { source: "/", has: [{ type: "query", key: "page" }] },
+  ],
 };

@@ -1,13 +1,23 @@
 import { ImageResponse } from "next/og";
 
-// Google requires favicon dimensions to be a multiple of 48px (min 48x48).
-export const size = { width: 192, height: 192 };
 export const contentType = "image/png";
 
+// Google requires favicon dimensions to be a multiple of 48px (192), and the
+// brand asks for 512x512 too — serve both from the same mark.
+const SIZES = [192, 512];
+
+export function generateImageMetadata() {
+  return SIZES.map((s) => ({
+    id: String(s),
+    size: { width: s, height: s },
+    contentType,
+  }));
+}
+
 // Branded favicon — same Aperture mark and brand green used in the
-// header/footer logo and the default OG image, replacing the unbranded
-// default Next.js favicon.ico.
-export default function Icon() {
+// header/footer logo and the default OG image.
+export default async function Icon({ id }: { id: Promise<string | number> }) {
+  const s = Number(await id);
   return new ImageResponse(
     (
       <div
@@ -18,12 +28,12 @@ export default function Icon() {
           alignItems: "center",
           justifyContent: "center",
           background: "#16382a",
-          borderRadius: 36,
+          borderRadius: Math.round(s * 0.1875),
         }}
       >
         <svg
-          width="144"
-          height="144"
+          width={Math.round(s * 0.75)}
+          height={Math.round(s * 0.75)}
           viewBox="0 0 24 24"
           fill="none"
           stroke="white"
@@ -41,6 +51,6 @@ export default function Icon() {
         </svg>
       </div>
     ),
-    { ...size },
+    { width: s, height: s },
   );
 }

@@ -46,7 +46,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // pages, so they're unconditional and don't use isSeoEligible.
     { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.3 },
     { url: `${SITE_URL}/how-it-works`, changeFrequency: "monthly", priority: 0.3 },
-    { url: `${SITE_URL}/data-and-verification`, changeFrequency: "monthly", priority: 0.3 },
     { url: `${SITE_URL}/report-an-issue`, changeFrequency: "monthly", priority: 0.3 },
     { url: `${SITE_URL}/contact`, changeFrequency: "monthly", priority: 0.3 },
     { url: `${SITE_URL}/privacy`, changeFrequency: "yearly", priority: 0.2 },
@@ -98,21 +97,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     });
   }
 
-  // Photographer directory: detail pages, plus state and city landing pages
-  // (each only exists when it has at least one visible photographer).
-  const photographerPaths = new Set<string>();
+  // Photographer directory: only claimed profiles are indexable (unclaimed are
+  // thin and noindex). State/city landing pages are noindex for now.
   for (const p of photographers) {
+    if (!p.isClaimed) continue;
     entries.push({
       url: `${SITE_URL}/photographers/p/${p.slug}`,
       lastModified: p.createdAt,
       changeFrequency: "weekly",
       priority: 0.6,
     });
-    photographerPaths.add(`${p.country.slug}/${p.state.slug}`);
-    photographerPaths.add(`${p.country.slug}/${p.state.slug}/${p.citySlug}`);
-  }
-  for (const path of photographerPaths) {
-    entries.push({ url: `${SITE_URL}/photographers/${path}`, changeFrequency: "weekly", priority: 0.6 });
   }
 
   // Studio detail pages

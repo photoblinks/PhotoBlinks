@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdminPage } from "@/lib/supabase/require-permission";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,7 @@ export default async function AdminPhotographerDraftsPage({
 }: {
   searchParams: Promise<{ page?: string; q?: string }>;
 }) {
-  await requireAdminPage();
+  await requireModulePage([PERMISSION.PHOTOGRAPHERS_EDIT, PERMISSION.PHOTOGRAPHERS_PUBLISH]);
 
   const { page: pageParam, q: qParam } = await searchParams;
   const q = String(qParam ?? "").trim();

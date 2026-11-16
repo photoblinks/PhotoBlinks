@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdminPage } from "@/lib/supabase/require-permission";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { approveClaim, rejectClaim } from "./actions";
@@ -42,7 +42,7 @@ export default async function AdminPhotographerClaimsPage({
 }: {
   searchParams: Promise<{ status?: string; error?: string; approved?: string }>;
 }) {
-  await requireAdminPage();
+  await requireModulePage([PERMISSION.PHOTOGRAPHERS_PUBLISH]);
 
   const { status: statusParam, error, approved } = await searchParams;
   const status = TABS.some((t) => t.value === statusParam) ? (statusParam as string) : "pending";

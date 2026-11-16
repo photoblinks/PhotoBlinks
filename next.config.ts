@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: "/data-and-verification", destination: "/about#data-and-verification", permanent: true },
+    ];
+  },
   images: {
     // Images are optimized by Cloudflare Image Transformations (see
     // src/lib/cf-image-loader.ts), not Vercel's built-in /_next/image

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdminPage } from "@/lib/supabase/require-permission";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,7 +61,7 @@ export default async function AdminPhotographerPhotosPage({
 }: {
   searchParams: Promise<{ status?: string; page?: string }>;
 }) {
-  await requireAdminPage();
+  await requireModulePage([PERMISSION.PHOTOGRAPHERS_PUBLISH]);
 
   const { status: statusParam, page: pageParam } = await searchParams;
   const status: StatusFilter = STATUS_TABS.some((t) => t.value === statusParam)

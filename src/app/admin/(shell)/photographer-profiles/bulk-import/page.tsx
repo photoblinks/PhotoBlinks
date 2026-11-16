@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireAdminPage } from "@/lib/supabase/require-permission";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { BulkImportForm } from "@/components/admin/bulk-import-form";
 
 export default async function BulkImportPhotographersPage() {
-  await requireAdminPage();
+  await requireModulePage([PERMISSION.PHOTOGRAPHERS_EDIT]);
 
   const supabase = await createClient();
   const [{ data: countries }, { data: states }] = await Promise.all([

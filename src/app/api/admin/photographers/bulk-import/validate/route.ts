@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
+import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
 import { parseBulkImportSheet } from "@/lib/bulk-import/parser";
 import {
   loadPhotographerReference,
@@ -10,8 +10,12 @@ import {
 import { readBulkUpload } from "@/lib/bulk-import/upload";
 
 export async function POST(request: Request) {
-  if (!(await getAuthorizedAdminUser())) {
+  const staff = await getAuthorizedStaffUser();
+  if (!staff) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!staff.can(PERMISSION.PHOTOGRAPHERS_EDIT)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const upload = await readBulkUpload(request);

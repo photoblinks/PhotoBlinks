@@ -6,17 +6,17 @@ import { z } from "zod";
 import { CACHE_TAGS } from "@/lib/public-data";
 import { revalidatePublicContent } from "@/lib/revalidate-public";
 import { createClient } from "@/lib/supabase/server";
-import { getAuthorizedAdminUser } from "@/lib/supabase/require-admin";
+import { getAuthorizedStaffUser, PERMISSION } from "@/lib/supabase/require-permission";
 
 const idSchema = z.string().uuid();
 const BASE = "/admin/photographer-claims";
 
-/** Approves a claim: approve_photographer_claim (admin-only, re-checks the
+/** Approves a claim: approve_photographer_claim (publish-permission only, re-checks the
  * profile is still unclaimed) assigns the profile to the claimant's verified
  * account. The claimant already set a password in the claim form. */
 export async function approveClaim(id: string) {
   if (!idSchema.safeParse(id).success) redirect(BASE);
-  if (!(await getAuthorizedAdminUser())) redirect("/admin/login");
+  if (!(await getAuthorizedStaffUser())?.can(PERMISSION.PHOTOGRAPHERS_PUBLISH)) redirect("/admin/login");
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("approve_photographer_claim", { p_claim_id: id });
@@ -33,7 +33,7 @@ export async function approveClaim(id: string) {
 
 export async function rejectClaim(id: string) {
   if (!idSchema.safeParse(id).success) redirect(BASE);
-  if (!(await getAuthorizedAdminUser())) redirect("/admin/login");
+  if (!(await getAuthorizedStaffUser())?.can(PERMISSION.PHOTOGRAPHERS_PUBLISH)) redirect("/admin/login");
 
   const supabase = await createClient();
   const { error } = await supabase

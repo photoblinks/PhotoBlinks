@@ -1,17 +1,23 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
-import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
+import { JsonLd } from "@/components/public/json-ld";
+import { DEFAULT_OG_IMAGE, absoluteUrl, buildOrganizationJsonLd } from "@/lib/jsonld";
+import { getPublicPhotographers, getPublishedLocationCount } from "@/lib/public-data";
+
+export const revalidate = 604800;
+
+const TITLE = "About PhotoBlinks — Pre-Wedding Locations & Photographers in India";
+const DESCRIPTION =
+  "PhotoBlinks is an India-focused pre-wedding location guide, backed by local photographers who shoot there. Learn who we are, how listings are reviewed, and what we do and don't do.";
 
 export const metadata: Metadata = {
-  title: "About Us",
-  description:
-    "PhotoBlinks helps couples and photographers discover pre-wedding photoshoot locations across India.",
+  title: TITLE,
+  description: DESCRIPTION,
   alternates: { canonical: "/about" },
   openGraph: {
-    title: "About Us | PhotoBlinks",
-    description:
-      "PhotoBlinks helps couples and photographers discover pre-wedding photoshoot locations across India.",
+    title: TITLE,
+    description: DESCRIPTION,
     url: "/about",
     siteName: "PhotoBlinks",
     type: "website",
@@ -19,53 +25,142 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AboutPage() {
+const H2 = "font-heading mb-3 text-2xl font-semibold";
+const LINK = "text-pb-brand hover:underline";
+
+export default async function AboutPage() {
+  const [locationCount, photographers] = await Promise.all([
+    getPublishedLocationCount(),
+    getPublicPhotographers(),
+  ]);
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "AboutPage",
+          name: "About PhotoBlinks",
+          url: absoluteUrl("/about"),
+          mainEntity: buildOrganizationJsonLd(),
+        }}
+      />
       <Breadcrumbs items={[{ name: "Home", path: "/" }, { name: "About Us", path: "/about" }]} />
 
-      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">About PhotoBlinks</h1>
+      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
+        About PhotoBlinks: where to shoot, and who to shoot with
+      </h1>
+      <p className="mt-4 text-lg leading-relaxed text-foreground/90">
+        PhotoBlinks is a pre-wedding location guide for India. We list the places worth shooting at —
+        beaches, temples, waterfalls, hills, palaces — and connect couples with local photographers
+        who know those places. We launched with Karnataka and Kerala and are expanding across India.
+      </p>
 
-      <div className="mt-6 flex flex-col gap-6 leading-relaxed text-foreground/90">
-        <p>
-          PhotoBlinks is a discovery platform for pre-wedding photoshoot locations across India. We
-          help couples and photographers find and compare locations before deciding where to shoot.
-        </p>
+      <dl className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border bg-muted/40 p-4">
+          <dt className="text-sm text-muted-foreground">Published locations</dt>
+          <dd className="font-heading text-2xl font-semibold">{locationCount}</dd>
+        </div>
+        <div className="rounded-xl border bg-muted/40 p-4">
+          <dt className="text-sm text-muted-foreground">Listed photographers</dt>
+          <dd className="font-heading text-2xl font-semibold">{photographers.length}</dd>
+        </div>
+        <div className="col-span-2 rounded-xl border bg-muted/40 p-4 sm:col-span-1">
+          <dt className="text-sm text-muted-foreground">Launch regions</dt>
+          <dd className="font-heading text-2xl font-semibold">Karnataka &amp; Kerala</dd>
+        </div>
+      </dl>
 
+      <div className="mt-10 flex flex-col gap-10 leading-relaxed text-foreground/90">
         <section>
-          <h2 className="font-heading mt-2 mb-3 text-xl font-semibold">What We Do</h2>
+          <h2 className={H2}>Why PhotoBlinks exists</h2>
           <p>
-            Planning a pre-wedding shoot usually starts with the same question: where? PhotoBlinks
-            brings together photoshoot locations — beaches, temples, waterfalls, hills, palaces, and
-            more — in one place, organized so you can browse by state, city, or category and compare
-            options before you commit to one.
+            Planning a pre-wedding shoot starts with two questions: where, and with whom. The
+            answers are usually scattered across Instagram reels, travel blogs and word of mouth —
+            with no way to compare locations on practical details like entry fees, drone rules or
+            the best time to visit. PhotoBlinks puts both answers in one place, organised by state,
+            city and category.
           </p>
         </section>
 
         <section>
-          <h2 className="font-heading mb-3 text-xl font-semibold">How Locations Are Organized</h2>
+          <h2 className={H2}>Locations first, photographers alongside</h2>
           <p>
-            Every location on PhotoBlinks belongs to a state and a city, and is grouped into a
-            category such as Beach, Temple, Waterfall, or Hill. You can start broad — browsing a
-            state or a category — or go straight to a specific city and category combination. Each
-            individual location page brings together photos and whatever practical details are
-            available, so you can get a feel for a place before visiting.
+            Locations are the core of the site. Each{" "}
+            <Link href="/locations" className={LINK}>
+              location page
+            </Link>{" "}
+            collects photos and the practical details that decide whether a place suits your shoot.
+            Photographers sit alongside that: the{" "}
+            <Link href="/photographers" className={LINK}>
+              photographer directory
+            </Link>{" "}
+            lists photographers by city with their services, experience and starting prices, and
+            approved photographer photos appear on the location pages they were shot at — so you see
+            a place as it really photographs, not just how it&apos;s advertised.
           </p>
         </section>
 
         <section>
-          <h2 className="font-heading mb-3 text-xl font-semibold">Our Approach</h2>
+          <h2 className={H2}>What we do — and don&apos;t do</h2>
+          <ul className="list-disc space-y-2 pl-5">
+            <li>We publish and maintain location listings and a photographer directory.</li>
+            <li>
+              We do not handle bookings, payments or reservations. You contact photographers and
+              venues directly.
+            </li>
+            <li>
+              Locations are not self-submitted by venues, and listings are not scraped from another
+              database.
+            </li>
+          </ul>
+        </section>
+
+        <section id="data-and-verification" className="scroll-mt-24">
+          <h2 className={H2}>How information is reviewed</h2>
           <p>
-            We&apos;d rather show you a handful of genuinely useful, specific details about a location
-            than pad a page with generic description. See{" "}
-            <Link href="/how-it-works" className="text-pb-brand hover:underline">
-              How It Works
+            Location listings are entered and reviewed by our own team through an internal admin
+            workflow before they go live: photos, pricing, category and practical details such as
+            entry fees, drone policy and best time to visit.
+          </p>
+          <p className="mt-3">
+            Photographer-submitted photos and public reports about a location are never published
+            automatically. They wait in a moderation queue and appear only after an admin approves
+            them. Photographer profiles can be claimed by the photographer; our team checks each
+            claim before the profile can be managed, and verified profiles carry a verified badge.
+          </p>
+          <p className="mt-3">
+            <strong>What &quot;published&quot; means:</strong> our team reviewed the listing and chose
+            to publish it. It does not mean every fact was independently confirmed with the venue or
+            an authority. Fees, photography and drone permissions, and timings can change without
+            notice — details reflect what was known when the page was last updated, so confirm
+            anything important directly before you travel.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H2}>Corrections and contact</h2>
+          <p>
+            Spotted something wrong or outdated? Use{" "}
+            <Link href="/report-an-issue" className={LINK}>
+              Report an Issue
             </Link>{" "}
-            for a walkthrough of using the site, and{" "}
-            <Link href="/data-and-verification" className="text-pb-brand hover:underline">
-              Our Data &amp; Verification
+            — reports go to our moderation team. For anything else, see our{" "}
+            <Link href="/contact" className={LINK}>
+              contact page
+            </Link>
+            . Photographers can{" "}
+            <Link href="/sign-in/photographer" className={LINK}>
+              join PhotoBlinks
             </Link>{" "}
-            for how location information is put together and kept up to date.
+            or claim an existing listing.
+          </p>
+          <p className="mt-3">
+            New here? Read{" "}
+            <Link href="/how-it-works" className={LINK}>
+              How PhotoBlinks Works
+            </Link>{" "}
+            for a walkthrough for couples and photographers.
           </p>
         </section>
       </div>

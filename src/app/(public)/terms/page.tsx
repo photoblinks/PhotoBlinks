@@ -47,7 +47,7 @@ export default function TermsPage() {
           <p>
             Content on location pages — including pricing, fees, permissions, drone policy, timings,
             and similar details — is provided for general informational purposes. As explained in{" "}
-            <Link href="/data-and-verification" className="text-pb-brand hover:underline">
+            <Link href="/about#data-and-verification" className="text-pb-brand hover:underline">
               Our Data &amp; Verification
             </Link>
             , publication on PhotoBlinks reflects our team&apos;s internal review, not an independent

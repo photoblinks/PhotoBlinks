@@ -37,6 +37,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: path },
+    // Only /photographers is indexable for now; geo landing pages stay noindex.
+    robots: { index: false, follow: true },
     openGraph: {
       title: `${title} | PhotoBlinks`,
       description,

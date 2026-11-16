@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-export type ActivityModule = "locations" | "studios";
+export type ActivityModule = "locations" | "studios" | "photographers";
 export type ActivityAction =
   | "created"
   | "updated"

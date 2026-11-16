@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdminPage } from "@/lib/supabase/require-permission";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ export default async function AdminPhotographerProfilesPage({
 }: {
   searchParams: Promise<{ status?: string; page?: string; q?: string }>;
 }) {
-  await requireAdminPage();
+  await requireModulePage([PERMISSION.PHOTOGRAPHERS_EDIT, PERMISSION.PHOTOGRAPHERS_PUBLISH]);
 
   const { status: statusParam, page: pageParam, q: qParam } = await searchParams;
   const status: StatusFilter = STATUS_TABS.some((t) => t.value === statusParam)

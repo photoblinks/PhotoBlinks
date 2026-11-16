@@ -1,4 +1,4 @@
-import { requireAdminPage } from "@/lib/supabase/require-permission";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { PhotographerGeoEditor } from "@/components/admin/photographer-geo-editor";
 
 export default async function EditPhotographerStateSeoPage({
@@ -8,7 +8,7 @@ export default async function EditPhotographerStateSeoPage({
   params: Promise<{ stateId: string }>;
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requireAdminPage();
+  await requireModulePage([PERMISSION.PHOTOGRAPHERS_EDIT]);
   const { stateId } = await params;
   const { error } = await searchParams;
   return <PhotographerGeoEditor stateId={stateId} citySlug={null} error={error} />;

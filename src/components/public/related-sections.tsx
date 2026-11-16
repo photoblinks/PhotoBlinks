@@ -40,6 +40,7 @@ function PlaceCards({ title, places, section }: { title: string; places: PlaceCa
           <Link
             key={place.href}
             href={place.href}
+            prefetch={false}
             className="group flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
           >
             <div className="relative aspect-4/3 overflow-hidden bg-linear-to-br from-emerald-950 via-pb-brand to-emerald-800">

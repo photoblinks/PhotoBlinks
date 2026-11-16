@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdminPage } from "@/lib/supabase/require-permission";
+import { requireModulePage, PERMISSION } from "@/lib/supabase/require-permission";
 import { Badge } from "@/components/ui/badge";
 import { PhotographerStatusActions } from "@/components/admin/photographer-status-actions";
 import {
@@ -23,7 +23,7 @@ export default async function AdminPhotographerRequestsPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  await requireAdminPage();
+  const staff = await requireModulePage([PERMISSION.PHOTOGRAPHERS_PUBLISH]);
 
   const { page: pageParam } = await searchParams;
   const supabase = await createClient();
@@ -101,7 +101,7 @@ export default async function AdminPhotographerRequestsPage({
                 })}
               </TableCell>
               <TableCell>
-                <PhotographerStatusActions id={row.id} current="on_hold" />
+                <PhotographerStatusActions id={row.id} current="on_hold" isAdmin={staff.isAdmin} />
               </TableCell>
             </TableRow>
           ))}

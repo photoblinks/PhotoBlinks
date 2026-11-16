@@ -30,6 +30,7 @@ export function LocationCard({
     <Link
       href={href ?? `/location/${location.slug}`}
       className="group flex flex-col gap-3"
+      prefetch={false}
       // In the picker, leaving the page would drop the in-progress selection.
       {...(actions ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
