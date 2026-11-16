@@ -944,8 +944,6 @@ export type PublicSponsoredPhotographer = {
   image_url: string;
   title: string;
   description: string | null;
-  phone_number: string;
-  whatsapp_number: string;
 };
 
 /** The active (non-expired) sponsored photographer for a state, or null if
@@ -962,13 +960,13 @@ export const getActiveSponsoredPhotographerByState = cache(
       const supabase = createPublicClient();
       const { data } = await supabase
         .from("sponsored_photographers")
-        .select("id, photography_name, image_url, title, description, phone_number, whatsapp_number")
+        .select("id, photography_name, image_url, title, description")
         .eq("state_id", stateId)
         .maybeSingle();
 
       return data;
     },
-    ["getActiveSponsoredPhotographerByState"],
+    ["getActiveSponsoredPhotographerByState", "no-contact-v2"],
   ),
 );
 
@@ -985,7 +983,7 @@ export const getActiveSponsoredPhotographers = unstable_cache(
     const { data } = await supabase
       .from("sponsored_photographers")
       .select(
-        "id, photography_name, image_url, title, description, phone_number, whatsapp_number, states(name, slug)",
+        "id, photography_name, image_url, title, description, states(name, slug)",
       );
     return (data ?? []).map((row) => ({
       id: row.id,
@@ -993,12 +991,10 @@ export const getActiveSponsoredPhotographers = unstable_cache(
       image_url: row.image_url,
       title: row.title,
       description: row.description,
-      phone_number: row.phone_number,
-      whatsapp_number: row.whatsapp_number,
       state: Array.isArray(row.states) ? (row.states[0] ?? null) : row.states,
     }));
   },
-  ["getActiveSponsoredPhotographers"],
+  ["getActiveSponsoredPhotographers", "no-contact-v2"],
   { revalidate: PUBLIC_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.sponsored] },
 );
 
@@ -1110,7 +1106,6 @@ export type PublicPhotographerPhoto = {
   image_url: string;
   title: string;
   description: string | null;
-  phone_number: string;
 };
 
 /** Approved photographer-submitted photos for a published location.
@@ -1125,9 +1120,16 @@ export const getApprovedPhotographerPhotos = cache(
       const { data } = await supabase.rpc("get_approved_photographer_photos", {
         p_location_id: locationId,
       });
-      return (data as PublicPhotographerPhoto[]) ?? [];
+      // The RPC also returns the contact number; it must never reach the page
+      // (see revealPhotographerContact), so only the public fields are kept.
+      return ((data as PublicPhotographerPhoto[] | null) ?? []).map((photo) => ({
+        id: photo.id,
+        image_url: photo.image_url,
+        title: photo.title,
+        description: photo.description,
+      }));
     },
-    ["getApprovedPhotographerPhotos"],
+    ["getApprovedPhotographerPhotos", "no-contact-v2"],
   ),
 );
 
@@ -1935,8 +1937,9 @@ export type PublicPhotographer = {
   googleMapsUrl: string | null;
   logoUrl: string | null;
   bannerUrl: string | null;
-  phoneNumber: string | null;
-  whatsappNumber: string | null;
+  /** Whether a number exists; the number itself is only revealed on click. */
+  hasPhone: boolean;
+  hasWhatsapp: boolean;
   city: string;
   citySlug: string;
   state: GeoRef;
@@ -2018,8 +2021,8 @@ function toPublicPhotographer(row: PublicPhotographerRow): PublicPhotographer {
     portfolioUrl: row.portfolio_url,
     googleBusinessUrl: row.google_business_url ?? null,
     googleMapsUrl: row.google_maps_url ?? null,
-    phoneNumber: row.phone_number,
-    whatsappNumber: row.whatsapp_number,
+    hasPhone: Boolean(row.phone_number),
+    hasWhatsapp: Boolean(row.whatsapp_number),
     city: row.city,
     citySlug: row.city_slug,
     state: { name: row.state_name, slug: row.state_slug },
@@ -2044,7 +2047,7 @@ export const getPublicPhotographers = unstable_cache(
     const { data } = await createPublicClient().rpc("get_public_photographers");
     return ((data ?? []) as PublicPhotographerRow[]).map(toPublicPhotographer);
   },
-  ["getPublicPhotographers"],
+  ["getPublicPhotographers", "no-contact-v2"],
   { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.photographers] },
 );
 
@@ -2056,7 +2059,7 @@ export const getPublicPhotographerBySlug = cache(
       const row = ((data ?? []) as PublicPhotographerRow[])[0];
       return row ? toPublicPhotographer(row) : null;
     },
-    ["getPublicPhotographerBySlug"],
+    ["getPublicPhotographerBySlug", "no-contact-v2"],
     { revalidate: PUBLIC_LONG_REVALIDATE_SECONDS, tags: [PUBLIC_CACHE_TAG, CACHE_TAGS.photographers] },
   ),
 );

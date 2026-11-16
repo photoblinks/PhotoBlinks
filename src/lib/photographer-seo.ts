@@ -108,7 +108,7 @@ export function buildPhotographerSeo(p: PublicPhotographer, packages: Photograph
       answer: `${p.studioName} works in ${p.languages.join(", ")}.`,
     });
   }
-  if (p.phoneNumber || p.whatsappNumber) {
+  if (p.hasPhone || p.hasWhatsapp) {
     faqs.push({
       question: `How can I book or contact ${p.studioName}?`,
       answer: `Call or WhatsApp ${p.studioName} directly using the contact buttons on this PhotoBlinks page.`,

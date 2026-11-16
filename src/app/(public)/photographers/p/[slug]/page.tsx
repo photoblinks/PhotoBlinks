@@ -2,9 +2,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Camera, Globe, Languages, MapPin, Phone, Plane, Store, Wallet, Award } from "lucide-react";
+import { Camera, Globe, Languages, MapPin, Plane, Store, Wallet, Award } from "lucide-react";
 import { YoutubeIcon } from "@/components/public/social-platform-icons";
-import { WhatsAppIcon } from "@/components/public/whatsapp-icon";
+import { ContactRevealButton } from "@/components/public/contact-reveal-button";
 import { getPublicPhotographerBySlug, getPublicPhotographerPackages, getPublicPhotographers } from "@/lib/public-data";
 import { PACKAGE_TYPES, PACKAGE_TYPE_LABEL } from "@/lib/photographer-options";
 import { PackageCard } from "@/components/public/package-card";
@@ -14,7 +14,6 @@ import { PhotographerCard } from "@/components/public/photographer-card";
 import { ShareButton } from "@/components/public/share-button";
 import { VerifiedBadge } from "@/components/public/verified-badge";
 import { Button } from "@/components/ui/button";
-import { buildWhatsAppLink } from "@/lib/format";
 import { absoluteUrl, buildBreadcrumbList, socialImageUrl } from "@/lib/jsonld";
 import { buildPhotographerSeo } from "@/lib/photographer-seo";
 
@@ -102,7 +101,6 @@ export default async function PhotographerPage({ params }: Props) {
         description: p.bio || seo.summary,
         image: images.length > 0 ? images : undefined,
         logo: p.logoUrl ? socialImageUrl(p.logoUrl) : undefined,
-        telephone: p.phoneNumber ?? undefined,
         priceRange: prices.length > 0 ? `From ₹${Math.min(...prices)}` : p.startingPrice != null ? `From ₹${p.startingPrice}` : undefined,
         founder: { "@type": "Person", name: p.displayName },
         address: { "@type": "PostalAddress", addressLocality: p.city, addressRegion: p.state.name, addressCountry: p.country.name },
@@ -193,18 +191,14 @@ export default async function PhotographerPage({ params }: Props) {
 
       <div className="relative z-10 mx-auto -mt-10 max-w-5xl px-4 sm:px-6">
         <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border bg-white p-4 shadow-lg">
-          {p.phoneNumber && (
-            <Button render={<a href={`tel:${p.phoneNumber.replace(/[^\d+]/g, "")}`} />}>
-              <Phone className="size-4" /> Call
-            </Button>
-          )}
-          {p.whatsappNumber && (
-            <Button
+          {p.hasPhone && <ContactRevealButton target={{ kind: "profile", slug: p.slug }} channel="call" label="Call Now" />}
+          {p.hasWhatsapp && (
+            <ContactRevealButton
+              target={{ kind: "profile", slug: p.slug }}
+              channel="whatsapp"
+              label="WhatsApp"
               variant="outline"
-              render={<a href={buildWhatsAppLink(p.whatsappNumber)} target="_blank" rel="noopener noreferrer" />}
-            >
-              <WhatsAppIcon className="size-4" /> WhatsApp
-            </Button>
+            />
           )}
           {p.instagramUrl && (
             <Button variant="outline" render={<a href={p.instagramUrl} target="_blank" rel="noopener noreferrer nofollow" />}>
@@ -307,18 +301,14 @@ export default async function PhotographerPage({ params }: Props) {
               </dl>
             )}
             <div className={`flex flex-col gap-2 ${facts.length > 0 ? "mt-5 border-t pt-5" : ""}`}>
-              {p.phoneNumber && (
-                <Button render={<a href={`tel:${p.phoneNumber.replace(/[^\d+]/g, "")}`} />}>
-                  <Phone className="size-4" /> Call
-                </Button>
-              )}
-              {p.whatsappNumber && (
-                <Button
+              {p.hasPhone && <ContactRevealButton target={{ kind: "profile", slug: p.slug }} channel="call" label="Call Now" />}
+              {p.hasWhatsapp && (
+                <ContactRevealButton
+                  target={{ kind: "profile", slug: p.slug }}
+                  channel="whatsapp"
+                  label="WhatsApp"
                   className="bg-[#25D366] text-white hover:bg-[#1fb857]"
-                  render={<a href={buildWhatsAppLink(p.whatsappNumber)} target="_blank" rel="noopener noreferrer" />}
-                >
-                  <WhatsAppIcon className="size-4" /> WhatsApp
-                </Button>
+                />
               )}
               <ShareButton title={`${p.studioName} — Pre-Wedding Photographer`} url={absoluteUrl(`/photographers/p/${p.slug}`)} />
             </div>

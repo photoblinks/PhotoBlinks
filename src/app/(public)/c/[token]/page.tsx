@@ -1,10 +1,9 @@
 import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Phone, UserRound } from "lucide-react";
-import { WhatsAppIcon } from "@/components/public/whatsapp-icon";
+import { UserRound } from "lucide-react";
+import { ContactRevealButton } from "@/components/public/contact-reveal-button";
 import { getPublishedLocations, getSharedLocationCollection } from "@/lib/public-data";
-import { buildWhatsAppLink } from "@/lib/format";
 import { LocationCard } from "@/components/public/location-card";
 
 type Props = { params: Promise<{ token: string }> };
@@ -41,7 +40,6 @@ export default async function SharedLocationCollectionPage({ params }: Props) {
   const byId = new Map(cards.map((card) => [card.id, card]));
   const locations = collection.locationIds.flatMap((id) => byId.get(id) ?? []);
 
-  const whatsapp = collection.whatsappNumber || collection.phoneNumber;
   const avatarUrl = collection.avatarUrl?.startsWith("https://") ? collection.avatarUrl : null;
 
   return (
@@ -61,22 +59,20 @@ export default async function SharedLocationCollectionPage({ params }: Props) {
             {collection.bio && <p className="mt-2 text-sm leading-relaxed text-foreground/90">{collection.bio}</p>}
           </div>
           <div className="grid shrink-0 grid-cols-2 gap-2 sm:w-64">
-            <a
-              href={`tel:${collection.phoneNumber}`}
-              className="flex items-center justify-center gap-1.5 rounded-md border border-pb-brand bg-white px-3 py-2 text-sm font-medium text-pb-brand hover:bg-pb-brand/5"
-            >
-              <Phone className="size-4" aria-hidden="true" />
-              Call
-            </a>
-            <a
-              href={buildWhatsAppLink(whatsapp)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 rounded-md border border-pb-brand bg-white px-3 py-2 text-sm font-medium text-pb-brand hover:bg-pb-brand/5"
-            >
-              <WhatsAppIcon className="size-4" aria-hidden="true" />
-              WhatsApp
-            </a>
+            <ContactRevealButton
+              target={{ kind: "collection", token }}
+              channel="call"
+              label="Call Now"
+              variant="outline"
+              className="border-pb-brand text-pb-brand hover:bg-pb-brand/5"
+            />
+            <ContactRevealButton
+              target={{ kind: "collection", token }}
+              channel="whatsapp"
+              label="WhatsApp"
+              variant="outline"
+              className="border-pb-brand text-pb-brand hover:bg-pb-brand/5"
+            />
           </div>
         </div>
       </section>

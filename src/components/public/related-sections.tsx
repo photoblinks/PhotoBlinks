@@ -10,6 +10,7 @@ import {
   type PublicLocationCard,
   type PublicPhotographer,
 } from "@/lib/public-data";
+import { haversineDistanceKm } from "@/lib/geo";
 import { LocationCard } from "@/components/public/location-card";
 import { PhotographerCard } from "@/components/public/photographer-card";
 
@@ -204,19 +205,38 @@ export async function RelatedLocations({
   stateSlug,
   citySlug,
   placeName,
+  categorySlug,
+  latitude,
+  longitude,
 }: {
   locationSlug: string;
   countrySlug?: string;
   stateSlug?: string;
   citySlug?: string;
   placeName: string;
+  categorySlug?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }) {
-  const score = (l: PublicLocationCard) =>
-    l.state?.slug === stateSlug && l.city?.slug === citySlug ? 2 : l.state?.slug === stateSlug ? 1 : 0;
+  const origin = latitude != null && longitude != null ? { latitude, longitude } : null;
+  // Relevance tiers: same city+category > same city > same state+category > same
+  // state > same country > elsewhere. Within a tier, nearest first, so the
+  // "next state" is the closest one rather than an arbitrary one.
+  const score = (l: PublicLocationCard) => {
+    const sameCategory = !!categorySlug && l.category?.slug === categorySlug;
+    const sameState = !!stateSlug && l.state?.slug === stateSlug;
+    if (sameState && !!citySlug && l.city?.slug === citySlug) return sameCategory ? 6 : 5;
+    if (sameState) return sameCategory ? 4 : 3;
+    return !!countrySlug && l.country?.slug === countrySlug ? 2 : 1;
+  };
+  const distance = (l: PublicLocationCard) =>
+    origin && l.latitude != null && l.longitude != null
+      ? haversineDistanceKm(origin, { latitude: l.latitude, longitude: l.longitude })
+      : Infinity;
   const related = (await getPublishedLocations())
     .filter((l) => l.slug !== locationSlug)
-    .map((l) => ({ l, score: score(l) }))
-    .sort((a, b) => b.score - a.score)
+    .map((l) => ({ l, score: score(l), distance: distance(l) }))
+    .sort((a, b) => b.score - a.score || a.distance - b.distance)
     .slice(0, CARD_LIMIT);
 
   return (

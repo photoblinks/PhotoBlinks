@@ -158,7 +158,7 @@ The 5-published-location threshold below applies ONLY to geographic/category AGG
           (p) =>
             `### ${p.photography_name}\n- State: ${p.state?.name ?? "Unspecified"}\n- ${p.title}${
               p.description ? `\n- ${p.description}` : ""
-            }\n- Contact: ${p.phone_number}`,
+            }`,
         )
         .join("\n\n")}`,
     );

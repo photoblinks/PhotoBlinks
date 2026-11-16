@@ -2,10 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
-import { Phone } from "lucide-react";
-import { WhatsAppIcon } from "@/components/public/whatsapp-icon";
-import { Button } from "@/components/ui/button";
-import { buildWhatsAppLink } from "@/lib/format";
+import { ContactRevealButton } from "@/components/public/contact-reveal-button";
 import { recordSponsoredPhotographerEvent } from "@/lib/sponsored-photographer-analytics";
 import type { PublicSponsoredPhotographer } from "@/lib/public-data";
 
@@ -76,30 +73,22 @@ export function SponsoredPhotographerCard({
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <Button
-          render={<a href={`tel:${photographer.phone_number}`} />}
+        <ContactRevealButton
+          target={{ kind: "sponsored", id: photographerId }}
+          channel="call"
+          label="Call Now"
           variant="outline"
           className="w-full border border-pb-brand bg-white text-pb-brand hover:bg-pb-brand/5"
-          onClick={() => trackClick("call_click")}
-        >
-          <Phone className="size-4" />
-          Call
-        </Button>
-        <Button
-          render={
-            <a
-              href={buildWhatsAppLink(photographer.whatsapp_number)}
-              target="_blank"
-              rel="noopener noreferrer"
-            />
-          }
+          onConfirm={() => trackClick("call_click")}
+        />
+        <ContactRevealButton
+          target={{ kind: "sponsored", id: photographerId }}
+          channel="whatsapp"
+          label="WhatsApp"
           variant="outline"
           className="w-full border border-pb-brand bg-white text-pb-brand hover:bg-pb-brand/5"
-          onClick={() => trackClick("whatsapp_click")}
-        >
-          <WhatsAppIcon className="size-4" />
-          WhatsApp
-        </Button>
+          onConfirm={() => trackClick("whatsapp_click")}
+        />
       </div>
     </div>
   );

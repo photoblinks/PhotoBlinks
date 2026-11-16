@@ -1,20 +1,19 @@
 import Image from "next/image";
-import { Phone } from "lucide-react";
-import { WhatsAppIcon } from "@/components/public/whatsapp-icon";
-import { buildWhatsAppLink } from "@/lib/format";
+import { ContactRevealButton } from "@/components/public/contact-reveal-button";
 import { PHOTOGRAPHER_PHOTO_WIDTH, toTransformUrl } from "@/lib/cf-image-loader";
 import type { PublicPhotographerPhoto } from "@/lib/public-data";
 
 type Props = {
   photos: PublicPhotographerPhoto[];
   locationName: string;
+  locationId: string;
 };
 
 /** Approved photographer-submitted photos for a location.
- * Pure server component — no client JS needed. Contact buttons are plain
- * anchor tags (tel: and wa.me) that work without JS.
+ * Server component; the contact buttons reveal the number only on click
+ * (the number is never in the page).
  * Renders nothing when photos is empty. */
-export function PhotographerPhotoSection({ photos, locationName }: Props) {
+export function PhotographerPhotoSection({ photos, locationName, locationId }: Props) {
   if (photos.length === 0) return null;
 
   return (
@@ -43,22 +42,22 @@ export function PhotographerPhotoSection({ photos, locationName }: Props) {
                 </p>
               )}
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <a
-                  href={`tel:${photo.phone_number}`}
-                  className="flex items-center justify-center gap-1.5 rounded-md border border-pb-brand bg-white px-2 py-1.5 text-xs font-medium text-pb-brand hover:bg-pb-brand/5 dark:bg-transparent"
-                >
-                  <Phone className="size-3.5" aria-hidden="true" />
-                  Call
-                </a>
-                <a
-                  href={buildWhatsAppLink(photo.phone_number)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 rounded-md border border-pb-brand bg-white px-2 py-1.5 text-xs font-medium text-pb-brand hover:bg-pb-brand/5 dark:bg-transparent"
-                >
-                  <WhatsAppIcon className="size-3.5" aria-hidden="true" />
-                  WhatsApp
-                </a>
+                <ContactRevealButton
+                  target={{ kind: "photo", id: photo.id, locationId }}
+                  channel="call"
+                  label="Call Now"
+                  variant="outline"
+                  size="sm"
+                  className="border-pb-brand text-pb-brand hover:bg-pb-brand/5"
+                />
+                <ContactRevealButton
+                  target={{ kind: "photo", id: photo.id, locationId }}
+                  channel="whatsapp"
+                  label="WhatsApp"
+                  variant="outline"
+                  size="sm"
+                  className="border-pb-brand text-pb-brand hover:bg-pb-brand/5"
+                />
               </div>
             </div>
           </div>

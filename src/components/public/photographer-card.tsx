@@ -1,10 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Camera, MapPin, Phone, Wallet } from "lucide-react";
-import { WhatsAppIcon } from "@/components/public/whatsapp-icon";
-import { Button } from "@/components/ui/button";
+import { Camera, MapPin, Wallet } from "lucide-react";
+import { ContactRevealButton } from "@/components/public/contact-reveal-button";
 import { VerifiedBadge } from "@/components/public/verified-badge";
-import { buildWhatsAppLink } from "@/lib/format";
 import type { PublicPhotographer } from "@/lib/public-data";
 
 const inr = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
@@ -24,8 +22,8 @@ export function PhotographerCard({ photographer }: { photographer: PublicPhotogr
     offersPreWedding,
     offersWedding,
     isVerified,
-    phoneNumber,
-    whatsappNumber,
+    hasPhone,
+    hasWhatsapp,
   } = photographer;
 
   const banner = bannerUrl ?? avatarUrl;
@@ -104,21 +102,19 @@ export function PhotographerCard({ photographer }: { photographer: PublicPhotogr
           )}
         </div>
 
-        {(phoneNumber || whatsappNumber) && (
+        {(hasPhone || hasWhatsapp) && (
           <div className="relative z-10 mt-auto grid grid-cols-2 gap-2 pt-1">
-            {phoneNumber && (
-              <Button size="sm" render={<a href={`tel:${phoneNumber.replace(/[^\d+]/g, "")}`} />}>
-                <Phone className="size-4" /> Call
-              </Button>
+            {hasPhone && (
+              <ContactRevealButton target={{ kind: "profile", slug }} channel="call" label="Call Now" size="sm" />
             )}
-            {whatsappNumber && (
-              <Button
+            {hasWhatsapp && (
+              <ContactRevealButton
+                target={{ kind: "profile", slug }}
+                channel="whatsapp"
+                label="WhatsApp"
                 size="sm"
                 className="bg-[#25D366] text-white hover:bg-[#1fb857]"
-                render={<a href={buildWhatsAppLink(whatsappNumber)} target="_blank" rel="noopener noreferrer" />}
-              >
-                <WhatsAppIcon className="size-4" /> WhatsApp
-              </Button>
+              />
             )}
           </div>
         )}

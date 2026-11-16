@@ -70,6 +70,9 @@ export default async function LocationDetailPage({ params }: Props) {
         countrySlug={location.country?.slug}
         stateSlug={location.state?.slug}
         citySlug={location.city?.slug}
+        categorySlug={location.category?.slug}
+        latitude={location.latitude}
+        longitude={location.longitude}
         placeName={location.city?.name ?? location.state?.name ?? location.name}
       />
     </>

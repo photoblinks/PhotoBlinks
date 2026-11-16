@@ -294,7 +294,7 @@ export async function LocationDetailContent({
         </div>
       )}
 
-      <PhotographerPhotoSection photos={photographerPhotos} locationName={location.name} />
+      <PhotographerPhotoSection photos={photographerPhotos} locationName={location.name} locationId={location.id} />
 
       <div id="comments" className="mt-14 scroll-mt-20">
         <LocationComments
