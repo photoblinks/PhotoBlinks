@@ -5,7 +5,7 @@ import { getEditorBySlug, getEditorPosts } from "@/lib/public-data";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { EditorAvatar, EditorSocials } from "@/components/public/editor-card";
 import { JsonLd } from "@/components/public/json-ld";
-import { absoluteUrl, buildBreadcrumbList, buildEditorPersonJsonLd, socialImageUrl } from "@/lib/jsonld";
+import { buildEditorPageJsonLd, socialImageUrl } from "@/lib/jsonld";
 
 export const revalidate = 604800;
 
@@ -52,16 +52,9 @@ export default async function EditorPage({ params }: Props) {
     { name: editor.name, path },
   ];
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ProfilePage",
-    url: absoluteUrl(path),
-    mainEntity: buildEditorPersonJsonLd(editor),
-  };
-
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
-      <Breadcrumbs items={breadcrumbs} includeJsonLd={false} />
+      <Breadcrumbs items={breadcrumbs} />
 
       <header className="mt-6 flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-left">
         <EditorAvatar editor={editor} size={128} />
@@ -93,8 +86,7 @@ export default async function EditorPage({ params }: Props) {
         </section>
       )}
 
-      <JsonLd data={jsonLd} />
-      <JsonLd data={buildBreadcrumbList(breadcrumbs)} />
+      <JsonLd data={buildEditorPageJsonLd(editor, breadcrumbs)} />
     </div>
   );
 }

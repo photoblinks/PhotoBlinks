@@ -18,7 +18,7 @@ import { JsonLd } from "@/components/public/json-ld";
 import { LocationFactsStrip } from "@/components/public/location-facts-strip";
 import { EditorialSection } from "@/components/public/editorial-section";
 import { RelatedPlaces } from "@/components/public/related-sections";
-import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd } from "@/lib/jsonld";
 import {
   buildCategoryCityDefaultDescription,
   buildCategoryCityDefaultTitle,
@@ -236,10 +236,12 @@ export default async function CategoryLocationsPage({ params }: Props) {
       {/* Always describes this page's own canonical city+category result
           set — never the filter preview above. */}
       <JsonLd
-        data={buildItemListJsonLd(
-          heading,
-          locations.map((l) => ({ name: l.name, path: `/location/${l.slug}` })),
-        )}
+        data={buildPageJsonLd({
+          name: heading,
+          path: basePath,
+          breadcrumbItems: breadcrumbs,
+          items: locations.map((l) => ({ name: l.name, path: `/location/${l.slug}` })),
+        })}
       />
     </div>
   );

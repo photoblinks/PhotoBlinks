@@ -12,12 +12,13 @@
     "db:reset": "supabase db reset",
     "db:preflight": "node --env-file=.env.production-backup scripts/preflight-migrations.mjs",
     "db:push": "supabase db push --linked",
-    "test": "tsx --test src/lib/bulk-import/parser.test.ts src/lib/bulk-import/validate.test.ts src/lib/bulk-import/create.test.ts src/lib/bulk-import/photographers.test.ts"
+    "test": "tsx --test src/lib/bulk-import/parser.test.ts src/lib/bulk-import/validate.test.ts src/lib/bulk-import/create.test.ts src/lib/bulk-import/photographers.test.ts src/lib/ai-verification/*.test.ts && node --test gemini-verification.test.js gemini-pricing.test.js gemini-client.test.js && node --test \"prototypes/brave-gemini/tests/*.test.js\""
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1117.0",
     "@aws-sdk/s3-request-presigner": "^3.1117.0",
     "@base-ui/react": "^1.7.0",
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.9.1",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",

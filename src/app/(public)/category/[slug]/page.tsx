@@ -13,7 +13,7 @@ import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DirectoryFilter, DirectoryResults } from "@/components/public/location-directory";
 import { CategoryExploreByState, FlatBrowse } from "@/components/public/location-browse-views";
 import { JsonLd } from "@/components/public/json-ld";
-import { DEFAULT_OG_IMAGE, buildItemListJsonLd, socialImageUrl } from "@/lib/jsonld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd, socialImageUrl } from "@/lib/jsonld";
 import { isSeoEligible } from "@/lib/seo-eligibility";
 
 // ISR: no searchParams/cookies read, so the route is eligible for the Full
@@ -171,10 +171,12 @@ export default async function CategoryPage({ params }: Props) {
       </div>
 
       <JsonLd
-        data={buildItemListJsonLd(
-          heading,
-          locations.map((l) => ({ name: l.name, path: `/location/${l.slug}` })),
-        )}
+        data={buildPageJsonLd({
+          name: heading,
+          path: basePath,
+          breadcrumbItems: breadcrumbs,
+          items: locations.map((l) => ({ name: l.name, path: `/location/${l.slug}` })),
+        })}
       />
     </div>
   );

@@ -108,7 +108,7 @@ export default async function BlogPostPage({ params }: Props) {
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <Breadcrumbs items={breadcrumbItems} includeJsonLd={false} />
+      <Breadcrumbs items={breadcrumbItems} />
 
       <header className="mb-6">
         {post.category && (

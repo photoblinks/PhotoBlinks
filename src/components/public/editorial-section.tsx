@@ -9,6 +9,7 @@ import {
 import { CityQuickFactsCard, buildQuickFactRows } from "@/components/public/city-quick-facts-card";
 import { EditorCard } from "@/components/public/editor-card";
 import { JsonLd } from "@/components/public/json-ld";
+import { buildFaqPage, buildGraph } from "@/lib/jsonld";
 import { BlogContentRenderer } from "@/components/public/blog-content-renderer";
 import type { BlogBlock, EditorialBlock } from "@/lib/blog/content-blocks";
 
@@ -69,20 +70,8 @@ export async function EditorialSection(
 
   // FAQ blocks in the blog also become FAQPage structured data.
   const faqs = blocks.filter((block): block is Extract<BlogBlock, { type: "faq" }> => block.type === "faq");
-  const faqJsonLd =
-    faqs.length > 0 ? (
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: faqs.map((faq) => ({
-            "@type": "Question",
-            name: faq.question,
-            acceptedAnswer: { "@type": "Answer", text: faq.answer },
-          })),
-        }}
-      />
-    ) : null;
+  const faqPage = buildFaqPage(faqs);
+  const faqJsonLd = faqPage ? <JsonLd data={buildGraph([faqPage])} /> : null;
 
   // Quick Facts sits in a right column that sticks while the blog scrolls and
   // stops where the blog ends (the sticky card lives inside the grid row).

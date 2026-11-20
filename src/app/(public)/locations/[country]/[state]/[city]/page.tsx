@@ -18,7 +18,7 @@ import { JsonLd } from "@/components/public/json-ld";
 import { LocationFactsStrip } from "@/components/public/location-facts-strip";
 import { EditorialSection } from "@/components/public/editorial-section";
 import { RelatedPlaces } from "@/components/public/related-sections";
-import { DEFAULT_OG_IMAGE, buildItemListJsonLd, socialImageUrl } from "@/lib/jsonld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd, socialImageUrl } from "@/lib/jsonld";
 import {
   buildGeoDefaultDescription,
   buildStateCategoryDefaultDescription,
@@ -193,6 +193,14 @@ export default async function LocationsCityOrStateCategoryPage({ params }: Props
         </div>
 
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+          <JsonLd
+            data={buildPageJsonLd({
+              name: heading,
+              path: basePath,
+              breadcrumbItems: breadcrumbs,
+              items: locations.map((l) => ({ name: l.name, path: `/location/${l.slug}` })),
+            })}
+          />
           <Breadcrumbs items={breadcrumbs} />
           <Suspense
             fallback={
@@ -358,10 +366,12 @@ export default async function LocationsCityOrStateCategoryPage({ params }: Props
       {/* Always describes this page's own canonical state+category result
           set — never the filter preview above. */}
       <JsonLd
-        data={buildItemListJsonLd(
-          heading,
-          locations.map((l) => ({ name: l.name, path: `/location/${l.slug}` })),
-        )}
+        data={buildPageJsonLd({
+          name: heading,
+          path: basePath,
+          breadcrumbItems: breadcrumbs,
+          items: locations.map((l) => ({ name: l.name, path: `/location/${l.slug}` })),
+        })}
       />
     </div>
   );

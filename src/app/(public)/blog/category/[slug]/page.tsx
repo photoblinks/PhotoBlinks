@@ -4,7 +4,8 @@ import { getActiveBlogCategories, getBlogCategoryBySlug, getBlogPostsByCategoryS
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { BlogCategoryNav } from "@/components/public/blog-category-nav";
 import { BlogPostCard } from "@/components/public/blog-post-card";
-import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
+import { JsonLd } from "@/components/public/json-ld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd } from "@/lib/jsonld";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -62,6 +63,15 @@ export default async function BlogCategoryPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <JsonLd
+        data={buildPageJsonLd({
+          name: `${category.name} Articles`,
+          description: category.description,
+          path: `/blog/category/${category.slug}`,
+          breadcrumbItems,
+          items: posts.map((post) => ({ name: post.title, path: `/blog/${post.slug}` })),
+        })}
+      />
       <Breadcrumbs items={breadcrumbItems} />
 
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">{category.name} Articles</h1>

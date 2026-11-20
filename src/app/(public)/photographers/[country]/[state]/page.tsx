@@ -7,7 +7,7 @@ import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { PhotographersHero } from "@/components/public/photographers-hero";
 import { PhotographerDirectory } from "@/components/public/photographer-directory";
 import { JsonLd } from "@/components/public/json-ld";
-import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd, photographerListItems } from "@/lib/jsonld";
 
 export const revalidate = 604800;
 
@@ -65,6 +65,12 @@ export default async function PhotographersStatePage({ params }: Props) {
   }
   const cityLinks = [...cities.values()].sort((a, b) => a.name.localeCompare(b.name));
 
+  const breadcrumbs = [
+    { name: "Home", path: "/" },
+    { name: "Photographers", path: "/photographers" },
+    { name: state.name, path: `/photographers/${country}/${stateSlug}` },
+  ];
+
   return (
     <div>
       <PhotographersHero
@@ -75,16 +81,17 @@ export default async function PhotographersStatePage({ params }: Props) {
 
       <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
         <PhotographerDirectory photographers={photographers} />
-        <JsonLd data={buildItemListJsonLd(seo?.h1_title || `Pre-Wedding Photographers in ${state.name}`, photographers.slice(0, 100).map((p) => ({ name: p.studioName, path: `/photographers/p/${p.slug}` })))} />
+        <JsonLd
+          data={buildPageJsonLd({
+            name: seo?.h1_title || `Pre-Wedding Photographers in ${state.name}`,
+            path: `/photographers/${country}/${stateSlug}`,
+            breadcrumbItems: breadcrumbs,
+            items: photographerListItems(photographers),
+          })}
+        />
 
         <div className="mt-10">
-          <Breadcrumbs
-            items={[
-              { name: "Home", path: "/" },
-              { name: "Photographers", path: "/photographers" },
-              { name: state.name, path: `/photographers/${country}/${stateSlug}` },
-            ]}
-          />
+          <Breadcrumbs items={breadcrumbs} />
         </div>
 
         {cityLinks.length > 0 && (

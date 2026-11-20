@@ -14,7 +14,7 @@ import { PhotographerCard } from "@/components/public/photographer-card";
 import { ShareButton } from "@/components/public/share-button";
 import { VerifiedBadge } from "@/components/public/verified-badge";
 import { Button } from "@/components/ui/button";
-import { absoluteUrl, buildBreadcrumbList, socialImageUrl } from "@/lib/jsonld";
+import { absoluteUrl, buildBreadcrumbNode, buildFaqPage, buildGraph, socialImageUrl, websiteRef } from "@/lib/jsonld";
 import { buildPhotographerSeo } from "@/lib/photographer-seo";
 
 export const revalidate = 604800;
@@ -90,9 +90,7 @@ export default async function PhotographerPage({ params }: Props) {
 
   // One @graph: the business (LocalBusiness + ProfessionalService), the
   // ProfilePage describing it, and a FAQPage mirroring the visible FAQ.
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
+  const jsonLd = buildGraph([
       {
         "@type": ["LocalBusiness", "ProfessionalService"],
         "@id": `${pageUrl}#business`,
@@ -134,22 +132,12 @@ export default async function PhotographerPage({ params }: Props) {
         inLanguage: "en-IN",
         dateCreated: p.createdAt,
         about: { "@id": `${pageUrl}#business` },
-        isPartOf: { "@type": "WebSite", name: "PhotoBlinks", url: absoluteUrl("/") },
+        isPartOf: websiteRef(),
+        breadcrumb: { "@id": `${pageUrl}#breadcrumb` },
       },
-      ...(seo.faqs.length > 0
-        ? [
-            {
-              "@type": "FAQPage",
-              mainEntity: seo.faqs.map((f) => ({
-                "@type": "Question",
-                name: f.question,
-                acceptedAnswer: { "@type": "Answer", text: f.answer },
-              })),
-            },
-          ]
-        : []),
-    ],
-  };
+      buildBreadcrumbNode(pageUrl, breadcrumbs),
+      buildFaqPage(seo.faqs, pageUrl),
+    ].filter((node) => node !== null));
 
   return (
     <div>
@@ -328,7 +316,6 @@ export default async function PhotographerPage({ params }: Props) {
       </div>
 
       <JsonLd data={jsonLd} />
-      <JsonLd data={buildBreadcrumbList(breadcrumbs)} />
     </div>
   );
 }

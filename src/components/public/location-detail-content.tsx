@@ -123,7 +123,7 @@ export async function LocationDetailContent({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <Breadcrumbs items={breadcrumbItems} includeJsonLd={false} />
+      <Breadcrumbs items={breadcrumbItems} />
       <div className="mb-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
           <h1 className="font-heading text-3xl font-semibold sm:text-4xl">{location.name}</h1>

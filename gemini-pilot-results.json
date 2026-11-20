@@ -1,0 +1,629 @@
+{
+  "timestamp": "2026-11-19T06:41:13.921Z",
+  "model": "gemini-3.8-flash",
+  "summary": {
+    "totalLocations": 5,
+    "successful": 5,
+    "failed": 0,
+    "totalInputTokens": 27632,
+    "totalOutputTokens": 19489,
+    "totalGroundingRequests": 29,
+    "estimatedCostUSD": 0.09380775,
+    "inrValidCount": 3
+  },
+  "results": [
+    {
+      "location": "Hampi Heritage Site",
+      "state": "Karnataka",
+      "category": "Heritage/Monument",
+      "success": true,
+      "pass1Latency": 28823,
+      "pass2Latency": 24200,
+      "groundingQueries": 4,
+      "sourcesCount": 18,
+      "inrValid": false,
+      "data": {
+        "locationName": "Hampi Heritage Site",
+        "state": "Karnataka",
+        "category": "Heritage Site",
+        "pricingTiers": [
+          {
+            "tierName": "Casual / Tourist Photography",
+            "priceINR": 0,
+            "duration": "Per visit",
+            "includes": [
+              "Handheld DSLRs",
+              "Mirrorless cameras",
+              "Smartphones"
+            ]
+          },
+          {
+            "tierName": "Casual Couple / Pre-Wedding (Handheld)",
+            "priceINR": 0,
+            "duration": "Per visit",
+            "includes": [
+              "Handheld shooting without tripods, flash stands, gimbals, reflector screens, or props"
+            ]
+          },
+          {
+            "tierName": "Professional Pre-Wedding / Commercial Still Photography",
+            "priceINR": 750,
+            "duration": "Per shoot",
+            "includes": [
+              "Tripods",
+              "Stands",
+              "Lights",
+              "Reflectors",
+              "Crew access"
+            ]
+          },
+          {
+            "tierName": "Commercial Filming / Cinema / Video Shoots",
+            "priceINR": 100000,
+            "duration": "Per day per monument",
+            "includes": [
+              "ASI World Heritage Monument Filming License"
+            ]
+          },
+          {
+            "tierName": "Drone Photography / Videography Deposit",
+            "priceINR": 50000,
+            "duration": "Per project",
+            "includes": [
+              "Refundable security deposit for drone operations"
+            ]
+          }
+        ],
+        "permitRequired": true,
+        "bestMonths": [
+          "October",
+          "November",
+          "December",
+          "January",
+          "February"
+        ],
+        "sources": [
+          {
+            "title": "newindianexpress.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGzqGNUf-QHRf7GsPB6dX7R1ZBwVW5gnt0e7VEoOz1elp0jeQPGDZvov4BMEk4Mwn4q9p8ysqNcXZ9L0ILsWY5mFzAL7xFJkrk05mY8-_conmw_jtOwPMYffofFxBwA84RvHnvLRhvoJJJIn408U2Zfp_I2aPxB9B2yZcHwufA5jYWRYGz1W0OaMTb_3oGzpWSh-LCbwSOPIEE-4YjCAlNB3U2qyE7OG_vN6ZYQxDXswD4hrPw1g2PLuoaF"
+          },
+          {
+            "title": "indiatimes.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHK69zVHCVz-65CpX-2bRb-HSuit0k_n4_BqiBh8XgRCpv02zLCa1-TEB418ttUwnnPAZF2ErwVGSDh7In5z6zFv0FNX3ZDMu4PrcmNp18fKqrNAZxax_XQFucFEK4uOA9MzrAN2LQQ4c2Pac2oSomP2mpx_ZUQ7W2esucfwR-Q-orxHYqNkK0dXrJyRuEPD3Wg0UkYAg6XqDrQNNL7K5G_ll57MzABUo4gyQnBkl-XhTrgN_cQcawGSkZudjDCxrAuoxfNRsovnsR_yKY3OnMBtamu0Fq423woQ5wTdyGO7b0oWW-2k6RWTDolcwo="
+          },
+          {
+            "title": "indiacinehub.gov.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGPawtj6vuqVL91ocFirB_PcV2rKpEhvPa6X5GRzzTj_dKzJF6CFptW0EGSyhyjXj8ARZiW0mg6kLf3O4fYZNwhgPQaVVWhdTjvzAU3tfg9yj9HRAdV81ZFzpCAelWMYQ24j6vdgL_hJ7EAMma0XR4gd4Kw0V_CvEIC-ie24IIhgpM08MWzXw99_TWwzKWod6c1iHpGjzqSBNKIMrcAL96JidUKAYR1oToTV2fWs2W-29ly"
+          },
+          {
+            "title": "asi.nic.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHDaoNP9TWzyXeNnsB0NLAR6d3hCw9D5Y3SLkzGw4MyQvHVPzuFdb4p_7WFEceZzGz4PqaywG0F4olfWpqkvmmyZMYPK0w56gEMY6Ido6nW6A=="
+          },
+          {
+            "title": "indiatimes.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEVBtSpwcxRePNQlyVDFObmCXXQe8qggRwOHRPdKh8NUtzKkG1CkI0kzK7Ua9aCs0zWONm4tWZ25TIiSGACZwyVrXjRNK4TQE0fdfYbdI6_A92ZdHIbCjFPO8q8zalmImyukgv9tDrR0d2fpsdl5BHd5YVqPJ1JF6BLRDIkpFHkmVbRkzUp-3XQROvFRRrN50hovt7scS0zlqRx1soPf2Tfe4iN4K2JA6jfeLNDE3f_htu2z2I="
+          },
+          {
+            "title": "tacproductions.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFbeSUvzIMIshR2AIR5ARGz5NUXRjF8rKunuk3BvbgRMvi0MJ9Eybdkt0CkwD2hp8JL-hPCpGVUpSIYyDypPtA73TJdeiFtpwgdZ3ENxPcYw8GPuCEB5re5Iivyf4XIfvUMQQplNL7QPzKpGPfAheFxkWk2EBLYyVgUEMhBFg=="
+          },
+          {
+            "title": "hospet.online",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHszg1ZXLgSycz7Jyd0AKydCfRjpWQEoG7Tl6OcnkhfcpEGojkIpKe9eBHzjh6Tc-f03jiDg3P4nN56yLEZEwnZS7jk7yerhkq7TCyPKMkb2KhyDxOaK2TdljHuDkg3xZ18nnRkB_DuVZlfMPpU7EDgzD7dGLrdjVKU_g=="
+          },
+          {
+            "title": "scribd.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFk9J1XavGJsB0H_kXqnYbI8JxiyZxaXiHXL4ALAWO8tUlN6LPhc9OrwPQRD9TGbgKyfjCrov68RAHAlbHncen_NSiWi-WfYsTjh3F_7God6JZuo1FUhh2d6oOaPBQ-ZlRh8d7d2joaV5OAsBgzYC6QewWu6oxvHIJwJ6B_ERN5tzQsvT4oiUin0KZ9Re2hWYW6Gp0="
+          },
+          {
+            "title": "nammatrip.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGGi7rqSz021BHj9VS_hBqp8qKGQgGHv2INimQrnmgYk3ARoeNMqhzg2aAGDr6vxXBbzX9fOUAauO9SIt_-_RtAZhxgdyRBCzgrRGlXQP4bA9FF4iR0ov3WADJ49lzKRSDN9zYSnO8UINQQM2W1m4PCmA=="
+          },
+          {
+            "title": "gkvale.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFY2J0U8xxdtDnl7TJax8PjMnhXaNZLTQvJ15OYEurtsO6t6QFzj4mjBfbru8qWqrBxhRqc2FK1uW7NsAlA7w1sRHV4HyFgDYq4FoFvr_RCKaelAXGhHpD_7VdExk1DUhLJKW5E_63WCf-v"
+          },
+          {
+            "title": "asihampicircle.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEBgsKpRr3IDEEmSxQdwkw6TkZcueYjzceRXSaIBayMtDwTJgfyRclJXEup5f7kCMOFnuxdwb6rLAqp1ul69FE9oRkQafqwsno5tzG-XGzZEneXduWCXDfx0uCtKxzT"
+          },
+          {
+            "title": "siaphotography.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGoPFpfDPc2bw0_Q4WHufqK561GsPtrqhfxG5g9yQxLzYgdriAa_eNZk3OTbHiVArKAYGwKR-swOlMFpZP2dGeQMX4Hm4-H-oZMq2rvbPB6gOyIkxWI9s9aHBC1F_wHcrdGnUl6UMsKoJMwv4UU5P97k1zc4fodG-qp"
+          },
+          {
+            "title": "hampi.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGbg4Ybbnzqsz59tc7LUyI2b-NX-5Opy9UAqRA5bj9H2FjPyKK6iG4VaZO7O1kR2B5J7BnqWYPSIAWCt9gwbmWRvknGLBi0kmvC5PjYNyURP62T"
+          },
+          {
+            "title": "shiningframe.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEtlnPW7HdoF_hnE6kFih7-KHd1Oiu104wlRtvFJOLsQLSbjmTuzHJhM5JDx2qZRBQR-E4OuDVS_7-Oy6WJ8_7v_wYjaZlamDa2tqEgvXl8NUBXIvR6VLLOaXYQbHxxrw1Bo8w2cV_X4Ys="
+          },
+          {
+            "title": "asihampicircle.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHQhTXYJ4u-iLi3lM1mugjRieaR5TRXjDVz87ObMM6x0MgS2YQOZXYatBo063t4VORXiSp0hhM30PYzJO8RNhB0FBmxyeUt8_Ifv52dldSNI-xPvDisND4VxQ=="
+          },
+          {
+            "title": "asihampicircle.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGP58TmwprNesXr6NmBGMLnVHkdRR02YQPaSY6r_iejjUhH0zLw9kLCiOkTJCiErKVRL4fMdQWdhJoTZWSXCrbt2AAkmj5Ic8ZvljuNF-NB0leJsCOWsH4CjB6MRA0op9NcVqKEtyUb7Q=="
+          },
+          {
+            "title": "indiacinehub.gov.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGScp8DQAm0QwkeZwa56H2oiIpvHzV4XqWD2yWvcM4OIIytT21SZgnQCvC4Iy0Th1NHCkN1iunR6FTiAmnzygLQ7QkAzO9nuNk2AMdMyKpO6k3DH8u-Hgqw-RHr_ifTxfHmqVMcyWB8G8RzoO6Gtk0JhwP3v2vBNg=="
+          }
+        ],
+        "contactInfo": {
+          "email": "sahc.asi@gov.in",
+          "phone": "+91 (0)8394-200998",
+          "website": "http://www.asihampicircle.in"
+        },
+        "notes": "Using camera stands, artificial lighting rigs, or large reflectors inside protected monument boundaries is prohibited without written permission. Commercial still shoots or filming applications require 2 to 4 weeks advance submission. Active places of worship like the inner sanctum of Virupaksha Temple prohibit commercial photography.",
+        "permitAuthority": "Archaeological Survey of India (ASI) – Hampi Circle",
+        "permitCostINR": 750
+      }
+    },
+    {
+      "location": "Coorg Coffee Plantation",
+      "state": "Karnataka",
+      "category": "Nature/Plantation",
+      "success": true,
+      "pass1Latency": 52898,
+      "pass2Latency": 33189,
+      "groundingQueries": 10,
+      "sourcesCount": 19,
+      "inrValid": true,
+      "data": {
+        "locationName": "Coorg Coffee Plantation",
+        "state": "Karnataka",
+        "category": "Plantation / Agriculture",
+        "pricingTiers": [
+          {
+            "tierName": "Casual / Tourist Photography",
+            "priceINR": 350,
+            "duration": "Per tour / visit",
+            "includes": [
+              "Handheld DSLRs/smartphones",
+              "Covered under estate tour ticket"
+            ]
+          },
+          {
+            "tierName": "Pre-Wedding / Couple Portrait Shoot",
+            "priceINR": 5000,
+            "duration": "Per day",
+            "includes": [
+              "Access to estate trails",
+              "Colonial bungalows",
+              "Canopy walkways"
+            ]
+          },
+          {
+            "tierName": "Commercial / Ad Shoots / Catalogues",
+            "priceINR": 35000,
+            "duration": "1 day",
+            "includes": [
+              "Crew size up to 15–25 people",
+              "Private access",
+              "Dedicated changing rooms",
+              "Power supply access",
+              "Utility setups"
+            ]
+          },
+          {
+            "tierName": "Feature Films / Web Series Production",
+            "priceINR": 100000,
+            "duration": "1 day",
+            "includes": [
+              "Full estate buyout/cordoning off sections",
+              "Heavy lighting",
+              "Generator parking",
+              "Support crew arrangements"
+            ]
+          }
+        ],
+        "permitRequired": true,
+        "bestMonths": [
+          "October",
+          "November",
+          "December",
+          "January",
+          "February",
+          "March",
+          "April"
+        ],
+        "sources": [
+          {
+            "title": "sceneloc8.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEx2JEetP0AoTyfQmlR9aA9YKjSb_xJUBSa70yjMw-NWepBYpLe-3WdnnJk4gMJ_iv5ciXs2_MF3c1nk5XLAGaH9YsCQjztwtqFCxOV_y0LJt2yxxhvJHhj5sl1KqV1XE0jwDFA_Hk4sySg6Q2ILy8oOuoSnFXCBkZJBIPKGK8-Yo-6l2s7gZw1Ip5zIqhiErwg7WMNQYpDUA=="
+          },
+          {
+            "title": "tacproductions.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEuMMXJYv9Umu3RrWD3ZOdeDGywvkCcrlmVrQjpCNMCL0ngjPTqCS0fHmOtbik6PI97GeS6rTwaysSOulZQ1F46MOBeCJf43jXH3Vz-nETMWmuka0KzrkclUGueHkw2RrCOQrf34TtMTMTYq4SItmTf1FZqYE_pIcjd"
+          },
+          {
+            "title": "tacproductions.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEMZhTqOFh3vsvIjcP_bwgnVwcipX3MSw8or037QoDk5oLslXrcDaG20gFcPtalMjwPi4-faIHvg8QZg_8em48Aba41JX7PygPAHDzBX-ENJaWYqQnsc2BZHf021HQ9vYLuviQhCr1cm0nmNco_LjVqujdYzWWNFNfwlL8xcw=="
+          },
+          {
+            "title": "lineproducersindia.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGPMclxfPjf0WK3BZ0-EBJZJR56eIQRG5qwwhJ2_KdCoy0xht1NJ8YXFb0oaAVyKNWNsNU9A9rK8ro238rzU93A5-KElVq0U5jAHNnKZAgsOqXZKF4E-zHsexF_Y5dL1ntaITLfRCVVRLEJ1C3WN6MGOgGgDOI="
+          },
+          {
+            "title": "viator.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHZyZTxKpvTULAsPqp4Njo4DPLvhJpb4yvFarmY3_nuXHLKFF5kh0tGAHWkDjcfykDBENyq6wVnaYY28HBCAJwbDSDi4EtueU_wxn2xOGTKiRz9M6rL6B6H_eXXgnkMyFsAmcfSzUfZequVEeQf7PH15sgVbNGES69mMHX1CFz94MJ6GDJJqpRPuMr3YZ_N5MaLSUXWlM-z0rrtT4c9lls="
+          },
+          {
+            "title": "coorgtour.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEDgnqhNE2gAaVyKzVaixYTtqgIdYBl3Kp_SkIm6CRL8qwIGe5gBfCRnQ7jP0yWclpRlWYArrLvPLm28hkr5tVTTwFz_OpxEPfUL-6Ec005iDOEkZ19qHKZpVyWG2MPGGd6aLzLIM8nGFmLJBnBv3Q0P-rOJ032VbUHRWc="
+          },
+          {
+            "title": "amanvanaspa.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGRqCu8GLBoA5DXAIiOmGVFhmJzA_9uDQJMJLUq29h0_XeTQAZn6dPWayrRnYW1GN4j6pKhuuIb2LkQvC_AMDi1A6vLgXjpSWu7Fe74nGaga8UaHGDxGEGN8G_5QggjZa-B5UvtwbuJVCrLhAMoBVMiOAo6JM30tBjxq26DZYswSbTJDURZF-5XhbkCo_BykXNJEj85vKipcqACgrIBICwxnwIMcbkdsjU="
+          },
+          {
+            "title": "happiffie.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF7Gkvuc0QpB8OdRpMthzTJODlErMOInV8kZ8L2x7NJx5rEbfETUnoZmYGXZqwCKLHhiATp1cZG9ppzHQ0D8sLcTyxLnpnr8OpFBSV95fNObewuIezIYXJZhREdz1hupH3UEWI-hgaZUTj6S5A0jw=="
+          },
+          {
+            "title": "velvetknot.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGuGCJLZ0ZA7yIgARB6-iUtGl5_AUC90jQEkObsSkG6Whrj7LgWZcD3_k6Y06ujoAULNssxwDcMR8VHV3vNOCHAx0vImZkAW4vBE3yrWHP7BYqukfl_i29pWOMwCUa5OD5aWPynDfkA7NruCQ=="
+          },
+          {
+            "title": "ifgtbenvis.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFxSW2SdyFNVp2BZ3WsFplgnzXn3x6a4f22ZPCAL7FFVtLdXKU5__gHuy9OxGrWgWopTqLWQIlkj7r86_rSlpd-Op9bSqV4RXjteyYufwpgIH04jJbM_iXZcZdiDv6cMjCT8LhadWWBlAJtWNR_cJOCXhO6KIdtY_RIVoDQY4WGnlMZDoD03s93B7oVuBzWEZGwg3OHtms1ZMO2DFbKxzXCcfFUlkOUcXww7lbn-mWU9CSWawOVvMOliPKKB8Yi1rwmWXREW-s="
+          },
+          {
+            "title": "scribd.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF5V7SKriKCWYY08YzabD4w1qNzu1omUIniosKrrlo-99XoQXQEmMbz1dQSp1lR0L6aId60riU7Bj9vFg6oJ8SltO6A30bszr8qnF9UWXs3d6F8QxlnXiBpH2pSJvlSVt98k9h2tfB6I8029po="
+          },
+          {
+            "title": "itsmy.wedding",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEq7QqVueOfOJru3idLOs4-dE55xBdCx8Xuckp9uPkXyVZdEv1aRy5L9NZwLirVuYHG9ym2wfzz90KftkmQs7m8vNEoVc_JVkIvIF6MGL9nvvuTprc0RqD-iwiN7NXMxglzhfKg30CooQj95kC8gQU="
+          },
+          {
+            "title": "indiatimes.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH9B0PiTo7QloNV1WPr33geb-HWKzU1cH3C4hW0rRWbzitFkKDuYsO2hB5EbTPodR-SU6S_1MguBwMeF-aoXVeVUMhRw6Qb6q10tJ54aAD323xP5X9Y28Wu5yESiiQcFPRbScbbwblJfui1ckA-GveAiK3DkvCukCgXhAt3zclZGth_xgkyV_6KXR1UadvavBo_1bbfnt_7cCu5YhR_YQxece0KFUhxTX4P2uO-JwClKKx1FvBsz3no-P7gpOJkqrzBAwphPp1K"
+          },
+          {
+            "title": "newindianexpress.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGATNKclP1GxbYe9g8vnnCEJttO1Thg6Xb5Ld4gj0pBpvbtYI2gWU-0mjRD8G1VpxPPSVQkPyd6L-MdZzK5jEMLOIBCZAKYbF0Rrdm-vHepHVlzpnQCh2UzdP4bPEPuhrcPhM77QXeOygvYi0xy-XGV1g_LJX9Wfmh8o_6WOrTazInpcgW-DnhNad42o9ryEi9-pbQ5vcSnaGbuQJuwa1wRfYD5A36oAmdQtTCegMYc2evgHHjW-1LwHw=="
+          },
+          {
+            "title": "holidify.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGzUJmYFnF3xAFaDAT4wCTT47xDCzZe7GmplenM3eKadRRIkCPhiGI03wXinUhZjB8nYDZ1rdcQedk2WXEcw4KH4Ai0TwqDmGvna37a4-a79RTgTXl-FD7ArBxBoWhOtQ6Hqy81BxcLnwQLqs0RIoswtDU0v_prxvLQhhzGJfnhzmmMl2VE_ae8"
+          },
+          {
+            "title": "mercaragoldestate.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGZJD_xKx0mg7ta3YpcAeUOwr_5NySu6haljZe2l8NqOlM8iWr_8eW54Mg_yveYYv17ON6myb4xamHzeaQddU6sLcwnNYWvQFixGqN6LeNaz5Xvin0J3nYwwpmLTpXF7EZxPKUL71--8U1MQ4KF6741jis="
+          },
+          {
+            "title": "trawell.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHSaWcEurFWdRGJW1Gkzf4ENg-sXKNO920rDakyL2YwaEjEThpCgqrsTmrSl8KXt1YOldKcpCxbB4t7NiD_FbZuBfe78DBc4ZSl8Wxb6PViyuGUBx0j27ap0DpsGDL2oNc0QUVl6eluA-Z3QB-gy-Lpfopz"
+          },
+          {
+            "title": "youtube.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGD4NTObf5qShwvY2nNxrneXShMXRlwxQn9XFlE3ZHkFy49MO7nnyfwiRFLUdS1QbdA6NGe-OsGJmu5vdr3ImqtyyLlD3k4cFLe8ps81po7TD6HER8vnHv4nQR_G_faZ3aL"
+          },
+          {
+            "title": "oldkentresorts.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHvL0w5CR-3HplC5N6ygIH15Il1jjxN-8xcP-lW7pUeSSna08WL45kU283VfjSJdv0WsfJfZvdWR_NDv8ATOyuDotci1f3evGSZz3K9EvjrMGC39E2_uT4w0L8="
+          }
+        ],
+        "contactInfo": {
+          "phone": "+91 94481 09848",
+          "website": "https://mercaragoldestate.com/"
+        },
+        "notes": "Plantations are privately owned working estates, plantation resorts, or homestays. Forest Department approval is only needed if adjoining reserve forests or buffer zones.",
+        "permitAuthority": "Private Estate Owner / Resort General Manager",
+        "permitCostINR": 5000
+      }
+    },
+    {
+      "location": "Fort Kochi",
+      "state": "Kerala",
+      "category": "Heritage/Urban",
+      "success": true,
+      "pass1Latency": 47551,
+      "pass2Latency": 15414,
+      "groundingQueries": 6,
+      "sourcesCount": 15,
+      "inrValid": true,
+      "data": {
+        "locationName": "Fort Kochi",
+        "state": "Kerala",
+        "category": "Heritage and Coastal Destination",
+        "pricingTiers": [
+          {
+            "tierName": "Casual / Vacation Portrait Sessions",
+            "priceINR": 5000,
+            "duration": "1–2 Hours",
+            "includes": [
+              "15–30 edited high-resolution images",
+              "Ideal for solo travelers, influencers, or couples",
+              "Coverage of 1–2 spots (e.g., Chinese Fishing Nets, Princess Street)"
+            ]
+          },
+          {
+            "tierName": "Classic Pre-Wedding / Couple Session",
+            "priceINR": 20000,
+            "duration": "4–6 Hours",
+            "includes": [
+              "Multiple outfit changes",
+              "30–50 retouched photos",
+              "Full coverage of colonial streets, Vasco da Gama Square, beach"
+            ]
+          },
+          {
+            "tierName": "Signature / Cinematic Pre-Wedding Session",
+            "priceINR": 40000,
+            "duration": "8–10 Hours",
+            "includes": [
+              "Lead photographer and cinematographer",
+              "60+ edited photos",
+              "1–2 minute teaser / Save-the-Date video",
+              "Optional multi-location transit"
+            ]
+          },
+          {
+            "tierName": "Commercial / Brand Shoot (Half-Day)",
+            "priceINR": 25000,
+            "duration": "Up to 4 hours",
+            "includes": [
+              "High-end lighting gear",
+              "Commercial usage and licensing",
+              "Art direction and color grading"
+            ]
+          },
+          {
+            "tierName": "Commercial / Brand Shoot (Full-Day)",
+            "priceINR": 50000,
+            "duration": "8 hours",
+            "includes": [
+              "Full-day crew and commercial licensing",
+              "Lighting equipment setup",
+              "Color grading and direction"
+            ]
+          }
+        ],
+        "permitRequired": false,
+        "bestMonths": [
+          "October",
+          "November",
+          "December",
+          "January",
+          "February"
+        ],
+        "sources": [
+          {
+            "title": "venuelook.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHsaJPDwEUwi-iSrbDkOFcFCQQNt08LtoIuqnCM-YGRCjAZ_TB9D7pj4XsRb-4UygRMXuyjKSO8rbHxqVP6euLxHrR-OyryE8wI0WYw8YSh-36rof1zZaD80xDCPIAIz7BMrHGeu70oIR7Xobt5hM8uipo="
+          },
+          {
+            "title": "thehindu.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEOT6GVSXgDyhNTM3pLaysHgexS8WhXvNj6f8hNeZEaw1riRyaTFMDAVGNG82p0jCh0dVRhA39gTFP6G17k6CVtZdZgzvsqUuhMR5EoDkPb9Koklsza64Gh4-uadiO_OJb81FgXRapu36W3J48g5jgUB_jfNfDNfCeCnkQeI67Ygr7vbHQD_Qn2GLNbBi0GaBe4slY0OW8Xyso5ZrvFzdDaBja7oe-_6i9SprpvY9Qm5lLLWzIPTklDPx9YUxyFOXQl-mHxPfkH1E7Wx4yplOjAhKZ5lCSMDutmxr7oQBA5TfHnW6chFea1_X8nvA=="
+          },
+          {
+            "title": "dtpcernakulam.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGZmArgnunlA64Le21SZLF1Gj950FOC33JUBNJzyy7Tnber4MZH02ntZ5YTlDM_YYVK9bvMA5W7HjEo92HrplvLBU-0BHEZ0fvjLXOEl5hZWCa6BcpB7iRGd_cN"
+          },
+          {
+            "title": "lsgkerala.gov.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEEawUjzBDOd8Odw4_PUDsrOsfC1wUI8IHmD33Qk0rEiQX0qo5pueXjwlmoSfUO5bMT-nectITv--PAAglNB7im_BD3iy52qoblHT4RSNYOVO_-u4C2XxbmLZifQLRJaw=="
+          }
+        ],
+        "contactInfo": {
+          "email": "corporationofcochin@gmail.com",
+          "phone": "+91 484 2369007",
+          "website": "https://kochicorporation.lsgkerala.gov.in"
+        },
+        "notes": "Personal and pre-wedding handheld shoots on public streets and beach are free of permit requirements. Commercial productions, complex gear setups, and ASI monuments require prior municipal or central permissions. Drones are strictly regulated due to nearby naval installations.",
+        "permitAuthority": "Kochi Municipal Corporation / Archaeological Survey of India (ASI)",
+        "permitCostINR": 0
+      }
+    },
+    {
+      "location": "Munnar Tea Gardens",
+      "state": "Kerala",
+      "category": "Nature/Plantation",
+      "success": true,
+      "pass1Latency": 39108,
+      "pass2Latency": 22138,
+      "groundingQueries": 4,
+      "sourcesCount": 12,
+      "inrValid": false,
+      "data": {
+        "locationName": "Munnar Tea Gardens",
+        "state": "Kerala",
+        "category": "Tea Plantation",
+        "pricingTiers": [
+          {
+            "tierName": "Casual / Tourist",
+            "priceINR": 0,
+            "duration": "Per session",
+            "includes": [
+              "Mobile phone or casual DSLR photography from public viewpoints"
+            ]
+          },
+          {
+            "tierName": "Pre-Wedding / Couple Shoot",
+            "priceINR": 2000,
+            "duration": "Per session",
+            "includes": [
+              "Staged portraits, outfit changes, tripods/reflectors, light gear inside private tea rows or factory grounds"
+            ]
+          },
+          {
+            "tierName": "Commercial / Ad Campaign",
+            "priceINR": 15000,
+            "duration": "1 day",
+            "includes": [
+              "Brand shoots, apparel/lifestyle catalogs, product campaigns with moderate crews"
+            ]
+          },
+          {
+            "tierName": "Film / TV / Large Media",
+            "priceINR": 18375,
+            "duration": "1 day",
+            "includes": [
+              "Feature film sequences, web series, major OTT video productions"
+            ]
+          }
+        ],
+        "permitRequired": true,
+        "bestMonths": [
+          "October",
+          "November",
+          "December",
+          "January",
+          "February",
+          "March",
+          "April",
+          "May"
+        ],
+        "sources": [
+          {
+            "title": "munnartourism.co.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG_idFFi7ae3kgjNrnPQItQWQ8UIaOQkMbuyNZYT4d82DY6_Au9pWDlVRjDFvhSDbqK8cDxwTreoX1cDX-6TS8_1z7cVggVGlvFDCw6bRSW4ef8Zso4bzyzFbw9nGdPuLLaNcs="
+          },
+          {
+            "title": "kiomoi.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFZb8HIhMLD02NL7G_1aDxyAv_VtQOrTz6_oK33Lu7_oSMyUn4cX5hhlaMJWeiU-x2vvYvgQI0JySAqeiu889Etp9sPQsZ0fkROSYP12oZaiBV1nl6RmQyCfx7WXJ-IZ5vnUk6jnAHlWEJ5-5ytPHokZKI="
+          },
+          {
+            "title": "kerala-tickets.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFDIAPU6bpmUIFfY4wvdIh8bZdkgmSH0F8as6wbXFNCidLrjahzecWz6upYG__KJzSbuEPL3LhFUYIjs38PBuwh3ciX7mU-W8yU8GssZ2kisU1XK8WBO-EkkCiEz8pPa0dPA1JQgp0EkZa_TzA="
+          },
+          {
+            "title": "yatish.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHPJ2QyoMMeEF45vuAU0J1xVSmJkNtHLoP5PuRNyom71jJyF0hkK8CgYL436dUmd_btnBtpvc4s6Q4skS7WKWvs9qteawlv56y1whTu2eBWU9MexIhSYwCK4CKk8i0tgkcd9IOYAIQvYRbmqwwEvtjkNatYmQTf6fv62epCIF4LG0lAVNu4NpM="
+          },
+          {
+            "title": "kerala.gov.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEZgY6kLAg53JigJPXjDM3Jaz7UnNKMr1DmD-UGosY26vtZ08Rjtzc_55DXMizHda98VIT71DT3BIY0vI5-xtf2EqRkmH_300WpfOzlbqAbpsW8PnRm_g9mg7nCl5UyFxw7OBbd"
+          },
+          {
+            "title": "keralatourism.org",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEb7iMG2s5ypIu-MX7N4xVm8pjdQNzEZvVWIXCBgPm4EDSxMzynXFcO1IInyMbGYjmin4k2xQgvMJ7FtuoGhXhrygeolugow0lJG8gSczyiRO6StjcX8JnXLVX5dPJSlKIqEfQbHOF0SRQPmhJwa5wkBAHNoHU="
+          },
+          {
+            "title": "munnarinfo.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHx-9rV9IxF9OfYccLNNh1lbGJcq35Hz5dddO7D-Fr9u-TXJXEhomWRQvGo5qQ93KoHCK_aCbfUDrVL5_zi0W3CsL78tTDEaaPfZ4X1LUBAAFM7wYobPp5DZ4qApNl9k6Yas3EyFg=="
+          },
+          {
+            "title": "munnartourism.co.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFVeywiQt9HrcUAssGy9wJlC8AngdyUTHWKTG4gX6nUj2SnUM_gUYf07xNfRj91yvkyF-MFNg2PeUuJsxy590n8f1-M7Pt0Ul5p3BOhUnU99t6FCzBiksL0-Zr8163BAY8Fd_4vmPChNJG-fCsAm0c="
+          },
+          {
+            "title": "shiningframe.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHOpbqg5oGNzbS0-oETqLEm_72W8Gg1SDtKejUu6du9MYQXlHlzGl1M9X6f8ArgmSCbxAF_-8MY3BjV_g9FatQQTGagXoQM_KaP34gY3lvrwnkHua4iq0UY3L76gOxk5nBfTPrmhND-ez0="
+          },
+          {
+            "title": "thirdeyetraveller.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE8miwRh2ZY8R40_cM4l3Zgpx7_mksPV4BqXddKA_66scBHjMB9p6PLDndOXQavKjKcjC1cAtGKEfe4LedF-5N9ziuhDy4f24hJLj9rh03fxImqfzPSOLnXuUgoN8YMc_FJnPT5TU5KFnH8_KMP1tAaDV8="
+          },
+          {
+            "title": "financialexpress.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGUWj9XcIBB83nEZibB2V4MUcTQ_MmGOyyZdDTOOzSZm_dEZ-tRVVk9q_n6a9JUmoKB4Upl4wI-MQB7qPGPesTOcy89k5wvoBgklUWKUsEuaOqZubcdSrJQJThdFN8rRApZE4NjBRnOTUyuezvT9bdH0NcwqWoEtXWNuo1yUnPxXQS3BOGi03ZThMAb86UPHWQzH1P-hfMgr8KxcCip816OG_npkoCLKlXLlYFVmWflxLE-"
+          },
+          {
+            "title": "preweddinglocation.in",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG77-MzwYFQ6RC1ZtFO5txRdRQOytg2IzzBOFHZJslp68BfIZV8loGbBhg48WX1XfGpbGahtuNBhrdFCeUTBSIBH6fUx6tZrOiXb-MhtcThEkhU46bipa7CJR5bi70_vTQ3CXlcrQF51Uqr7Htjg46PBB8lYWGyyw0_kA=="
+          }
+        ],
+        "contactInfo": {
+          "email": "kdhpcorporate@kdhptea.co.in",
+          "phone": "+91 4865 230 561",
+          "website": "https://www.kdhptea.com"
+        },
+        "notes": "Stepping past fences or deep into tea lines requires a permit from the estate management. Filming on reserve forest edges requires Kerala Forest Department permission.",
+        "permitAuthority": "Private Estate Management (KDHP/Lockhart) / Kerala Forest & Wildlife Department / DTPC Idukki",
+        "permitCostINR": 2000
+      }
+    },
+    {
+      "location": "Bangalore Palace Grounds",
+      "state": "Karnataka",
+      "category": "Urban/Studio-adjacent",
+      "success": true,
+      "pass1Latency": 31019,
+      "pass2Latency": 14879,
+      "groundingQueries": 5,
+      "sourcesCount": 20,
+      "inrValid": true,
+      "data": {
+        "locationName": "Bangalore Palace Grounds",
+        "state": "Karnataka",
+        "category": "Heritage Palace",
+        "pricingTiers": [
+          {
+            "tierName": "Casual / Tourist Photography (DSLR)",
+            "priceINR": 675,
+            "duration": "Day Entry",
+            "includes": [
+              "Standard DSLR still camera access for personal photography"
+            ]
+          },
+          {
+            "tierName": "Pre-Wedding & Couple Portraits (Outer Grounds & Courtyard)",
+            "priceINR": 5000,
+            "duration": "Short duration session",
+            "includes": [
+              "Access to outer grounds and palace courtyard"
+            ]
+          },
+          {
+            "tierName": "Pre-Wedding & Heritage Interiors",
+            "priceINR": 25000,
+            "duration": "2 to 4 hours",
+            "includes": [
+              "Outer palace grounds access",
+              "Designated heritage interior rooms access"
+            ]
+          },
+          {
+            "tierName": "Commercial / Film / Production Shoots",
+            "priceINR": 50000,
+            "duration": "1 day / shift",
+            "includes": [
+              "Full grounds, lawn pavilions, or inner halls requisition"
+            ]
+          }
+        ],
+        "permitRequired": true,
+        "bestMonths": [
+          "October",
+          "November",
+          "December",
+          "January",
+          "February",
+          "March",
+          "April"
+        ],
+        "sources": [
+          {
+            "title": "karnatakatourism.org",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEhJmAG9pjC4txH__cPoOs1-BhGr-5TgAtHrwt2h0sAsyEHu6clHxQqKH8snAYRbY8aVDQ_vjyarWI_u8JOl6iFQ6UC-JcfmP-lNUUUA2tDpEh3zrxcKcXexAxBdodIjE3a1QHUtcS2LGogfP2QmIXN"
+          },
+          {
+            "title": "thevarkala.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHNPGBGXZR8OkOt_VlFDMUkcaoaV0jG2oe83WqFL_9BXJW6nf0NdDAQ5pdrZm7sOfcpMrLTIRKvbF85Ky3a7cCiA8_nwl5rtGr0fs0RakrzHDRVB2XZ1NLGdX8kD7433KJjQQjTAW8="
+          },
+          {
+            "title": "tripnetra.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGfUR3fsdN-5uw2uWvzbUyLJjeVn1tQ50zufPMR21E9AfgQGdaxyKIGC9pNY680NOxzxiOsYQGgwje8Dl7S5sAJlR6lkNb6py-mLPSV-kkHnuTkfIAIGafRlDSiYigf41S9"
+          },
+          {
+            "title": "traveltriangle.com",
+            "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE_V21BVRh8qBEYpaU6nQr2uh1o4EsbySoG2SXTuxDppaGnf-3TuLkmhVijjYTAW0xwbOBABaS4xh16RUKFDj6i-kzTW6FzZnYZbpcKo5mygUQrUUnonWaGqj-oeJjMRUyAqpOXB2213Eu2a8nv6-Md5J9F139dnAR0A7ev7uiulpvetQ2pG5S3ztkMT4lSbXK7LFS-uCCZ9Q=="
+          }
+        ],
+        "contactInfo": {
+          "phone": "+91 80 2235 2828 / +91 80 2336 0819",
+          "website": "https://karnatakatourism.org"
+        },
+        "notes": "Bangalore Palace is private property owned by the Wadiyar dynasty; commercial and pre-wedding permits must be coordinated directly with the Palace Administrative Office 7-14 days in advance. Drones and high-intensity flash equipment near historical artifacts are strictly prohibited.",
+        "permitAuthority": "Bangalore Palace Administrative / Estate Office",
+        "permitCostINR": 5000
+      }
+    }
+  ]
+}

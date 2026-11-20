@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getActiveCountries, getPublishedStudios } from "@/lib/public-data";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
-import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
+import { JsonLd } from "@/components/public/json-ld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd } from "@/lib/jsonld";
 
 // No searchParams/cookies here, so this route is eligible for ISR — the
 // same 24h window as the underlying cached data queries (public-data.ts).
@@ -22,6 +23,8 @@ export const metadata: Metadata = {
   },
 };
 
+const breadcrumbItems = [{ name: "Home", path: "/" }, { name: "Studios", path: "/studios" }];
+
 export default async function StudiosIndexPage() {
   const [countries, studios] = await Promise.all([getActiveCountries(), getPublishedStudios()]);
 
@@ -34,7 +37,16 @@ export default async function StudiosIndexPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <Breadcrumbs items={[{ name: "Home", path: "/" }, { name: "Studios", path: "/studios" }]} />
+      <JsonLd
+        data={buildPageJsonLd({
+          name: "Pre-Wedding Photo Studios",
+          description: metadata.description,
+          path: "/studios",
+          breadcrumbItems,
+          items: activeCountries.map((c) => ({ name: c.name, path: `/studios/${c.slug}` })),
+        })}
+      />
+      <Breadcrumbs items={breadcrumbItems} />
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Pre-Wedding Photo Studios</h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
         Explore pre-wedding photo studios by country. Pick a country below to narrow down by state

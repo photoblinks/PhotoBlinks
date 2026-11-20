@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getActiveCountries, getPublishedLocations } from "@/lib/public-data";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
-import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
+import { JsonLd } from "@/components/public/json-ld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd } from "@/lib/jsonld";
 
 // No searchParams/cookies here, so this route is eligible for ISR — the
 // same 24h window as the underlying cached data queries (public-data.ts).
@@ -24,6 +25,8 @@ export const metadata: Metadata = {
   },
 };
 
+const breadcrumbItems = [{ name: "Home", path: "/" }, { name: "Locations", path: "/locations" }];
+
 export default async function LocationsIndexPage() {
   const [countries, locations] = await Promise.all([getActiveCountries(), getPublishedLocations()]);
 
@@ -36,7 +39,16 @@ export default async function LocationsIndexPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <Breadcrumbs items={[{ name: "Home", path: "/" }, { name: "Locations", path: "/locations" }]} />
+      <JsonLd
+        data={buildPageJsonLd({
+          name: "Pre-Wedding Photoshoot Locations",
+          description: metadata.description,
+          path: "/locations",
+          breadcrumbItems,
+          items: activeCountries.map((c) => ({ name: c.name, path: `/locations/${c.slug}` })),
+        })}
+      />
+      <Breadcrumbs items={breadcrumbItems} />
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
         Pre-Wedding Photoshoot Locations
       </h1>

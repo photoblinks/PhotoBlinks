@@ -4,7 +4,7 @@ import { getPublicPhotographers } from "@/lib/public-data";
 import { PhotographersHero } from "@/components/public/photographers-hero";
 import { PhotographerDirectory } from "@/components/public/photographer-directory";
 import { JsonLd } from "@/components/public/json-ld";
-import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd, photographerListItems } from "@/lib/jsonld";
 
 // ISR: only cached public data is read, so the page is statically generated
 // and refreshed when a photographer is approved/edited (tag revalidation).
@@ -58,7 +58,14 @@ export default async function PhotographersIndexPage() {
         ) : (
           <>
             <PhotographerDirectory photographers={photographers} />
-            <JsonLd data={buildItemListJsonLd(TITLE, photographers.slice(0, 100).map((p) => ({ name: p.studioName, path: `/photographers/p/${p.slug}` })))} />
+            <JsonLd
+              data={buildPageJsonLd({
+                name: TITLE,
+                path: "/photographers",
+                breadcrumbItems: [{ name: "Home", path: "/" }, { name: "Photographers", path: "/photographers" }],
+                items: photographerListItems(photographers),
+              })}
+            />
 
             {stateLinks.length > 0 && (
               <div className="mt-12 border-t pt-8">

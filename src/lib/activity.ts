@@ -9,7 +9,9 @@ export type ActivityAction =
   | "unpublished"
   | "images_updated"
   | "faqs_updated"
-  | "pricing_updated";
+  | "pricing_updated"
+  | "ai_approved"
+  | "ai_rejected";
 
 type ActivityEventInput = {
   module: ActivityModule;

@@ -443,12 +443,14 @@ export async function deleteLocation(id: string): Promise<LocationRowResult> {
     };
   }
 
-  // Nothing references a location as a foreign key (location_images cascades
-  // on delete), so unlike categories there's no "in use" case to guard —
-  // a straightforward delete is safe. Publish/unpublish covers the
-  // reversible/soft case.
+  // Child rows cascade, except ai_location_verification_history, which is
+  // ON DELETE RESTRICT (audit trail): a location AI has verified can only be
+  // unpublished, not deleted.
   const { data, error } = await supabase.from("locations").delete().eq("id", id).select("id");
 
+  if (error?.code === "23503") {
+    return { error: "This location has AI verification history and cannot be deleted. Unpublish it instead." };
+  }
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "This location no longer exists." };
 

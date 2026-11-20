@@ -19,7 +19,7 @@ import { StudioCard } from "@/components/public/studio-card";
 import { AboutSection } from "@/components/public/about-section";
 import { StateCountsSection } from "@/components/public/state-counts-section";
 import { JsonLd } from "@/components/public/json-ld";
-import { DEFAULT_OG_IMAGE, buildOrganizationJsonLd, buildWebSiteJsonLd } from "@/lib/jsonld";
+import { DEFAULT_OG_IMAGE, buildHomeJsonLd } from "@/lib/jsonld";
 
 // Static + ISR: no searchParams/cookies, so "/" is served from the edge cache.
 // Filtered views live at /locations/search; the proxy redirects legacy
@@ -101,8 +101,7 @@ export default async function HomePage() {
         <StateCountsSection />
       </Suspense>
 
-      <JsonLd data={buildWebSiteJsonLd()} />
-      <JsonLd data={buildOrganizationJsonLd()} />
+      <JsonLd data={buildHomeJsonLd()} />
     </div>
   );
 }

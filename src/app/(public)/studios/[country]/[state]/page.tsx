@@ -6,7 +6,8 @@ import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { StudioSearch } from "@/components/public/studio-search";
 import { StudioDirectory, StateStudioResults } from "@/components/public/studio-directory";
 import { RelatedPlaces } from "@/components/public/related-sections";
-import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
+import { JsonLd } from "@/components/public/json-ld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd, studioListItems } from "@/lib/jsonld";
 
 // ISR: no searchParams/cookies read, so the route is eligible for the Full
 // Route Cache with the same 24h window as public-data.ts. The ?q= name
@@ -68,17 +69,24 @@ export default async function StateStudiosPage({ params }: Props) {
 
   const { state, studios } = data;
   const basePath = `/studios/${countrySlug}/${state.slug}`;
+  const breadcrumbs = [
+    { name: "Home", path: "/" },
+    { name: "Studios", path: "/studios" },
+    { name: state.country!.name, path: `/studios/${countrySlug}` },
+    { name: state.name, path: basePath },
+  ];
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <Breadcrumbs
-        items={[
-          { name: "Home", path: "/" },
-          { name: "Studios", path: "/studios" },
-          { name: state.country!.name, path: `/studios/${countrySlug}` },
-          { name: state.name, path: `/studios/${countrySlug}/${state.slug}` },
-        ]}
+      <JsonLd
+        data={buildPageJsonLd({
+          name: `Pre-Wedding Photo Studios in ${state.name}`,
+          path: basePath,
+          breadcrumbItems: breadcrumbs,
+          items: studioListItems(studios),
+        })}
       />
+      <Breadcrumbs items={breadcrumbs} />
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
         Pre-Wedding Photo Studios in {state.name}
       </h1>

@@ -101,7 +101,7 @@ export default async function StudioDetailPage({ params }: Props) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <Breadcrumbs items={breadcrumbItems} includeJsonLd={false} />
+      <Breadcrumbs items={breadcrumbItems} />
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h1 className="font-heading text-3xl font-semibold sm:text-4xl">{studio.name}</h1>

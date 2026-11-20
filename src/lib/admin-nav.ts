@@ -30,6 +30,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     items: [
       { href: "/admin/locations", label: "Locations", description: "Add, edit and publish locations.", permissions: [PERMISSION.LOCATIONS_EDIT, PERMISSION.LOCATIONS_PUBLISH] },
       { href: "/admin/locations/bulk-import", label: "Bulk Import", description: "Import many locations at once.", permissions: [PERMISSION.LOCATIONS_EDIT] },
+      { href: "/admin/ai-verification", label: "AI Verification", description: "Review and approve AI-proposed location data.", permissions: [PERMISSION.LOCATIONS_PUBLISH] },
       { href: "/admin/categories", label: "Categories", description: "Beach, temple, waterfall and other categories." },
       { href: "/admin/location-reports", label: "Location Reports", description: "Review reports sent by visitors." },
       { href: "/admin/country-pages", label: "Country Pages", description: "Banner, heading and SEO for country pages." },

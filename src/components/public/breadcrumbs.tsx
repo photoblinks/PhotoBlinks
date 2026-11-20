@@ -1,22 +1,11 @@
 import Link from "next/link";
-import { JsonLd } from "@/components/public/json-ld";
-import { buildBreadcrumbList } from "@/lib/jsonld";
 
 export type BreadcrumbItem = { name: string; path: string };
 
-/** Visual breadcrumb trail plus matching BreadcrumbList JSON-LD. The last
- * item is rendered as the current page (no link). Pass
- * `includeJsonLd={false}` on pages that already fold the same breadcrumb
- * list into a combined @graph elsewhere (e.g. the location detail page's
- * LocationJsonLd) — every other caller keeps the default standalone
- * BreadcrumbList script. */
-export function Breadcrumbs({
-  items,
-  includeJsonLd = true,
-}: {
-  items: BreadcrumbItem[];
-  includeJsonLd?: boolean;
-}) {
+/** Visual breadcrumb trail. The last item is rendered as the current page
+ * (no link). Structured data is emitted by each page's own JSON-LD graph
+ * (see buildPageJsonLd / the detail-page builders in lib/jsonld.ts). */
+export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   return (
     <>
       <nav aria-label="Breadcrumb" className="mb-4 hidden text-sm text-muted-foreground sm:block">
@@ -44,7 +33,6 @@ export function Breadcrumbs({
           })}
         </ol>
       </nav>
-      {includeJsonLd && <JsonLd data={buildBreadcrumbList(items)} />}
     </>
   );
 }

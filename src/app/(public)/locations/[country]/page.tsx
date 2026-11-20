@@ -14,7 +14,8 @@ import { HomeFilter } from "@/components/public/home-filter";
 import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { DirectoryFilter, DirectoryResults } from "@/components/public/location-directory";
 import { CountryBrowse } from "@/components/public/location-browse-views";
-import { DEFAULT_OG_IMAGE, socialImageUrl } from "@/lib/jsonld";
+import { JsonLd } from "@/components/public/json-ld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd, socialImageUrl } from "@/lib/jsonld";
 import { isSeoEligible } from "@/lib/seo-eligibility";
 
 // ISR: this page no longer reads searchParams/cookies, so it is eligible for
@@ -153,6 +154,14 @@ export default async function CountryLocationsPage({ params }: Props) {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+        <JsonLd
+          data={buildPageJsonLd({
+            name: heading,
+            path: basePath,
+            breadcrumbItems: breadcrumbs,
+            items: states.map((s) => ({ name: s.name, path: `${basePath}/${s.slug}` })),
+          })}
+        />
         <Breadcrumbs items={breadcrumbs} />
         <Suspense fallback={<CountryBrowse country={country} locations={locations} />}>
           <DirectoryResults

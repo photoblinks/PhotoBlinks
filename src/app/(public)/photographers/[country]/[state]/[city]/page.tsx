@@ -6,7 +6,7 @@ import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { PhotographersHero } from "@/components/public/photographers-hero";
 import { PhotographerDirectory } from "@/components/public/photographer-directory";
 import { JsonLd } from "@/components/public/json-ld";
-import { DEFAULT_OG_IMAGE, buildItemListJsonLd } from "@/lib/jsonld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd, photographerListItems } from "@/lib/jsonld";
 
 export const revalidate = 604800;
 
@@ -61,6 +61,13 @@ export default async function PhotographersCityPage({ params }: Props) {
   const { photographers, state, cityName } = data;
   const { seo, blocks } = await getPhotographerGeoPage(country, stateSlug, city);
 
+  const breadcrumbs = [
+    { name: "Home", path: "/" },
+    { name: "Photographers", path: "/photographers" },
+    { name: state.name, path: `/photographers/${country}/${stateSlug}` },
+    { name: cityName, path: `/photographers/${country}/${stateSlug}/${city}` },
+  ];
+
   return (
     <div>
       <PhotographersHero
@@ -71,17 +78,17 @@ export default async function PhotographersCityPage({ params }: Props) {
 
       <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
         <PhotographerDirectory photographers={photographers} />
-        <JsonLd data={buildItemListJsonLd(seo?.h1_title || `Pre-Wedding Photographers in ${cityName}`, photographers.slice(0, 100).map((p) => ({ name: p.studioName, path: `/photographers/p/${p.slug}` })))} />
+        <JsonLd
+          data={buildPageJsonLd({
+            name: seo?.h1_title || `Pre-Wedding Photographers in ${cityName}`,
+            path: `/photographers/${country}/${stateSlug}/${city}`,
+            breadcrumbItems: breadcrumbs,
+            items: photographerListItems(photographers),
+          })}
+        />
 
         <div className="mt-10">
-          <Breadcrumbs
-            items={[
-              { name: "Home", path: "/" },
-              { name: "Photographers", path: "/photographers" },
-              { name: state.name, path: `/photographers/${country}/${stateSlug}` },
-              { name: cityName, path: `/photographers/${country}/${stateSlug}/${city}` },
-            ]}
-          />
+          <Breadcrumbs items={breadcrumbs} />
         </div>
 
         <EditorialSection blocks={blocks} />

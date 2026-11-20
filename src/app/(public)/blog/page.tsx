@@ -9,7 +9,8 @@ import { Breadcrumbs } from "@/components/public/breadcrumbs";
 import { BlogCategoryNav } from "@/components/public/blog-category-nav";
 import { BlogPostCard } from "@/components/public/blog-post-card";
 import { BlogListing, BlogListingSection } from "@/components/public/blog-listing";
-import { DEFAULT_OG_IMAGE } from "@/lib/jsonld";
+import { JsonLd } from "@/components/public/json-ld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd } from "@/lib/jsonld";
 import type { Metadata } from "next";
 
 // ISR: no cookies/searchParams read, so this route is eligible for the Full
@@ -18,10 +19,12 @@ import type { Metadata } from "next";
 // post list, so ?page=N no longer forces a dynamic render.
 export const revalidate = 604800;
 
+const BLOG_DESCRIPTION =
+  "Guides, location spotlights, and photoshoot planning tips for pre-wedding shoots across Karnataka, Kerala, and beyond.";
+
 export async function generateMetadata(): Promise<Metadata> {
   const title = "Blog";
-  const description =
-    "Guides, location spotlights, and photoshoot planning tips for pre-wedding shoots across Karnataka, Kerala, and beyond.";
+  const description = BLOG_DESCRIPTION;
 
   return {
     title,
@@ -54,6 +57,15 @@ export default async function BlogIndexPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <JsonLd
+        data={buildPageJsonLd({
+          name: "PhotoBlinks Blog",
+          description: BLOG_DESCRIPTION,
+          path: "/blog",
+          breadcrumbItems,
+          items: allPosts.map((post) => ({ name: post.title, path: `/blog/${post.slug}` })),
+        })}
+      />
       <Breadcrumbs items={breadcrumbItems} />
 
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">PhotoBlinks Blog</h1>

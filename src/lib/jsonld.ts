@@ -28,34 +28,40 @@ export const DEFAULT_OG_IMAGE = {
   alt: "PhotoBlinks — Photoshoot Locations",
 };
 
-/** WebSite schema for the homepage/root experience. No potentialAction
- * (SearchAction) — the site has filters, not a dedicated search endpoint. */
-export function buildWebSiteJsonLd() {
-  return {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: "PhotoBlinks",
-    url: absoluteUrl("/"),
-  };
+/** Keeps list-page ItemLists a sane size on big directories. */
+const MAX_LIST_ITEMS = 100;
+const SCHEMA_CONTEXT = "https://schema.org";
+const WEBSITE_ID = absoluteUrl("/#website");
+const ORGANIZATION_ID = absoluteUrl("/#organization");
+
+type PathItem = { name: string; path: string };
+type Faq = { question: string; answer: string };
+
+/** Wraps nodes into the single `@graph` document every page emits. */
+export function buildGraph(nodes: object[]) {
+  return { "@context": SCHEMA_CONTEXT, "@graph": nodes };
 }
 
-/** Organization schema for the homepage/root experience. Only fields that
- * are actually true of the project today — no invented sameAs, contact
- * info, or logo asset. */
-export function buildOrganizationJsonLd() {
-  return {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: "PhotoBlinks",
-    url: absoluteUrl("/"),
-    description: "Discover pre-wedding photoshoot locations across India.",
-  };
+/** Self-contained (name + url) so any page's graph can reference the
+ * site/org identity without the homepage's full node being present. */
+export const websiteRef = () => ({ "@type": "WebSite", "@id": WEBSITE_ID, name: "PhotoBlinks", url: absoluteUrl("/") });
+const organizationRef = () => ({ "@type": "Organization", "@id": ORGANIZATION_ID, name: "PhotoBlinks", url: absoluteUrl("/") });
+
+/** Homepage graph: WebSite + Organization, linked by `@id`. No
+ * potentialAction (SearchAction) — the site has filters, not a dedicated
+ * search endpoint. Only fields that are actually true of the project today —
+ * no invented sameAs, contact info, or logo asset. */
+export function buildHomeJsonLd() {
+  return buildGraph([
+    { ...websiteRef(), publisher: { "@id": ORGANIZATION_ID } },
+    { ...organizationRef(), description: "Discover pre-wedding photoshoot locations across India." },
+  ]);
 }
 
-export function buildBreadcrumbList(items: { name: string; path: string }[]) {
+export function buildBreadcrumbNode(canonicalUrl: string, items: PathItem[]) {
   return {
-    "@context": "https://schema.org",
     "@type": "BreadcrumbList",
+    "@id": `${canonicalUrl}#breadcrumb`,
     itemListElement: items.map((item, index) => ({
       "@type": "ListItem",
       position: index + 1,
@@ -63,6 +69,83 @@ export function buildBreadcrumbList(items: { name: string; path: string }[]) {
       item: absoluteUrl(item.path),
     })),
   };
+}
+
+/** FAQPage graph node. Only ever built from FAQs actually rendered on the
+ * page — callers pass nothing when there are none (returns null). */
+export function buildFaqPage(faqs: Faq[], canonicalUrl?: string) {
+  if (faqs.length === 0) return null;
+  return {
+    "@type": "FAQPage",
+    ...(canonicalUrl ? { "@id": `${canonicalUrl}#faq` } : {}),
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: { "@type": "Answer", text: faq.answer },
+    })),
+  };
+}
+
+function buildGeo(latitude: number | null, longitude: number | null) {
+  return latitude != null && longitude != null ? { "@type": "GeoCoordinates", latitude, longitude } : undefined;
+}
+
+/** Detail-page graph: WebPage (links the page to the site, its breadcrumb and
+ * its main entity) + main entity + BreadcrumbList + optional extras. */
+function buildEntityGraph(opts: {
+  canonicalUrl: string;
+  name: string;
+  description?: string | null;
+  main: { "@id": string };
+  breadcrumbItems: PathItem[];
+  extras: (object | null)[];
+}) {
+  const { canonicalUrl, name, description, main, breadcrumbItems, extras } = opts;
+  return buildGraph([
+    {
+      "@type": "WebPage",
+      "@id": `${canonicalUrl}#webpage`,
+      url: canonicalUrl,
+      name,
+      description: description ?? undefined,
+      isPartOf: websiteRef(),
+      breadcrumb: { "@id": `${canonicalUrl}#breadcrumb` },
+      mainEntity: { "@id": main["@id"] },
+    },
+    main,
+    buildBreadcrumbNode(canonicalUrl, breadcrumbItems),
+    ...extras.filter((node): node is object => node !== null),
+  ]);
+}
+
+/** One call for every non-detail public page: a WebPage-family node tied to
+ * the site and its breadcrumb. Passing `items` makes it a list page — the
+ * ItemList becomes the page's mainEntity (replaces hand-built ItemList
+ * scripts). `type` defaults to CollectionPage when `items` is set. */
+export function buildPageJsonLd(opts: {
+  name: string;
+  description?: string | null;
+  path: string;
+  breadcrumbItems: PathItem[];
+  type?: "WebPage" | "CollectionPage" | "AboutPage" | "ContactPage";
+  items?: PathItem[];
+}) {
+  const { name, description, path, breadcrumbItems, items } = opts;
+  const type = opts.type ?? (items ? "CollectionPage" : "WebPage");
+  const url = absoluteUrl(path);
+  return buildGraph([
+    {
+      "@type": type,
+      "@id": `${url}#webpage`,
+      url,
+      name,
+      description: description ?? undefined,
+      isPartOf: websiteRef(),
+      breadcrumb: { "@id": `${url}#breadcrumb` },
+      mainEntity: items && items.length > 0 ? buildItemList(name, items.slice(0, MAX_LIST_ITEMS)) : undefined,
+    },
+    buildBreadcrumbNode(url, breadcrumbItems),
+  ]);
 }
 
 /** Plain-text (no UI emoji) label for the drone_status enum, for use in
@@ -188,12 +271,11 @@ function buildAddress(place: {
  * 19C) — omitted entirely when there are none, never a fabricated score. */
 export function buildLocationJsonLd(
   location: PublicLocationDetail,
-  breadcrumbItems: { name: string; path: string }[],
+  breadcrumbItems: PathItem[],
   ratingSummary?: { average: number; count: number },
 ) {
   const canonicalUrl = absoluteUrl(`/location/${location.slug}`);
   const amenityFeature = buildAmenityFeatures(location);
-  const breadcrumbList = buildBreadcrumbList(breadcrumbItems);
   // Same validated video (or null) that gates the on-page heading/iframe —
   // an unparseable/missing youtube_url never produces a VideoObject, and
   // never a `video` reference on the Place either.
@@ -207,14 +289,7 @@ export function buildLocationJsonLd(
     description: location.description ?? undefined,
     image: location.images.length > 0 ? location.images.map(socialImageUrl) : undefined,
     address: buildAddress(location),
-    geo:
-      location.latitude != null && location.longitude != null
-        ? {
-            "@type": "GeoCoordinates",
-            latitude: location.latitude,
-            longitude: location.longitude,
-          }
-        : undefined,
+    geo: buildGeo(location.latitude, location.longitude),
     // TouristAttraction.isAccessibleForFree maps losslessly from
     // pricing_type for "free"/"paid"; "unknown" is omitted rather than
     // guessed as false.
@@ -234,40 +309,21 @@ export function buildLocationJsonLd(
     video: video ? { "@id": `${canonicalUrl}#video` } : undefined,
   };
 
-  const graph: object[] = [
-    place,
-    {
-      "@type": "BreadcrumbList",
-      "@id": `${canonicalUrl}#breadcrumb`,
-      itemListElement: breadcrumbList.itemListElement,
-    },
-  ];
+  const videoDescription = location.description
+    ? toVideoDescription(location.description)
+    : `Video of ${location.name}${location.city ? ` in ${location.city.name}` : ""}, a photoshoot location listed on PhotoBlinks.`;
 
-  if (video) {
-    const description = location.description
-      ? toVideoDescription(location.description)
-      : `Video of ${location.name}${location.city ? ` in ${location.city.name}` : ""}, a photoshoot location listed on PhotoBlinks.`;
-    graph.push(buildVideoObject(video, canonicalUrl, `${location.name} Tour & Photoshoot Video`, description));
-  }
-
-  // Only ever built from FAQs actually rendered on the page — never
-  // fabricated, never present when the location has none.
-  if (location.faqs.length > 0) {
-    graph.push({
-      "@type": "FAQPage",
-      "@id": `${canonicalUrl}#faq`,
-      mainEntity: location.faqs.map((faq) => ({
-        "@type": "Question",
-        name: faq.question,
-        acceptedAnswer: { "@type": "Answer", text: faq.answer },
-      })),
-    });
-  }
-
-  return {
-    "@context": "https://schema.org",
-    "@graph": graph,
-  };
+  return buildEntityGraph({
+    canonicalUrl,
+    name: location.name,
+    description: location.description,
+    main: place,
+    breadcrumbItems,
+    extras: [
+      video ? buildVideoObject(video, canonicalUrl, `${location.name} Tour & Photoshoot Video`, videoDescription) : null,
+      buildFaqPage(location.faqs, canonicalUrl),
+    ],
+  });
 }
 
 /** Combined LocalBusiness + BreadcrumbList (+ FAQPage when the studio has
@@ -278,10 +334,9 @@ export function buildLocationJsonLd(
  * page already loaded/computed; this never queries Supabase itself. */
 export function buildStudioJsonLd(
   studio: PublicStudioDetail,
-  breadcrumbItems: { name: string; path: string }[],
+  breadcrumbItems: PathItem[],
 ) {
   const canonicalUrl = absoluteUrl(`/studio/${studio.slug}`);
-  const breadcrumbList = buildBreadcrumbList(breadcrumbItems);
   // Same validated video (or null) that gates the on-page heading/iframe —
   // an unparseable/missing youtube_url never produces a VideoObject, and
   // never a `video` reference on the LocalBusiness either.
@@ -295,51 +350,25 @@ export function buildStudioJsonLd(
     description: studio.description ?? undefined,
     image: studio.images.length > 0 ? studio.images.map(socialImageUrl) : undefined,
     address: buildAddress(studio),
-    geo:
-      studio.latitude != null && studio.longitude != null
-        ? {
-            "@type": "GeoCoordinates",
-            latitude: studio.latitude,
-            longitude: studio.longitude,
-          }
-        : undefined,
+    geo: buildGeo(studio.latitude, studio.longitude),
     video: video ? { "@id": `${canonicalUrl}#video` } : undefined,
   };
 
-  const graph: object[] = [
-    business,
-    {
-      "@type": "BreadcrumbList",
-      "@id": `${canonicalUrl}#breadcrumb`,
-      itemListElement: breadcrumbList.itemListElement,
-    },
-  ];
+  const videoDescription = studio.description
+    ? toVideoDescription(studio.description)
+    : `${studio.name}, a photography studio${studio.city ? ` in ${studio.city.name}` : ""}.`;
 
-  if (video) {
-    const description = studio.description
-      ? toVideoDescription(studio.description)
-      : `${studio.name}, a photography studio${studio.city ? ` in ${studio.city.name}` : ""}.`;
-    graph.push(buildVideoObject(video, canonicalUrl, `${studio.name} Video`, description));
-  }
-
-  // Only ever built from FAQs actually rendered on the page — never
-  // fabricated, never present when the studio has none.
-  if (studio.faqs.length > 0) {
-    graph.push({
-      "@type": "FAQPage",
-      "@id": `${canonicalUrl}#faq`,
-      mainEntity: studio.faqs.map((faq) => ({
-        "@type": "Question",
-        name: faq.question,
-        acceptedAnswer: { "@type": "Answer", text: faq.answer },
-      })),
-    });
-  }
-
-  return {
-    "@context": "https://schema.org",
-    "@graph": graph,
-  };
+  return buildEntityGraph({
+    canonicalUrl,
+    name: studio.name,
+    description: studio.description,
+    main: business,
+    breadcrumbItems,
+    extras: [
+      video ? buildVideoObject(video, canonicalUrl, `${studio.name} Video`, videoDescription) : null,
+      buildFaqPage(studio.faqs, canonicalUrl),
+    ],
+  });
 }
 
 /** schema.org Person for an editor profile — the author entity for E-E-A-T. */
@@ -353,8 +382,25 @@ export function buildEditorPersonJsonLd(editor: PublicEditor) {
     description: editor.bio ?? undefined,
     image: editor.imageUrl ? socialImageUrl(editor.imageUrl) : undefined,
     sameAs: editor.socials.length > 0 ? editor.socials.map((social) => social.url) : undefined,
-    worksFor: { "@type": "Organization", name: "PhotoBlinks", url: absoluteUrl("/") },
+    worksFor: organizationRef(),
   };
+}
+
+/** ProfilePage graph for an editor: the Person is the page's main entity. */
+export function buildEditorPageJsonLd(editor: PublicEditor, breadcrumbItems: PathItem[]) {
+  const url = absoluteUrl(`/editors/${editor.slug}`);
+  return buildGraph([
+    {
+      "@type": "ProfilePage",
+      "@id": `${url}#webpage`,
+      url,
+      name: editor.name,
+      isPartOf: websiteRef(),
+      breadcrumb: { "@id": `${url}#breadcrumb` },
+      mainEntity: buildEditorPersonJsonLd(editor),
+    },
+    buildBreadcrumbNode(url, breadcrumbItems),
+  ]);
 }
 
 /** Combined BlogPosting + BreadcrumbList (+ FAQPage when the post has FAQs)
@@ -365,11 +411,10 @@ export function buildEditorPersonJsonLd(editor: PublicEditor) {
  * runs for a draft (the page 404s before this is ever called). */
 export function buildBlogPostingJsonLd(
   post: PublicBlogPostDetail,
-  breadcrumbItems: { name: string; path: string }[],
+  breadcrumbItems: PathItem[],
   editor: PublicEditor | null = null,
 ) {
   const canonicalUrl = absoluteUrl(`/blog/${post.slug}`);
-  const breadcrumbList = buildBreadcrumbList(breadcrumbItems);
 
   const posting = {
     "@type": "BlogPosting",
@@ -380,19 +425,10 @@ export function buildBlogPostingJsonLd(
     datePublished: post.publishedAt,
     dateModified: post.updatedAt,
     author: editor ? buildEditorPersonJsonLd(editor) : { "@type": "Person", name: post.authorName },
-    publisher: { "@type": "Organization", name: "PhotoBlinks", url: absoluteUrl("/") },
-    mainEntityOfPage: canonicalUrl,
+    publisher: organizationRef(),
+    mainEntityOfPage: { "@id": `${canonicalUrl}#webpage` },
     url: canonicalUrl,
   };
-
-  const graph: object[] = [
-    posting,
-    {
-      "@type": "BreadcrumbList",
-      "@id": `${canonicalUrl}#breadcrumb`,
-      itemListElement: breadcrumbList.itemListElement,
-    },
-  ];
 
   // Single consistent FAQPage source: merge the post's inline faq content
   // blocks (already validated by getPublishedBlogPostBySlug, in document
@@ -413,27 +449,26 @@ export function buildBlogPostingJsonLd(
     mergedFaqs.push(faq);
   }
 
-  if (mergedFaqs.length > 0) {
-    graph.push({
-      "@type": "FAQPage",
-      "@id": `${canonicalUrl}#faq`,
-      mainEntity: mergedFaqs.map((faq) => ({
-        "@type": "Question",
-        name: faq.question,
-        acceptedAnswer: { "@type": "Answer", text: faq.answer },
-      })),
-    });
-  }
-
-  return {
-    "@context": "https://schema.org",
-    "@graph": graph,
-  };
+  return buildEntityGraph({
+    canonicalUrl,
+    name: post.title,
+    description: post.excerpt,
+    main: posting,
+    breadcrumbItems,
+    extras: [buildFaqPage(mergedFaqs, canonicalUrl)],
+  });
 }
 
-export function buildItemListJsonLd(name: string, items: { name: string; path: string }[]) {
+export function photographerListItems(photographers: { studioName: string; slug: string }[]): PathItem[] {
+  return photographers.map((p) => ({ name: p.studioName, path: `/photographers/p/${p.slug}` }));
+}
+
+export function studioListItems(studios: { name: string; slug: string }[]): PathItem[] {
+  return studios.map((s) => ({ name: s.name, path: `/studio/${s.slug}` }));
+}
+
+function buildItemList(name: string, items: PathItem[]) {
   return {
-    "@context": "https://schema.org",
     "@type": "ItemList",
     name,
     itemListElement: items.map((item, index) => ({

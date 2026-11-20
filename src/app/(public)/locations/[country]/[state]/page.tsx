@@ -15,7 +15,8 @@ import { DirectoryFilter, DirectoryResults } from "@/components/public/location-
 import { StateBrowse } from "@/components/public/location-browse-views";
 import { EditorialSection } from "@/components/public/editorial-section";
 import { RelatedPlaces } from "@/components/public/related-sections";
-import { DEFAULT_OG_IMAGE, socialImageUrl } from "@/lib/jsonld";
+import { JsonLd } from "@/components/public/json-ld";
+import { DEFAULT_OG_IMAGE, buildPageJsonLd, socialImageUrl } from "@/lib/jsonld";
 import { isSeoEligible } from "@/lib/seo-eligibility";
 import { buildGeoDefaultDescription, extractCategoryNames } from "@/lib/seo-templates";
 
@@ -149,6 +150,14 @@ export default async function StateLocationsPage({ params }: Props) {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+        <JsonLd
+          data={buildPageJsonLd({
+            name: heading,
+            path: basePath,
+            breadcrumbItems: breadcrumbs,
+            items: cities.map((c) => ({ name: c.name, path: `${basePath}/${c.slug}` })),
+          })}
+        />
         <Breadcrumbs items={breadcrumbs} />
         <Suspense
           fallback={
